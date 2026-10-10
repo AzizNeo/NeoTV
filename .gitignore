@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Runtime
+.env
+instance/
+!instance/.gitkeep
+*.db
+*.db-wal
+*.db-shm
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+
+# Tooling output
+_to_delete/
+.legacy_backup/
+*.log
+
+# IDE state (contains local paths)
+.vs/
+.idea/
+
+# Windows: project root doubles as an old virtualenv — never commit it
+/Lib/
+/Include/
+/Scripts/*.exe
+/pyvenv.cfg
+.import_linter_cache/
+
+# Runtime data (HLS output, uploads, logs)
+/data/
+/var/
+/logs/

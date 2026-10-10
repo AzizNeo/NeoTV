@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="favorites-container">
+    <h2>My Favorites</h2>
+    {% if not channels %}
+    <p>You haven't added any favorites yet.</p>
+    {% else %}
+    <div class="channel-grid">
+        {% for channel in channels %}
+        <div class="channel-card">
+            <a href="{{ url_for('player.play', channel_id=channel.id) }}">
+                <div class="channel-logo">
+                    {% if channel.logo %}
+                    <img src="{{ channel.logo }}" alt="{{ channel.name }}" loading="lazy">
+                    {% else %}
+                    <div class="no-logo">{{ channel.name[:2] }}</div>
+                    {% endif %}
+                </div>
+                <h3>{{ channel.name }}</h3>
+            </a>
+            <button class="fav-btn active" onclick="toggleFavorite(event, {{ channel.id }})">❤️</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

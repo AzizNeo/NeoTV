@@ -1,0 +1,114 @@
+# Production-like stack. Local development without containers:
+#   python -m tools.devctl run        (needs only Redis: `docker compose up -d redis`)
+#
+#   docker compose up -d --build
+#   docker compose run --rm api flask --app app.wsgi identity create-admin --username admin
+name: neotv
+
+x-backend: &backend
+  build: .
+  image: neotv/backend:2.0.0
+  env_file: .env
+  environment: &backend-env
+    ENV: ${ENV:-prod}
+    DATABASE_URL: postgresql://neotv:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/neotv
+    REDIS_URL: redis://redis:6379/1
+    CELERY_BROKER_URL: redis://redis:6379/0
+    CELERY_RESULT_BACKEND: redis://redis:6379/2
+    TRUSTED_PROXY_COUNT: "1"
+    HLS_SERVE_VIA_NGINX: "true"
+    RTMP_INTERNAL_BASE: rtmp://rtmp:1935/live
+    INGEST_CALLBACK_ALLOWED_IPS: ${INGEST_CALLBACK_ALLOWED_IPS:-172.16.0.0/12}
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+    migrate: { condition: service_completed_successfully }
+  restart: unless-stopped
+
+x-worker: &worker
+  <<: *backend
+  healthcheck:
+    test: ["CMD", "celery", "-A", "app.wsgi:celery", "inspect", "ping", "-d", "celery@$$HOSTNAME", "--timeout", "5"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: neotv
+      POSTGRES_USER: neotv
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neotv -d neotv"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "noeviction"]
+    ports: ["127.0.0.1:6379:6379"]  # local dev uses this Redis too
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  migrate:
+    <<: *backend
+    depends_on:
+      postgres: { condition: service_healthy }
+    command: ["flask", "--app", "app.wsgi", "db", "upgrade"]
+    restart: "no"
+
+  api:
+    <<: *backend
+    volumes: [hls:/var/lib/neotv/hls:ro]
+
+  worker-default:
+    <<: *worker
+    command: ["celery", "-A", "app.wsgi:celery", "worker", "-Q", "default,outbox", "-P", "threads", "-c", "16",
+              "--loglevel", "INFO", "--without-gossip", "--without-mingle", "-n", "default@%h"]
+
+  worker-playlist:
+    <<: *worker
+    command: ["celery", "-A", "app.wsgi:celery", "worker", "-Q", "playlist,epg", "-P", "threads", "-c", "8",
+              "--loglevel", "INFO", "--without-gossip", "--without-mingle", "-n", "playlist@%h"]
+
+  worker-transcode:
+    <<: *worker
+    # One ffmpeg per task: concurrency = max simultaneous live transcodes on this host.
+    command: ["celery", "-A", "app.wsgi:celery", "worker", "-Q", "transcode", "-P", "threads", "-c", "4",
+              "--loglevel", "INFO", "--without-gossip", "--without-mingle", "-n", "transcode@%h"]
+    volumes: [hls:/var/lib/neotv/hls]
+
+  beat:
+    <<: *backend
+    command: ["celery", "-A", "app.wsgi:celery", "beat", "--loglevel", "INFO"]
+
+  rtmp:
+    image: tiangolo/nginx-rtmp:latest-2026-09-28
+    volumes: ["./deploy/rtmp/nginx.conf:/etc/nginx/nginx.conf:ro"]
+    ports: ["1935:1935"]
+    depends_on: [api]
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/nginx/Dockerfile
+    ports: ["80:80"]
+    volumes: [hls:/var/lib/neotv/hls:ro]
+    depends_on: [api]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  hls:

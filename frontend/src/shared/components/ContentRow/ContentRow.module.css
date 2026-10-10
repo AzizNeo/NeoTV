@@ -1,0 +1,137 @@
+.row {
+  margin-bottom: 2.75rem;
+}
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+.title {
+  color: #e5e5e5;
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin: 0;
+}
+.subtitle {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+.grid {
+  display: grid;
+  gap: 18px;
+}
+.grid.landscape {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.grid.poster {
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+}
+.card {
+  min-width: 0;
+}
+.hit {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--border-radius-sm);
+  transition: transform var(--transition-normal);
+}
+.hit:hover,
+.hit:focus-visible {
+  transform: scale(1.04);
+}
+.art {
+  position: relative;
+  width: 100%;
+  background: #222;
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.landscape .art {
+  aspect-ratio: 16 / 9;
+}
+.poster .art {
+  aspect-ratio: 2 / 3;
+}
+.img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.placeholder {
+  padding: 1rem;
+  color: #777;
+  font-weight: 700;
+  text-align: center;
+}
+.liveBadge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+}
+.lock {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  padding: 5px;
+  display: flex;
+}
+.progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+}
+.progress span {
+  display: block;
+  height: 100%;
+  background: var(--color-primary);
+}
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 6px;
+}
+.name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9rem;
+  color: #b3b3b3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.actions {
+  display: inline-flex;
+  gap: 4px;
+}
+.caption {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

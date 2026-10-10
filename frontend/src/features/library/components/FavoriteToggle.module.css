@@ -1,0 +1,18 @@
+.heart {
+  display: inline-flex;
+  background: none;
+  border: none;
+  padding: 4px;
+  color: #8c8c8c;
+  cursor: pointer;
+  border-radius: 50%;
+}
+.heart:hover {
+  color: #fff;
+}
+.on {
+  color: var(--color-primary);
+}
+.on:hover {
+  color: var(--color-primary-hover);
+}

@@ -1,0 +1,13 @@
+.git
+.venv
+**/__pycache__
+**/*.pyc
+.env
+instance/
+frontend/node_modules
+frontend/dist
+_to_delete/
+.legacy_backup/
+tests/
+docs/
+Scripts/

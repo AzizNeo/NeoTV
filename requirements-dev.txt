@@ -1,0 +1,10 @@
+-r requirements.txt
+# Tests / tooling
+pytest==8.4.2
+pytest-cov==7.0.0
+responses==0.25.8
+fakeredis[lua]==2.31.3
+ruff==0.13.1
+mypy==1.18.2
+import-linter==2.5.2
+types-requests==2.32.4.20250913

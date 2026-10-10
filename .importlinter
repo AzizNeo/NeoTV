@@ -1,0 +1,51 @@
+[importlinter]
+root_package = app
+include_external_packages = True
+
+# 1. The shared kernel is pure Python: contracts every module may depend on.
+[importlinter:contract:shared-kernel-purity]
+name = shared_kernel imports nothing from the app or from frameworks
+type = forbidden
+source_modules =
+    app.shared_kernel
+forbidden_modules =
+    app.kernel
+    app.modules
+    flask
+    sqlalchemy
+    flask_sqlalchemy
+    celery
+    redis
+    requests
+    pydantic
+
+# 2. The kernel never knows about any concrete module (puzzle board ≠ pieces).
+[importlinter:contract:kernel-knows-no-module]
+name = kernel does not import modules
+type = forbidden
+source_modules =
+    app.kernel
+forbidden_modules =
+    app.modules
+
+# 3. Modules talk to each other only through the other module's public api.py
+#    (plus capabilities / events at runtime). Anything else is a boundary break.
+[importlinter:contract:module-independence]
+name = modules are independent except through <module>.api
+type = independence
+modules =
+    app.modules.identity
+    app.modules.notifications
+    app.modules.profile
+    app.modules.devices
+    app.modules.catalog
+    app.modules.live
+    app.modules.billing
+    app.modules.playback
+    app.modules.drm
+    app.modules.library
+    app.modules.recommendations
+    app.modules.admin
+    app.modules._template
+ignore_imports =
+    app.modules.** -> app.modules.*.api

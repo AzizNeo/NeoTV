@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="channel-grid-container">
+    <h2>Channels</h2>
+    <div class="channel-grid">
+        {% for channel in channels.items %}
+        <div class="channel-card">
+            <a href="{{ url_for('player.play', channel_id=channel.id) }}">
+                <div class="channel-logo">
+                    {% if channel.logo %}
+                    <img src="{{ channel.logo }}" alt="{{ channel.name }}" loading="lazy">
+                    {% else %}
+                    <div class="no-logo">{{ channel.name[:2] }}</div>
+                    {% endif %}
+                </div>
+                <div class="channel-info">
+                    <h3>{{ channel.name }}</h3>
+                    <span class="channel-group">{{ channel.group }}</span>
+                </div>
+            </a>
+            <button class="fav-btn" data-id="{{ channel.id }}" onclick="toggleFavorite(event, {{ channel.id }})">
+                ❤️
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination">
+        {% if channels.has_prev %}
+        <a href="{{ url_for('main.index', page=channels.prev_num) }}">Previous</a>
+        {% endif %}
+        {% if channels.has_next %}
+        <a href="{{ url_for('main.index', page=channels.next_num) }}">Next</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function toggleFavorite(e, id) {
+        e.preventDefault();
+        try {
+            const res = await fetch(`/api/toggle_favorite/${id}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.status === 'added') {
+                e.target.classList.add('active');
+            } else {
+                e.target.classList.remove('active');
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+</script>
+{% endblock %}

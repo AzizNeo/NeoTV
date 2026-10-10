@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="playlist-container">
+    <h2>Manage Playlists</h2>
+
+    <div class="add-playlist-form">
+        <h3>Add New Playlist</h3>
+        <form method="POST" action="{{ url_for('playlist.manage') }}">
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" name="name" required placeholder="My Playlist">
+            </div>
+            <div class="form-group">
+                <label>M3U URL</label>
+                <input type="url" name="url" required placeholder="http://example.com/playlist.m3u">
+            </div>
+            <button type="submit" class="btn-primary">Add Playlist</button>
+        </form>
+    </div>
+
+    <div class="playlist-list">
+        <h3>Your Playlists</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>URL</th>
+                    <th>Channels</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for playlist in playlists %}
+                <tr>
+                    <td>{{ playlist.name }}</td>
+                    <td>{{ playlist.url }}</td>
+                    <td>{{ playlist.channels.count() }}</td>
+                    <td>
+                        <a href="{{ url_for('playlist.refresh', id=playlist.id) }}" class="btn-sm">Refresh</a>
+                        <a href="{{ url_for('playlist.delete', id=playlist.id) }}" class="btn-sm btn-danger"
+                            onclick="return confirm('Are you sure?')">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

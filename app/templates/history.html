@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="history-container">
+    <h2>Watch History</h2>
+    <ul class="history-list">
+        {% for item in history %}
+        <li>
+            <a href="{{ url_for('player.play', channel_id=item.channel.id) }}">
+                <span class="timestamp">{{ item.timestamp.strftime('%Y-%m-%d %H:%M') }}</span>
+                <span class="channel-name">{{ item.channel.name }}</span>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

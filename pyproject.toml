@@ -1,0 +1,66 @@
+[project]
+name = "neotv"
+version = "2.0.0"
+description = "NeoTV IPTV platform — modular monolith (kernel + puzzle modules)"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["migrations/revisions/[0-9a-f]*_*.py", "frontend", "node_modules", ".venv", "_to_delete", ".legacy_backup"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF", "PL", "TID", "C4", "PIE", "RET", "PTH"]
+ignore = [
+    "PLR0913",  # explicit DI constructors take many collaborators by design
+    "PLR2004",  # magic values in domain tables are named where it matters
+    "PLR0911", "PLR0912", "PLR0915",
+    "S101",     # asserts allowed in tests / invariants
+    "S311",     # random only used for jitter
+    "RET504",
+    "PLC0415",  # local imports are deliberate (lazy wiring, optional deps)
+    "RUF012",
+    "E501",     # formatter owns line length
+    "UP046", "UP047",  # TypeVar generics kept for readability
+]
+allowed-confusables = ["ı", "İ", "–", "×", "→", "≠", "│", "─"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "PLR", "B011"]
+"migrations/**" = ["S608", "E501"]
+"tools/**" = ["S603", "S607", "T201"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"flask_login".msg = "v2 auth is stateless (app.kernel.security.auth)"
+"app.extensions".msg = "legacy module — use app.kernel.*"
+"app.core".msg = "legacy package — use app.kernel.*"
+
+[tool.mypy]
+python_version = "3.12"
+packages = ["app"]
+strict = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = false
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+ignore_missing_imports = true
+exclude = ["app/modules/_template/"]
+# The DI container is keyed by Protocol classes (resolve(Clock)); mypy's
+# type-abstract check does not model service locators.
+disable_error_code = ["type-abstract"]
+
+[[tool.mypy.overrides]]
+module = ["app.modules.*.models", "app.kernel.outbox.models"]
+disable_error_code = ["name-defined", "misc", "valid-type"]
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+omit = ["app/modules/_template/*"]
+
+[tool.coverage.report]
+skip_covered = true
+show_missing = true

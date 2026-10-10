@@ -1,0 +1,37 @@
+name: Architecture Guard
+on: [pull_request]
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: iptv_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Regenerate import-linter config
+        run: python scripts/dev/generate_importlinter_config.py
+      - name: Fail if config drifted from committed version
+        run: git diff --exit-code .importlinter || (echo "❌ .importlinter güncel değil, commit'e dahil edin" && exit 1)
+      - name: Check shared_kernel purity
+        run: bash scripts/dev/check_shared_kernel_purity.sh
+      - name: Run import boundaries
+        run: lint-imports
+      - name: Run tests (co-located)
+        run: pytest

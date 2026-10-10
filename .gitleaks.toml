@@ -1,0 +1,10 @@
+# gitleaks config: default rules + project allowlist.
+# CI runs `gitleaks git` on every push/PR; a new finding fails the build.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Deliberately fake secrets used only by the test suite / docs"
+paths = [
+  '''^tests/support/factory\.py$''',
+]

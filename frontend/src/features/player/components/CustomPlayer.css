@@ -1,0 +1,376 @@
+.custom-player {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.custom-player.hide-cursor {
+    cursor: none;
+}
+
+.video-element {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+}
+
+.spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #e50914;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Title Bar */
+.title-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 5;
+}
+
+.title-bar.visible {
+    opacity: 1;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.back-btn svg {
+    width: 28px;
+    height: 28px;
+    fill: white;
+}
+
+.back-btn:hover svg {
+    fill: #e50914;
+}
+
+.title {
+    color: white;
+    font-size: 1.2rem;
+    font-weight: 500;
+}
+
+.live-badge {
+    background: #e50914;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Controls */
+.controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 0 20px 20px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 5;
+}
+
+.controls.visible {
+    opacity: 1;
+}
+
+/* Progress Bar */
+.progress-container {
+    position: relative;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    cursor: pointer;
+    margin-bottom: 15px;
+    transition: height 0.2s ease;
+}
+
+.progress-container:hover {
+    height: 8px;
+}
+
+.progress-buffered {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 3px;
+    pointer-events: none;
+}
+
+.progress-played {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: #e50914;
+    border-radius: 3px;
+    pointer-events: none;
+}
+
+.progress-handle {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    width: 16px;
+    height: 16px;
+    background: #e50914;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+    transition: transform 0.2s ease;
+}
+
+.progress-container:hover .progress-handle {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+/* Controls Row */
+.controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.controls-left,
+.controls-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Control Buttons */
+.control-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-radius: 50%;
+    transition: background 0.2s ease;
+}
+
+.control-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.control-btn svg {
+    width: 28px;
+    height: 28px;
+    fill: white;
+}
+
+.control-btn:hover svg {
+    fill: #e50914;
+}
+
+/* Skip buttons */
+.skip-text {
+    position: absolute;
+    font-size: 10px;
+    color: white;
+    font-weight: bold;
+}
+
+/* Volume Control */
+.volume-control {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.volume-slider-container {
+    width: 0;
+    overflow: hidden;
+    transition: width 0.3s ease;
+}
+
+.volume-slider-container.visible {
+    width: 80px;
+    margin-left: 8px;
+}
+
+.volume-slider {
+    width: 80px;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: white;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.volume-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: white;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+/* Time Display */
+.time-display {
+    color: white;
+    font-size: 0.9rem;
+    margin-left: 10px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Settings */
+.settings-container {
+    position: relative;
+}
+
+.settings-menu {
+    position: absolute;
+    bottom: 50px;
+    right: 0;
+    background: rgba(28, 28, 28, 0.95);
+    border-radius: 8px;
+    padding: 10px 0;
+    min-width: 180px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+}
+
+.settings-section {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+}
+
+.settings-section:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+
+.settings-title {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.75rem;
+    padding: 5px 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.settings-option {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 15px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.settings-option:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.settings-option.active {
+    color: #e50914;
+}
+
+.settings-option.active::before {
+    content: '✓ ';
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .title-bar {
+        padding: 15px;
+    }
+
+    .title {
+        font-size: 1rem;
+    }
+
+    .controls {
+        padding: 0 15px 15px;
+    }
+
+    .control-btn svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .time-display {
+        font-size: 0.8rem;
+    }
+}

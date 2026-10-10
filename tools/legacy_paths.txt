@@ -1,0 +1,60 @@
+# Pre-v2 paths superseded by the modular v2 tree (see docs/IMPLEMENTATION_NOTES.md).
+# `python -m tools.cleanup_legacy --apply` moves them to .legacy_backup/<timestamp>/.
+# Explicit list: files you add later are never touched. Never list .env, instance/ or docs/.
+
+# ── backend ──
+app/config.py
+app/conftest.py
+app/core
+app/extensions.py
+app/models
+app/modules/auth
+app/modules/billing/routes.py
+app/modules/search
+app/modules/stream
+app/routes
+app/services
+app/shared_kernel/event_registry.py
+app/shared_kernel/identifiers.py
+app/shared_kernel/outbox.py
+app/tasks
+app/utils
+migrations/README
+migrations/versions
+tests/test_validation_fix.py
+test_run.log
+# Scripts/ also holds the root virtualenv's *.exe launchers on Windows — list only the old project scripts.
+Scripts/__init__.py
+Scripts/backfill_profile_id.py
+Scripts/batch
+Scripts/database
+Scripts/dev
+Scripts/maintenance
+Scripts/streaming
+Scripts/testing
+Scripts/utils
+
+# ── frontend ──
+frontend/public/vite.svg
+frontend/src/App.css
+frontend/src/App.jsx
+frontend/src/api.js
+frontend/src/assets
+frontend/src/components
+frontend/src/context
+frontend/src/core/api/axios.js
+frontend/src/core/context
+frontend/src/core/router
+frontend/src/features/admin/api
+frontend/src/features/admin/hooks/useAdmin.js
+frontend/src/features/auth/utils
+frontend/src/features/billing/api
+frontend/src/features/billing/components/PremiumTab.jsx
+frontend/src/features/billing/hooks
+frontend/src/features/billing/pages/PremiumPage.jsx
+frontend/src/features/epg
+frontend/src/features/playlist
+frontend/src/index.css
+frontend/src/mocks
+frontend/src/pages
+frontend/src/shared/ErrorBoundary

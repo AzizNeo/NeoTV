@@ -1,0 +1,5 @@
+# Optional tracing (enabled when OTEL_ENDPOINT is set)
+-r requirements.txt
+opentelemetry-api==1.37.0
+opentelemetry-sdk==1.37.0
+opentelemetry-exporter-otlp-proto-grpc==1.37.0

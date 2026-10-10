@@ -1,0 +1,100 @@
+.status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 2.5rem;
+  border-radius: var(--border-radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+.status strong {
+  text-transform: capitalize;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.75rem;
+}
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #1f1f1f;
+  border: 1px solid #333;
+  border-radius: var(--border-radius-lg);
+  padding: 2rem;
+}
+.current {
+  border: 2px solid #4caf50;
+}
+.badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #4caf50;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.card h2 {
+  margin: 0 0 0.5rem;
+}
+.price {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+.price small {
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  margin-left: 4px;
+}
+.card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 2rem;
+  flex: 1;
+}
+.card li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 0.9rem;
+  color: #e5e5e5;
+}
+.choose {
+  width: 100%;
+  padding: 1rem;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.choose:disabled {
+  background: #333;
+  color: #888;
+  cursor: default;
+}
+.manage {
+  text-align: center;
+  margin-top: 3rem;
+}
+.cancelLink {
+  background: none;
+  border: none;
+  color: #777;
+  text-decoration: underline;
+  cursor: pointer;
+}
