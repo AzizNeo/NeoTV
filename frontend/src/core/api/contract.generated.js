@@ -1036,7 +1036,8 @@ export const OPERATIONS = Object.freeze({
     "idempotent": false,
     "errors": [
       "TITLE_INVALID",
-      "PLAY_SOURCE_NOT_FOUND"
+      "PLAY_SOURCE_NOT_FOUND",
+      "TITLE_RATING_CONFLICT"
     ]
   }
 });

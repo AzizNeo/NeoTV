@@ -10954,7 +10954,8 @@
         "x-permission": "titles:write",
         "x-error-codes": [
           "TITLE_INVALID",
-          "PLAY_SOURCE_NOT_FOUND"
+          "PLAY_SOURCE_NOT_FOUND",
+          "TITLE_RATING_CONFLICT"
         ],
         "security": [
           {

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import argparse
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
@@ -157,8 +157,7 @@ def main(argv: list[str] | None = None) -> int:
 
         _seed_guide(resolve(EpgService), resolve(Clock), [existing[name] for name, _, _ in DEMO_LIVE])
 
-        if "titles" in app.extensions["modules"]:  # optional module: skipped when disabled
-            _seed_titles(catalog)
+        failures = _seed_titles(catalog) if "titles" in app.extensions["modules"] else 0  # optional module
 
         if args.ingest and "Test Ingest" not in existing:
             _, key = live.create(
@@ -173,18 +172,33 @@ def main(argv: list[str] | None = None) -> int:
                 sort_order=99,
             )
             print(f"live     + Test Ingest — ingest key (shown once): {key}")
-    return 0
+    return 1 if failures else 0
 
 
-def _seed_titles(catalog: CatalogAdminService) -> None:
-    """Upsert the storefront documents — same validation as ``PUT /api/v1/titles/admin/titles/<slug>``."""
+#: Demo-only ordering for "make the title at least as strict as its source".
+_STRICTNESS = {"general": 0, "teen": 1, "unrated": 2, "adult": 3}
+
+
+def _seed_titles(catalog: CatalogAdminService) -> int:
+    """Upsert the storefront documents — same validation as ``PUT /api/v1/titles/admin/titles/<slug>``.
+
+    Reports each failing title and carries on; returns the number of failures.
+    """
     from app.kernel.container import resolve
-    from app.modules.titles.domain import EpisodeDraft, SeasonDraft, TitleDraft, TitleKind
+    from app.modules.titles.domain import (
+        EpisodeDraft,
+        RatingConflictError,
+        SeasonDraft,
+        TitleDraft,
+        TitleKind,
+        TitlesError,
+    )
     from app.modules.titles.services import TitleAdminService
 
     channels, _ = catalog.list_channels(page=1, per_page=200, search=None, include_inactive=False)
     ref = {c.name: f"catalog:{c.id}" for c in channels}
     service = resolve(TitleAdminService)
+    failures = 0
     for t in DEMO_TITLES:
         season = SeasonDraft(
             number=1,
@@ -193,24 +207,38 @@ def _seed_titles(catalog: CatalogAdminService) -> None:
                 for n, (name, about) in enumerate(t.episodes, start=1)
             ),
         )
-        created = service.upsert(
-            TitleDraft(
-                slug=t.slug,
-                kind=TitleKind.SERIES if t.episodes else TitleKind.MOVIE,
-                name=t.name,
-                rating=t.rating,
-                synopsis=t.synopsis,
-                year=t.year,
-                runtime_minutes=t.runtime_minutes,
-                poster_url=_art(f"{t.slug}-poster"),
-                backdrop_url=_art(t.slug),
-                play_ref=ref[t.play] if t.play else None,
-                genres=t.genres,
-                featured_rank=t.featured_rank,
-                seasons=(season,) if t.episodes else (),
-            )
+        draft = TitleDraft(
+            slug=t.slug,
+            kind=TitleKind.SERIES if t.episodes else TitleKind.MOVIE,
+            name=t.name,
+            rating=t.rating,
+            synopsis=t.synopsis,
+            year=t.year,
+            runtime_minutes=t.runtime_minutes,
+            poster_url=_art(f"{t.slug}-poster"),
+            backdrop_url=_art(t.slug),
+            play_ref=ref[t.play] if t.play else None,
+            genres=t.genres,
+            featured_rank=t.featured_rank,
+            seasons=(season,) if t.episodes else (),
         )
+        try:
+            try:
+                created = service.upsert(draft)
+            except RatingConflictError as conflict:
+                # The demo source was re-rated locally (admin edit, playlist import …): follow the source —
+                # the kids rule itself is never bypassed.
+                rating = max(conflict.source_ratings.values(), key=lambda r: _STRICTNESS.get(r, len(_STRICTNESS)))
+                print(f"titles   ~ {t.name}: rating {draft.rating!r} → {rating!r} (its source is rated {rating!r})")
+                created = service.upsert(replace(draft, rating=rating))
+        except TitlesError as err:
+            failures += 1
+            print(f"titles   ! {t.name}: {err}")
+            for line in err.details if isinstance(err.details, list) else ():
+                print(f"           - {line}")
+            continue
         print(f"titles   {'+' if created else '='} {t.name}")
+    return failures
 
 
 def _seed_guide(epg: object, clock: object, channel_ids: list[int]) -> None:

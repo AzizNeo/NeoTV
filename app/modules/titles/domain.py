@@ -55,6 +55,14 @@ class InvalidTitleError(TitlesError):
     """The title document breaks a rule; ``details`` lists every violation (not just the first)."""
 
 
+class RatingConflictError(TitlesError):
+    """A kids-visible title over a source kids may not play. ``source_ratings`` maps each offending ref to its rating."""
+
+    def __init__(self, message: str, *, source_ratings: dict[str, str]) -> None:
+        super().__init__(message, details=[f"play_ref {r!r}: rated {v}" for r, v in sorted(source_ratings.items())])
+        self.source_ratings = source_ratings
+
+
 class PlaySourceNotFoundError(TitlesError):
     """A movie/episode points at content that does not exist or is not playable on demand."""
 

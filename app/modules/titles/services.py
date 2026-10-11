@@ -21,6 +21,7 @@ from app.modules.titles.domain import (
     EpisodeDraft,
     InvalidTitleError,
     PlaySourceNotFoundError,
+    RatingConflictError,
     SeasonDraft,
     TitleDraft,
     TitleKind,
@@ -185,10 +186,13 @@ class TitleAdminService:
                 "Title document is invalid", details=[f"play_ref {r!r}: not on demand" for r in live]
             )
         if draft.rating in KIDS_ALLOWED:
-            stricter = [f"play_ref {r!r}: rated {cards[r].rating}" for r in refs if cards[r].rating not in KIDS_ALLOWED]
+            stricter = {r: str(cards[r].rating) for r in refs if cards[r].rating not in KIDS_ALLOWED}
             if stricter:
                 # A kids profile must be able to play exactly what it can see.
-                raise InvalidTitleError("Title rating is less strict than its sources", details=stricter)
+                raise RatingConflictError(
+                    f"Title is rated {draft.rating!r} but kids may not play some of its sources",
+                    source_ratings=stricter,
+                )
 
     @staticmethod
     def _get(session: Session, slug: str) -> Title:

@@ -6,7 +6,12 @@ from app.kernel.capabilities import CapabilityIndex
 from app.kernel.manifest import ModuleManifest, RouteSpec
 from app.kernel.time import Clock
 from app.kernel.uow import UnitOfWorkFactory
-from app.modules.titles.domain import InvalidTitleError, PlaySourceNotFoundError, TitleNotFoundError
+from app.modules.titles.domain import (
+    InvalidTitleError,
+    PlaySourceNotFoundError,
+    RatingConflictError,
+    TitleNotFoundError,
+)
 
 
 def _services(c: Any) -> None:
@@ -33,5 +38,6 @@ manifest = ModuleManifest(
         TitleNotFoundError: (404, "TITLE_NOT_FOUND"),
         InvalidTitleError: (422, "TITLE_INVALID"),
         PlaySourceNotFoundError: (422, "PLAY_SOURCE_NOT_FOUND"),
+        RatingConflictError: (422, "TITLE_RATING_CONFLICT"),
     },
 )

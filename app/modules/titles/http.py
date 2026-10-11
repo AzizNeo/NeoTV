@@ -144,7 +144,7 @@ def admin_get(slug: str) -> object:
     permission="titles:write",
     body=TitleDocIn,
     response=TitleDocOut,
-    errors=("TITLE_INVALID", "PLAY_SOURCE_NOT_FOUND"),
+    errors=("TITLE_INVALID", "PLAY_SOURCE_NOT_FOUND", "TITLE_RATING_CONFLICT"),
 )
 def admin_put(slug: str, body: TitleDocIn) -> Response:
     service = resolve(TitleAdminService)

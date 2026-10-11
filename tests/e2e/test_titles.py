@@ -57,7 +57,8 @@ def test_sources_are_checked_and_kids_rule_holds(api: Api) -> None:
     assert missing.code == "PLAY_SOURCE_NOT_FOUND" and missing.body["error"]["details"] == ["catalog:999"]
     assert api.put(f"{ADMIN}/news", token=admin, json=_movie(f"catalog:{live['id']}")).code == "TITLE_INVALID"
     kids = api.put(f"{ADMIN}/late", token=admin, json=_movie(f"catalog:{adult['id']}", rating="general"))
-    assert kids.code == "TITLE_INVALID" and "rated adult" in kids.body["error"]["details"][0]
+    assert kids.code == "TITLE_RATING_CONFLICT"
+    assert kids.body["error"]["details"] == [f"play_ref 'catalog:{adult['id']}': rated adult"]
     assert api.put(f"{ADMIN}/late", token=admin, json=_movie(f"catalog:{adult['id']}", rating="adult")).status == 201
 
     invalid = api.put(
