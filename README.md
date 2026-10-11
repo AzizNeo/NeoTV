@@ -29,7 +29,7 @@ subscriptions, DRM, recommendations and a back office — built around a small k
 
 ## Highlights
 
-- **Modular monolith with a real contract.** 12 domain modules plug into a kernel through manifests
+- **Modular monolith with a real contract.** 13 domain modules plug into a kernel through manifests
   (capabilities, events, extension points, routes, tasks, permissions). Modules may only import each other's
   `api.py`; [import-linter](.importlinter) fails the build otherwise. Optional modules can be switched off with
   `DISABLED_MODULES` and dependants degrade gracefully — or fail at boot with a *named* error.
@@ -71,6 +71,7 @@ flowchart LR
     playback --> profile
     playback -. entitlements .-> billing
     catalog --> playback
+    titles --> playback
     live --> playback
     drm --> playback
     library --> playback
@@ -107,6 +108,7 @@ app/modules/<name>/
 | `profile` | Viewer profiles, PIN lock, profile context tokens |
 | `devices` | Device inventory; revoking a device ends its sessions and streams |
 | `catalog` | Channels and VOD from M3U playlists (async import, probing, dedupe) |
+| `titles` | Storefront layer: movies and series → seasons → episodes, genres, artwork, featured rows — pointing at playable content |
 | `live` | External HLS or RTMP-ingested live channels, ABR transcoding, EPG |
 | `playback` | Playback gate, stream slots, signed grants, HLS proxy, QoE |
 | `billing` | Plan catalogue, subscription state machine, signed PSP webhooks |

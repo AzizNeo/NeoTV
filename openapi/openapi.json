@@ -10581,6 +10581,602 @@
           }
         ]
       }
+    },
+    "/api/v1/titles/admin/titles": {
+      "get": {
+        "operationId": "titles_admin_list",
+        "summary": "Admin title list with source health",
+        "tags": [
+          "titles"
+        ],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Search"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TitleAdminPageOut"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-permission": "titles:write",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/titles/admin/titles/{slug}": {
+      "get": {
+        "operationId": "titles_admin_get",
+        "summary": "The editable title document",
+        "tags": [
+          "titles"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TitleDocOut"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-permission": "titles:write",
+        "x-error-codes": [
+          "TITLE_NOT_FOUND"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "operationId": "titles_admin_put",
+        "summary": "Create or replace a title (whole document; 201 when created)",
+        "tags": [
+          "titles"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "kind": {
+                          "enum": [
+                            "movie",
+                            "series"
+                          ],
+                          "title": "Kind",
+                          "type": "string"
+                        },
+                        "name": {
+                          "maxLength": 200,
+                          "minLength": 1,
+                          "title": "Name",
+                          "type": "string"
+                        },
+                        "rating": {
+                          "default": "unrated",
+                          "enum": [
+                            "general",
+                            "teen",
+                            "adult",
+                            "unrated"
+                          ],
+                          "title": "Rating",
+                          "type": "string"
+                        },
+                        "synopsis": {
+                          "anyOf": [
+                            {
+                              "maxLength": 4000,
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "default": null,
+                          "title": "Synopsis"
+                        },
+                        "year": {
+                          "anyOf": [
+                            {
+                              "type": "integer"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "default": null,
+                          "title": "Year"
+                        },
+                        "runtime_minutes": {
+                          "anyOf": [
+                            {
+                              "type": "integer"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "default": null,
+                          "title": "Runtime Minutes"
+                        },
+                        "poster_url": {
+                          "anyOf": [
+                            {
+                              "maxLength": 1024,
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "default": null,
+                          "title": "Poster Url"
+                        },
+                        "backdrop_url": {
+                          "anyOf": [
+                            {
+                              "maxLength": 1024,
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "default": null,
+                          "title": "Backdrop Url"
+                        },
+                        "play_ref": {
+                          "anyOf": [
+                            {
+                              "maxLength": 64,
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "default": null,
+                          "title": "Play Ref"
+                        },
+                        "genres": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "maxItems": 8,
+                          "title": "Genres",
+                          "type": "array"
+                        },
+                        "featured_rank": {
+                          "anyOf": [
+                            {
+                              "type": "integer"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "default": null,
+                          "title": "Featured Rank"
+                        },
+                        "is_published": {
+                          "default": true,
+                          "title": "Is Published",
+                          "type": "boolean"
+                        },
+                        "seasons": {
+                          "items": {
+                            "$ref": "#/components/schemas/SeasonDoc"
+                          },
+                          "maxItems": 100,
+                          "title": "Seasons",
+                          "type": "array"
+                        },
+                        "slug": {
+                          "title": "Slug",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "name",
+                        "slug"
+                      ],
+                      "title": "TitleDocOut",
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-permission": "titles:write",
+        "x-error-codes": [
+          "TITLE_INVALID",
+          "PLAY_SOURCE_NOT_FOUND"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "description": "A whole title. ``PUT`` replaces the stored aggregate with exactly this document.",
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "movie",
+                      "series"
+                    ],
+                    "title": "Kind",
+                    "type": "string"
+                  },
+                  "name": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "title": "Name",
+                    "type": "string"
+                  },
+                  "rating": {
+                    "default": "unrated",
+                    "enum": [
+                      "general",
+                      "teen",
+                      "adult",
+                      "unrated"
+                    ],
+                    "title": "Rating",
+                    "type": "string"
+                  },
+                  "synopsis": {
+                    "anyOf": [
+                      {
+                        "maxLength": 4000,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "title": "Synopsis"
+                  },
+                  "year": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "title": "Year"
+                  },
+                  "runtime_minutes": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "title": "Runtime Minutes"
+                  },
+                  "poster_url": {
+                    "anyOf": [
+                      {
+                        "maxLength": 1024,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "title": "Poster Url"
+                  },
+                  "backdrop_url": {
+                    "anyOf": [
+                      {
+                        "maxLength": 1024,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "title": "Backdrop Url"
+                  },
+                  "play_ref": {
+                    "anyOf": [
+                      {
+                        "maxLength": 64,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "title": "Play Ref"
+                  },
+                  "genres": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "maxItems": 8,
+                    "title": "Genres",
+                    "type": "array"
+                  },
+                  "featured_rank": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "title": "Featured Rank"
+                  },
+                  "is_published": {
+                    "default": true,
+                    "title": "Is Published",
+                    "type": "boolean"
+                  },
+                  "seasons": {
+                    "items": {
+                      "$ref": "#/components/schemas/SeasonDoc"
+                    },
+                    "maxItems": 100,
+                    "title": "Seasons",
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "name"
+                ],
+                "title": "TitleDocIn",
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "titles_admin_delete",
+        "summary": "Delete a title (its sources are untouched)",
+        "tags": [
+          "titles"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {},
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-permission": "titles:write",
+        "x-error-codes": [
+          "TITLE_NOT_FOUND"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -11370,6 +11966,80 @@
           "ads"
         ],
         "title": "EntitlementsOut",
+        "type": "object"
+      },
+      "EpisodeDoc": {
+        "additionalProperties": false,
+        "properties": {
+          "number": {
+            "maximum": 9999,
+            "minimum": 1,
+            "title": "Number",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "play_ref": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Play Ref"
+          },
+          "synopsis": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Synopsis"
+          },
+          "runtime_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Runtime Minutes"
+          },
+          "still_url": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Still Url"
+          }
+        },
+        "required": [
+          "number",
+          "name"
+        ],
+        "title": "EpisodeDoc",
         "type": "object"
       },
       "ErrorEnvelope": {
@@ -12668,6 +13338,43 @@
         "title": "RowOut",
         "type": "object"
       },
+      "SeasonDoc": {
+        "additionalProperties": false,
+        "properties": {
+          "number": {
+            "maximum": 9999,
+            "minimum": 0,
+            "title": "Number",
+            "type": "integer"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Name"
+          },
+          "episodes": {
+            "items": {
+              "$ref": "#/components/schemas/EpisodeDoc"
+            },
+            "maxItems": 500,
+            "title": "Episodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "number"
+        ],
+        "title": "SeasonDoc",
+        "type": "object"
+      },
       "SelectProfileResponse": {
         "properties": {
           "profile_token": {
@@ -12914,6 +13621,252 @@
           "progress"
         ],
         "title": "TaskStatus",
+        "type": "object"
+      },
+      "TitleAdminPageOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TitleAdminRowOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "TitleAdminPageOut",
+        "type": "object"
+      },
+      "TitleAdminRowOut": {
+        "properties": {
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "is_published": {
+            "title": "Is Published",
+            "type": "boolean"
+          },
+          "featured_rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Featured Rank"
+          },
+          "sources": {
+            "title": "Sources",
+            "type": "integer"
+          },
+          "unavailable_sources": {
+            "title": "Unavailable Sources",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "kind",
+          "name",
+          "year",
+          "is_published",
+          "featured_rank",
+          "sources",
+          "unavailable_sources",
+          "updated_at"
+        ],
+        "title": "TitleAdminRowOut",
+        "type": "object"
+      },
+      "TitleDocOut": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "movie",
+              "series"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "rating": {
+            "default": "unrated",
+            "enum": [
+              "general",
+              "teen",
+              "adult",
+              "unrated"
+            ],
+            "title": "Rating",
+            "type": "string"
+          },
+          "synopsis": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Synopsis"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Year"
+          },
+          "runtime_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Runtime Minutes"
+          },
+          "poster_url": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Poster Url"
+          },
+          "backdrop_url": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Backdrop Url"
+          },
+          "play_ref": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Play Ref"
+          },
+          "genres": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Genres",
+            "type": "array"
+          },
+          "featured_rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Featured Rank"
+          },
+          "is_published": {
+            "default": true,
+            "title": "Is Published",
+            "type": "boolean"
+          },
+          "seasons": {
+            "items": {
+              "$ref": "#/components/schemas/SeasonDoc"
+            },
+            "maxItems": 100,
+            "title": "Seasons",
+            "type": "array"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "slug"
+        ],
+        "title": "TitleDocOut",
         "type": "object"
       },
       "WebhookOut": {

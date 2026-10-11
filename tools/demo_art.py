@@ -32,6 +32,7 @@ ARTWORK: tuple[Art, ...] = (
     Art("tears-of-steel", "Tears of Steel", "Open Movie · 2012", "#1f4e79", "#060d18", "#5fd3ff"),
     Art("bipbop-basic", "BipBop", "Apple HLS test stream", "#444444", "#0b0b0b", "#e50914"),
     Art("bipbop-advanced", "BipBop Advanced", "Apple HLS test stream · fMP4", "#2b2b40", "#08080f", "#a78bfa"),
+    Art("test-streams", "Test Yayınları", "Dizi · HLS test akışları", "#3b3b3b", "#0a0a0a", "#22d3ee"),
     Art("live-akamai", "Akamai Live", "24/7 test channel", "#7a1e1e", "#160505", "#ffffff", live=True),
     Art("live-unified", "Unified Live", "24/7 test channel", "#14532d", "#03140a", "#ffffff", live=True),
 )
@@ -70,11 +71,39 @@ def render(art: Art) -> str:
 """
 
 
+def render_poster(art: Art) -> str:
+    """2:3 poster for cards (``<slug>-poster.svg``); same palette as the 16:9 backdrop."""
+    words = escape(art.title).split()
+    lines = [" ".join(words[i : i + 2]) for i in range(0, len(words), 2)]  # ≤ 2 words per line
+    tspans = "".join(f'<tspan x="60" dy="{0 if i == 0 else 92}">{line}</tspan>' for i, line in enumerate(lines))
+    top = 1010 - 92 * (len(lines) - 1)
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1200" role="img" aria-label="{escape(art.title)}">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="{art.top}"/><stop offset="1" stop-color="{art.bottom}"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1200" fill="url(#bg)"/>
+  <g fill="none" stroke="{art.accent}" stroke-opacity="0.22" stroke-width="3">
+    <circle cx="400" cy="420" r="150"/><circle cx="400" cy="420" r="240"/><circle cx="400" cy="420" r="330"/>
+  </g>
+  <circle cx="400" cy="420" r="18" fill="{art.accent}"/>
+  <g font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+    <text y="{top}" font-size="84" font-weight="800" fill="#ffffff" letter-spacing="-2">{tspans}</text>
+    <rect x="60" y="1048" width="80" height="8" rx="4" fill="{art.accent}"/>
+    <text x="60" y="1110" font-size="34" font-weight="500" fill="#ffffff" fill-opacity="0.75">{escape(art.kicker)}</text>
+  </g>
+</svg>
+"""
+
+
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     for art in ARTWORK:
         (OUT / f"{art.slug}.svg").write_text(render(art), encoding="utf-8")
-    print(f"wrote {len(ARTWORK)} files to {OUT}")
+        if not art.live:
+            (OUT / f"{art.slug}-poster.svg").write_text(render_poster(art), encoding="utf-8")
+    print(f"wrote artwork for {len(ARTWORK)} items to {OUT}")
     return 0
 
 

@@ -118,7 +118,9 @@ def test_every_api_route_goes_through_endpoint(full_app: Flask) -> None:
     assert not bare, f"routes bypassing @endpoint (no auth/validation/contract): {bare}"
 
 
-@pytest.mark.parametrize("module", ["recommendations", "library", "drm", "admin", "billing", "devices", "live"])
+@pytest.mark.parametrize(
+    "module", ["recommendations", "library", "drm", "admin", "billing", "devices", "live", "titles"]
+)
 def test_optional_modules_can_be_switched_off(module: str) -> None:
     app = make_app(schema="none", disabled_modules=[module])
     assert module not in app.extensions["modules"]

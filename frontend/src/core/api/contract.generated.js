@@ -999,5 +999,44 @@ export const OPERATIONS = Object.freeze({
     "errors": [
       "TEMPORARILY_UNAVAILABLE"
     ]
+  },
+  "titles_admin_delete": {
+    "method": "DELETE",
+    "path": "/api/v1/titles/admin/titles/{slug}",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": [
+      "TITLE_NOT_FOUND"
+    ]
+  },
+  "titles_admin_get": {
+    "method": "GET",
+    "path": "/api/v1/titles/admin/titles/{slug}",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": [
+      "TITLE_NOT_FOUND"
+    ]
+  },
+  "titles_admin_list": {
+    "method": "GET",
+    "path": "/api/v1/titles/admin/titles",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
+  },
+  "titles_admin_put": {
+    "method": "PUT",
+    "path": "/api/v1/titles/admin/titles/{slug}",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": [
+      "TITLE_INVALID",
+      "PLAY_SOURCE_NOT_FOUND"
+    ]
   }
 });

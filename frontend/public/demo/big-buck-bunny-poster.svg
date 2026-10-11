@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1200" role="img" aria-label="Big Buck Bunny">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a7d44"/><stop offset="1" stop-color="#0f2a14"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1200" fill="url(#bg)"/>
+  <g fill="none" stroke="#f4d35e" stroke-opacity="0.22" stroke-width="3">
+    <circle cx="400" cy="420" r="150"/><circle cx="400" cy="420" r="240"/><circle cx="400" cy="420" r="330"/>
+  </g>
+  <circle cx="400" cy="420" r="18" fill="#f4d35e"/>
+  <g font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+    <text y="918" font-size="84" font-weight="800" fill="#ffffff" letter-spacing="-2"><tspan x="60" dy="0">Big Buck</tspan><tspan x="60" dy="92">Bunny</tspan></text>
+    <rect x="60" y="1048" width="80" height="8" rx="4" fill="#f4d35e"/>
+    <text x="60" y="1110" font-size="34" font-weight="500" fill="#ffffff" fill-opacity="0.75">Open Movie · 2008</text>
+  </g>
+</svg>
