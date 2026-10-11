@@ -1,43 +1,149 @@
+/*
+ * NeoTV design tokens — the only place colours, type, spacing and motion are defined.
+ *
+ * Identity: a night-blue "studio after dark" base (easier on the eyes than pure black)
+ * with an amber "on air" lamp as the single accent. Red is reserved for LIVE, so it
+ * keeps a meaning. Two themes: dark (default) and light, chosen by <html data-theme>.
+ *
+ * Components use the semantic tokens (--bg, --surface-*, --text-*, --accent …).
+ * The legacy names at the bottom alias them, so older stylesheets follow the theme.
+ */
+
+@import '@fontsource-variable/manrope/index.css';
+@import '@fontsource-variable/bricolage-grotesque/index.css';
+
 :root {
-  /* Colors */
-  --color-primary: #e50914; /* Netflix Red */
-  --color-primary-hover: #f40612;
-  --color-background: #141414;
-  --color-surface: rgba(255, 255, 255, 0.05);
-  --color-surface-hover: rgba(255, 255, 255, 0.1);
-  --color-text-primary: #ffffff;
-  --color-text-secondary: rgba(255, 255, 255, 0.7);
-  --color-text-muted: rgba(255, 255, 255, 0.5);
-  --color-border: rgba(255, 255, 255, 0.1);
-  --color-error: #ff4d4d;
-  --color-success: #2ecc71;
+  /* ── Type ─────────────────────────────────────────────────────────────── */
+  --font-ui: 'Manrope Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-display: 'Bricolage Grotesque Variable', 'Manrope Variable', system-ui, sans-serif;
+  /* 1.25 modular scale on a 16px base */
+  --text-2xs: 0.75rem;
+  --text-xs: 0.8125rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-hero: clamp(2.25rem, 1.4rem + 3.6vw, 4.25rem);
+  --leading-tight: 1.15;
+  --leading-body: 1.55;
 
-  /* Spacing */
-  --spacing-xs: 0.25rem;
-  --spacing-sm: 0.5rem;
-  --spacing-md: 1rem;
-  --spacing-lg: 1.5rem;
-  --spacing-xl: 2rem;
+  /* ── Space (4px grid) ─────────────────────────────────────────────────── */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --gutter: clamp(1rem, 0.4rem + 2.6vw, 3.5rem); /* page side padding, phone → TV */
+  --content-max: 1600px;
+  --topbar-h: 64px;
+  --tabbar-h: 60px;
 
-  /* Typography */
-  --font-family-base: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-size-sm: 0.875rem;
-  --font-size-base: 1rem;
-  --font-size-lg: 1.125rem;
-  --font-size-xl: 1.5rem;
+  /* ── Shape ────────────────────────────────────────────────────────────── */
+  --radius-sm: 6px; /* chips, inputs */
+  --radius-md: 10px; /* cards, buttons */
+  --radius-lg: 16px; /* panels, sheets */
+  --radius-pill: 999px;
+
+  /* ── Motion ───────────────────────────────────────────────────────────── */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+
+  /* ── Fixed (theme-independent) ────────────────────────────────────────── */
+  --live: #d63b3b; /* white text on it: 4.6:1 (AA) */
+  --on-live: #ffffff;
+  --scrim: linear-gradient(180deg, rgb(8 11 20 / 0) 0%, rgb(8 11 20 / 0.55) 55%, rgb(8 11 20 / 0.92) 100%);
+  --z-topbar: 40;
+  --z-overlay: 60;
+  --z-toast: 80;
+}
+
+/* ── Dark (default) ─────────────────────────────────────────────────────── */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #121826;
+  --surface-1: #182033;
+  --surface-2: #1f2940;
+  --surface-3: #283350;
+  --border: #2d3954;
+  --border-strong: #42507a;
+  --text-1: #e9edf5;
+  --text-2: #b0b9cc;
+  --text-3: #8a94aa;
+  --accent: #ffb547; /* the on-air lamp: fills, focus, active nav */
+  --accent-hover: #ffc56e;
+  --accent-ink: #ffc56e; /* accent used as text on surfaces */
+  --on-accent: #1d1406;
+  --danger: #ff7b7b;
+  --success: #4fd69a;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-2: 0 10px 30px rgb(3 6 14 / 0.45);
+  --topbar-bg: rgb(18 24 38 / 0.82);
+}
+
+/* ── Light ──────────────────────────────────────────────────────────────── */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f3f5f9;
+  --surface-1: #ffffff;
+  --surface-2: #edf0f6;
+  --surface-3: #e1e6ef;
+  --border: #d6dce8;
+  --border-strong: #b4bdd0;
+  --text-1: #141a26;
+  --text-2: #444e66;
+  --text-3: #5f6a83;
+  --accent: #f2a12e;
+  --accent-hover: #e8921a;
+  --accent-ink: #9a5800; /* AA on white */
+  --on-accent: #1d1406;
+  --danger: #c6363a;
+  --success: #17804f;
+  --shadow-1: 0 1px 2px rgb(20 26 38 / 0.08);
+  --shadow-2: 0 12px 32px rgb(20 26 38 / 0.14);
+  --topbar-bg: rgb(243 245 249 / 0.86);
+}
+
+/* ── Legacy aliases (pre-3.1 stylesheets) ───────────────────────────────── */
+:root {
+  --color-primary: var(--accent);
+  --color-primary-hover: var(--accent-hover);
+  --color-background: var(--bg);
+  --color-surface: var(--surface-1);
+  --color-surface-hover: var(--surface-3);
+  --color-text-primary: var(--text-1);
+  --color-text-secondary: var(--text-2);
+  --color-text-muted: var(--text-3);
+  --color-border: var(--border);
+  --color-error: var(--danger);
+  --color-success: var(--success);
+  --spacing-xs: var(--space-1);
+  --spacing-sm: var(--space-2);
+  --spacing-md: var(--space-4);
+  --spacing-lg: var(--space-5);
+  --spacing-xl: var(--space-6);
+  --font-family-base: var(--font-ui);
+  --font-size-sm: var(--text-sm);
+  --font-size-base: var(--text-md);
+  --font-size-lg: var(--text-lg);
+  --font-size-xl: var(--text-xl);
   --font-weight-normal: 400;
-  --font-weight-medium: 500;
-  --font-weight-bold: 700;
-
-  /* Borders & Shadows */
-  --border-radius-sm: 4px;
-  --border-radius-md: 8px;
-  --border-radius-lg: 12px;
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
-
-  /* Animations */
-  --transition-fast: 0.15s ease-in-out;
-  --transition-normal: 0.3s ease-in-out;
+  --font-weight-medium: 600;
+  --font-weight-bold: 750;
+  --border-radius-sm: var(--radius-sm);
+  --border-radius-md: var(--radius-md);
+  --border-radius-lg: var(--radius-lg);
+  --shadow-sm: var(--shadow-1);
+  --shadow-md: var(--shadow-2);
+  --shadow-lg: var(--shadow-2);
+  --transition-fast: var(--dur-fast) var(--ease-out);
+  --transition-normal: var(--dur-base) var(--ease-out);
+  --card-bg: var(--surface-2);
 }

@@ -1,49 +1,51 @@
-import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LogOut, Menu, Tv, X } from 'lucide-react';
 import { useAuth } from '@/core/auth/AuthProvider';
 import { Slot, useRegistry } from '@/core/featureKit';
+import { AccountMenu } from './AccountMenu';
 import styles from './AppShell.module.css';
 
-const SECTIONS = [['main', null], ['account', 'Hesap']];
+const TABBAR_MAX = 5; // thumb-reachable bottom bar on phones; the rest stays in the top bar / account menu
 
-/** Sidebar navigation built purely from feature manifests (`nav`) — no hard-coded links. */
+/**
+ * App frame built purely from feature manifests (`nav`) — no hard-coded links.
+ * Desktop: top bar (main section) + account menu (account section). Phone: bottom tab bar.
+ */
 export function AppShell() {
   const { nav } = useRegistry();
-  const { can, user, logout } = useAuth();
-  const [open, setOpen] = useState(false);
+  const { can } = useAuth();
   const visible = nav.filter((item) => item.guard !== 'admin' || can('admin:access'));
+  const main = visible.filter((item) => item.section === 'main');
+  const account = visible.filter((item) => item.section === 'account');
+
+  const link = ({ to, label, icon: Icon, feature }, className) => (
+    <NavLink key={`${feature}:${to}`} to={to} end={to === '/'} className={({ isActive }) => `${className} ${isActive ? styles.active : ''}`}>
+      <Icon size={20} aria-hidden="true" className={styles.icon} />
+      <span>{label}</span>
+    </NavLink>
+  );
 
   return (
     <div className={styles.shell}>
-      <button type="button" className={styles.menuButton} onClick={() => setOpen((o) => !o)} aria-label="Menü" aria-expanded={open}>
-        {open ? <X size={22} /> : <Menu size={22} />}
-      </button>
-      <aside className={`${styles.sidebar} ${open ? styles.open : ''}`}>
-        <NavLink to="/" className={styles.brand} onClick={() => setOpen(false)}>
-          <Tv size={24} aria-hidden="true" /> NeoTV
+      <a href="#main" className={styles.skip}>İçeriğe geç</a>
+      <header className={styles.topbar}>
+        <NavLink to="/" className={styles.brand} aria-label="NeoTV ana sayfa">
+          <span className={styles.lamp} aria-hidden="true" />
+          NeoTV
         </NavLink>
-        <div className={styles.user}><Slot name="shell.user" /></div>
-        {SECTIONS.map(([section, title]) => {
-          const items = visible.filter((item) => item.section === section);
-          if (!items.length) return null;
-          return (
-            <nav key={section} className={styles.nav} aria-label={title ?? 'Ana menü'}>
-              {title && <span className={styles.sectionTitle}>{title}</span>}
-              {items.map(({ to, label, icon: Icon, feature }) => (
-                <NavLink key={`${feature}:${to}`} to={to} end={to === '/'} onClick={() => setOpen(false)}
-                  className={({ isActive }) => `${styles.link} ${isActive ? styles.active : ''}`}>
-                  <Icon size={18} aria-hidden="true" /> {label}
-                </NavLink>
-              ))}
-            </nav>
-          );
-        })}
-        <button type="button" className={styles.logout} onClick={() => logout()}>
-          <LogOut size={18} aria-hidden="true" /> Çıkış {user?.username ? `(${user.username})` : ''}
-        </button>
-      </aside>
-      <main className={styles.main}><Outlet /></main>
+        <nav className={styles.primary} aria-label="Ana menü">
+          {main.map((item) => link(item, styles.navLink))}
+        </nav>
+        <div className={styles.tools}>
+          <Slot name="shell.actions" />
+          <AccountMenu items={account} />
+        </div>
+      </header>
+      <main id="main" className={styles.main} tabIndex={-1}>
+        <Outlet />
+      </main>
+      <nav className={styles.tabbar} aria-label="Ana menü (mobil)">
+        {main.slice(0, TABBAR_MAX).map((item) => link(item, styles.tab))}
+      </nav>
     </div>
   );
 }

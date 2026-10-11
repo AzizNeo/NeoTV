@@ -36,15 +36,15 @@
 }
 .tile:hover,
 .tile:focus-visible {
-  color: #fff;
+  color: var(--text-1);
 }
 .tile:hover > span:first-child,
 .tile:focus-visible > span:first-child {
-  outline: 3px solid #fff;
+  outline: 3px solid var(--accent);
 }
 .kids {
   font-size: 0.75rem;
-  color: #ff9f43;
+  color: var(--accent-ink);
   margin-top: -0.5rem;
 }
 .manage {
@@ -52,8 +52,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #666;
-  color: #aaa;
+  border: 1px solid var(--border-strong);
+  color: var(--text-2);
   padding: 0.6rem 1.4rem;
   text-decoration: none;
   letter-spacing: 0.08em;
@@ -61,8 +61,8 @@
   font-size: 0.85rem;
 }
 .manage:hover {
-  color: #fff;
-  border-color: #fff;
+  color: var(--text-1);
+  border-color: var(--text-1);
 }
 .list {
   display: grid;
@@ -100,5 +100,5 @@
   cursor: pointer;
 }
 .avatarPicker button[aria-pressed='true'] {
-  border-color: #fff;
+  border-color: var(--accent);
 }

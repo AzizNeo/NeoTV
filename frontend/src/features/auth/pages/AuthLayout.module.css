@@ -5,8 +5,8 @@
   justify-content: center;
   padding: 2rem 1rem;
   background:
-    linear-gradient(rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.82)),
-    radial-gradient(ellipse at top, #3a0a0d 0%, #141414 65%);
+    radial-gradient(60rem 30rem at 50% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
+    var(--bg);
 }
 .brand {
   position: absolute;
@@ -14,16 +14,27 @@
   left: 2rem;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.6rem;
+  font-family: var(--font-display);
   font-size: 1.6rem;
-  font-weight: 800;
-  color: var(--color-primary);
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  color: var(--text-1);
   text-decoration: none;
+}
+/* Same "on air" lamp as the app shell's brand mark. */
+.brand::before {
+  content: '';
+  width: 0.62rem;
+  height: 0.62rem;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 70%, transparent);
 }
 .panel {
   width: 100%;
   max-width: 450px;
-  background: rgba(0, 0, 0, 0.78);
+  background: var(--surface-1);
   padding: 3rem 3.5rem;
   border-radius: var(--border-radius-md);
 }
@@ -37,7 +48,7 @@
   gap: 1rem;
 }
 .alert {
-  background: #e87c03;
+  background: color-mix(in srgb, var(--danger) 18%, var(--surface-1));
   padding: 10px 15px;
   border-radius: var(--border-radius-sm);
   margin-bottom: 1rem;
@@ -52,20 +63,20 @@
   top: 12px;
   background: none;
   border: none;
-  color: #8c8c8c;
+  color: var(--text-3);
   cursor: pointer;
 }
 .footer {
   margin-top: 2.5rem;
-  color: #737373;
+  color: var(--text-3);
 }
 .footer a {
-  color: #fff;
+  color: var(--text-1);
   text-decoration: none;
   margin-left: 5px;
 }
 .hint {
-  color: #8c8c8c;
+  color: var(--text-3);
   font-size: 0.8rem;
   margin: -0.4rem 0 0;
 }
@@ -74,7 +85,7 @@
   font-size: 0.8rem;
 }
 .lead {
-  color: #b3b3b3;
+  color: var(--text-2);
   font-size: 0.9rem;
   line-height: 1.5;
   margin: 0 0 1rem;
@@ -83,12 +94,12 @@
   align-self: flex-end; /* .form is a flex column */
   justify-self: end; /* …and works in grid containers too */
   margin-top: 0.25rem;
-  color: #b3b3b3;
+  color: var(--text-2);
   font-size: 0.85rem;
   text-decoration: none;
 }
 .forgot:hover {
-  color: #fff;
+  color: var(--text-1);
   text-decoration: underline;
 }
 .ok {

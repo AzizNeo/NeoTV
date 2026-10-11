@@ -166,7 +166,8 @@ export function useBackendModule(name) {
 export function Slot({ name, ...props }) {
   const registry = useRegistry();
   const items = useMemo(() => registry.slots.get(name) ?? [], [registry, name]);
-  return items.map(({ component: Component, feature }) => <Component key={feature} {...props} />);
+  // A feature may contribute several components to one slot: key by feature *and* position.
+  return items.map(({ component: Component, feature }, i) => <Component key={`${feature}:${i}`} {...props} />);
 }
 
 /** Contributions to a slot (for owners that need custom layout). */

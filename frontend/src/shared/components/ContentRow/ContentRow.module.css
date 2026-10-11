@@ -8,7 +8,7 @@
   margin-bottom: 0.9rem;
 }
 .title {
-  color: #e5e5e5;
+  color: var(--text-1);
   font-size: 1.35rem;
   font-weight: 600;
   margin: 0;
@@ -47,7 +47,7 @@
 .art {
   position: relative;
   width: 100%;
-  background: #222;
+  background: var(--surface-2);
   border-radius: var(--border-radius-sm);
   overflow: hidden;
   display: flex;
@@ -67,7 +67,7 @@
 }
 .placeholder {
   padding: 1rem;
-  color: #777;
+  color: var(--text-3);
   font-weight: 700;
   text-align: center;
 }
@@ -118,7 +118,7 @@
   flex: 1;
   min-width: 0;
   font-size: 0.9rem;
-  color: #b3b3b3;
+  color: var(--text-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

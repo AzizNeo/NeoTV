@@ -3,15 +3,15 @@
   background: none;
   border: none;
   padding: 4px;
-  color: #8c8c8c;
+  color: var(--text-3);
   cursor: pointer;
   border-radius: 50%;
 }
 .heart:hover {
-  color: #fff;
+  color: var(--text-1);
 }
 .on {
-  color: var(--color-primary);
+  color: var(--accent-ink);
 }
 .on:hover {
   color: var(--color-primary-hover);

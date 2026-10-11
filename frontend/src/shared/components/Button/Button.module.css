@@ -1,77 +1,87 @@
 .button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    border-radius: var(--border-radius-sm);
-    font-family: var(--font-family-base);
-    font-weight: var(--font-weight-medium);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 40px; /* comfortable touch target */
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
-
+.button:active:not(:disabled) {
+  transform: translateY(1px);
+}
 .button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 /* Variants */
 .variant-primary {
-    background-color: var(--color-primary);
-    color: #fff;
+  background-color: var(--accent);
+  color: var(--on-accent);
 }
-
 .variant-primary:hover:not(:disabled) {
-    background-color: var(--color-primary-hover);
+  background-color: var(--accent-hover);
 }
 
 .variant-secondary {
-    background-color: var(--color-surface);
-    color: var(--color-text-primary);
-    border: 1px solid var(--color-border);
+  background-color: var(--surface-2);
+  color: var(--text-1);
+  border-color: var(--border);
 }
-
 .variant-secondary:hover:not(:disabled) {
-    background-color: var(--color-surface-hover);
+  background-color: var(--surface-3);
+  border-color: var(--border-strong);
 }
 
+/* Destructive actions are outlined: readable in both themes, and not louder than the primary action. */
 .variant-danger {
-    background-color: var(--color-error);
-    color: #fff;
+  background-color: transparent;
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
 }
-
 .variant-danger:hover:not(:disabled) {
-    filter: brightness(1.1);
+  background-color: color-mix(in srgb, var(--danger) 12%, transparent);
+  border-color: var(--danger);
 }
 
 .variant-ghost {
-    background-color: transparent;
-    color: var(--color-text-secondary);
+  background-color: transparent;
+  color: var(--text-2);
 }
-
 .variant-ghost:hover:not(:disabled) {
-    color: var(--color-text-primary);
-    background-color: var(--color-surface);
+  color: var(--text-1);
+  background-color: var(--surface-2);
 }
 
 /* Sizes */
 .size-sm {
-    padding: var(--spacing-xs) var(--spacing-sm);
-    font-size: var(--font-size-sm);
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-xs);
 }
-
 .size-md {
-    padding: var(--spacing-sm) var(--spacing-md);
-    font-size: var(--font-size-base);
+  padding: 0 var(--space-4);
+  font-size: var(--text-sm);
 }
-
 .size-lg {
-    padding: var(--spacing-md) var(--spacing-lg);
-    font-size: var(--font-size-lg);
+  min-height: 48px;
+  padding: 0 var(--space-5);
+  font-size: var(--text-md);
 }
 
 /* Modifiers */
 .fullWidth {
-    width: 100%;
+  width: 100%;
 }

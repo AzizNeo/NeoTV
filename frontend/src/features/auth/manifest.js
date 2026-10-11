@@ -18,7 +18,7 @@ export default defineFeature({
     { path: '/account', lazy: () => import('./pages/AccountPage') },
   ],
   nav: [{ to: '/account', label: 'Hesap', icon: UserCog, order: 900, section: 'account' }],
-  slots: ['account.sections', 'shell.user'],
+  slots: ['account.sections', 'shell.user', 'shell.actions'],
   contributes: [
     { slot: 'account.sections', component: EmailVerificationNotice, order: 0 },
     { slot: 'account.sections', component: EmailChangeSection, order: 50 },

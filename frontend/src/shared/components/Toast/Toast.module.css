@@ -19,13 +19,13 @@
   animation: in 0.2s ease-out;
 }
 .success {
-  background: #1e7d45;
+  background: #17804f;
 }
 .error {
-  background: #b3261e;
+  background: #c6363a;
 }
 .info {
-  background: #2b2b2b;
+  background: #2d3954;
   border: 1px solid var(--color-border);
 }
 .close {
