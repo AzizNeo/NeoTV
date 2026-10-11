@@ -21,6 +21,7 @@ const ERRORS = {
   EMAIL_DELIVERY_UNAVAILABLE: 'E-posta gönderimi şu anda kullanılamıyor. Lütfen yöneticiye başvurun.',
   EMAIL_MISSING: 'Hesabınızda kayıtlı bir e-posta adresi yok.',
   EMAIL_ALREADY_VERIFIED: 'E-posta adresiniz zaten doğrulanmış.',
+  EMAIL_UNCHANGED: 'Bu adres zaten hesabınızın e-posta adresi.',
   EMAIL_RECIPIENT_INVALID: 'E-posta adresi geçersiz.',
   CAPTCHA_REQUIRED: 'Güvenlik doğrulaması gerekiyor.',
   LOGIN_THROTTLED: 'Çok sayıda hatalı giriş. Birkaç dakika sonra tekrar deneyin.',

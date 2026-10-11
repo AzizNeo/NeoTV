@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterator
 from datetime import timedelta
+from typing import Any
 
 import pytest
 from flask import Flask
@@ -124,3 +125,95 @@ def test_without_notifications_module_recovery_fails_loudly_signup_still_works()
     assert api.register("solo", email="solo@example.com").status == 201  # verification mail silently skipped
     reply = api.post("/api/v1/auth/password/forgot", json={"email": "solo@example.com"})
     assert (reply.status, reply.code) == (503, "EMAIL_DELIVERY_UNAVAILABLE")
+
+
+def test_self_service_password_change_notifies_the_owner(api: Api, mailbox: list[RenderedEmail]) -> None:
+    api.register("cleo", email="cleo@example.com")
+    token = api.login("cleo").data["access_token"]
+    body = {"current_password": PASSWORD, "new_password": NEW_PASSWORD}
+    assert api.post("/api/v1/auth/change-password", json=body, token=token, headers=CSRF).status == 200
+    assert len(_mails_to(mailbox, "cleo@example.com", "değiştirildi")) == 1
+    wrong = api.post(
+        "/api/v1/auth/change-password",
+        json=body,
+        token=api.login("cleo", NEW_PASSWORD).data["access_token"],
+        headers=CSRF,
+    )
+    assert wrong.code == "INVALID_CREDENTIALS"  # failed attempts publish nothing
+    assert len(_mails_to(mailbox, "cleo@example.com", "değiştirildi")) == 1
+
+
+# ── e-mail change ────────────────────────────────────────────────────────────
+def _change(api: Api, token: str, new_email: str, password: str = PASSWORD) -> Any:
+    return api.post("/api/v1/auth/email/change", json={"new_email": new_email, "password": password}, token=token)
+
+
+def _confirm_change(api: Api, mailbox: list[RenderedEmail], new_email: str) -> None:
+    raw = _token(_mails_to(mailbox, new_email, "onaylayın")[-1])
+    assert api.post("/api/v1/auth/email/change/confirm", json={"token": raw}).status == 200
+
+
+def test_email_change_is_confirmed_from_the_new_inbox(api: Api, mailbox: list[RenderedEmail]) -> None:
+    api.register("eve", email="eve@example.com")
+    api.register("taken", email="taken@example.com")
+    token = api.login("eve").data["access_token"]
+    api.post("/api/v1/auth/password/forgot", json={"email": "eve@example.com"})
+    stale_reset = _token(_mails_to(mailbox, "eve@example.com", "sıfırlama")[0])
+
+    assert _change(api, token, "new@example.com", password="wrong").code == "INVALID_CREDENTIALS"
+    assert _change(api, token, "EVE@example.com").code == "EMAIL_UNCHANGED"
+    assert _change(api, token, "taken@example.com").code == "EMAIL_TAKEN"
+    assert _change(api, token, "New@Example.com").status == 202
+    assert api.get("/api/v1/auth/me", token=token).data["email"] == "eve@example.com"  # nothing changed yet
+    [warning] = _mails_to(mailbox, "eve@example.com", "istendi")
+    assert "n***@example.com" in warning.text and "new@example.com" not in warning.text
+
+    _confirm_change(api, mailbox, "new@example.com")
+    me = api.get("/api/v1/auth/me", token=token).data
+    assert me["email"] == "new@example.com" and me["email_verified"] is True  # sessions survive a normal change
+    reset = api.post("/api/v1/auth/password/reset", json={"token": stale_reset, "new_password": NEW_PASSWORD})
+    assert reset.code == "ACTION_TOKEN_INVALID"  # links sent to the old inbox died with the change
+    [notice] = _mails_to(mailbox, "eve@example.com", "değiştirildi")
+    assert "/revert-email-change#token=" in notice.text
+
+
+def test_old_inbox_can_undo_a_takeover_and_wins_a_chain(app: Flask, api: Api, mailbox: list[RenderedEmail]) -> None:
+    api.register("owner", email="owner@example.com")
+    attacker = api.login("owner").data["access_token"]
+    assert _change(api, attacker, "a@evil.example.org").status == 202
+    _confirm_change(api, mailbox, "a@evil.example.org")
+    _backdate(app, "change_email", created_at=timedelta(minutes=5))  # past the burst guard
+    assert _change(api, attacker, "b@evil.example.org").status == 202
+    _confirm_change(api, mailbox, "b@evil.example.org")
+    owner_undo = _token(_mails_to(mailbox, "owner@example.com", "değiştirildi")[0])
+    attacker_undo = _token(_mails_to(mailbox, "a@evil.example.org", "değiştirildi")[0])
+
+    revert = api.post("/api/v1/auth/email/change/revert", json={"token": owner_undo})
+    assert revert.status == 200  # the second change did not cancel the owner's undo link
+    assert api.get("/api/v1/auth/me", token=attacker).status == 401  # every session ended
+    assert api.post("/api/v1/auth/refresh", headers=CSRF).status == 401
+    assert len(_mails_to(mailbox, "owner@example.com", "sıfırlama")) == 1  # reset link handed to the owner
+    assert api.post("/api/v1/auth/email/change/revert", json={"token": attacker_undo}).code == "ACTION_TOKEN_INVALID"
+    me = api.get("/api/v1/auth/me", token=api.login("owner").data["access_token"]).data
+    assert me["email"] == "owner@example.com" and me["email_verified"] is True
+
+
+# ── new-device alert ─────────────────────────────────────────────────────────
+PHONE = {
+    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile Safari/604.1"
+}
+
+
+def test_sign_in_from_a_new_device_alerts_the_owner_once(api: Api, mailbox: list[RenderedEmail]) -> None:
+    api.register("nina", email="nina@example.com")
+    api.login("nina")
+    api.login("nina")  # first and only device so far (signup) → not news
+    assert _mails_to(mailbox, "nina@example.com", "yeni bir cihaz") == []
+
+    assert api.login("nina", headers=PHONE).status == 200
+    [alert] = _mails_to(mailbox, "nina@example.com", "yeni bir cihaz")
+    assert "iPhone" in alert.text or "iOS" in alert.text, alert.text
+    assert "IP adresi:" in alert.text and "Cihazlar" in alert.text
+
+    api.login("nina", headers=PHONE)  # known device now
+    assert len(_mails_to(mailbox, "nina@example.com", "yeni bir cihaz")) == 1

@@ -52,13 +52,15 @@ class RefreshToken(db.Model):
 
 
 class ActionToken(db.Model):
-    """One-time link (e-mail verification, password reset). Only the SHA-256 of
+    """One-time link (e-mail verification, password reset, e-mail change and its undo). Only the SHA-256 of
     the secret is stored; ``email`` pins the address the link was sent to, so a
     link stops working if the account's address changes."""
 
     __tablename__ = "identity_action_tokens"
     __table_args__ = (
-        db.CheckConstraint("purpose IN ('verify_email','reset_password')", name="purpose_valid"),
+        db.CheckConstraint(
+            "purpose IN ('verify_email','reset_password','change_email','revert_email')", name="purpose_valid"
+        ),
         db.Index("ix_identity_action_tokens_user_purpose", "user_id", "purpose"),
     )
 

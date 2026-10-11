@@ -21,6 +21,7 @@ from app.modules.identity.domain import (
     EmailDeliveryUnavailableError,
     EmailMissingError,
     EmailTakenError,
+    EmailUnchangedError,
     InvalidCredentialsError,
     InvalidUsernameError,
     LoginThrottledError,
@@ -31,11 +32,14 @@ from app.modules.identity.domain import (
     UserNotFoundError,
     WeakPasswordError,
 )
-from app.shared_kernel.events import DeviceRevoked, UserRegistered
+from app.shared_kernel.events import DeviceRevoked, EmailChanged, NewDeviceSignedIn, PasswordChanged, UserRegistered
 
 
 def _services(c: Any) -> None:
+    from werkzeug.security import check_password_hash
+
     from app.modules.identity.guard import CaptchaVerifier, LoginAttemptGuard, NoCaptchaVerifier
+    from app.modules.identity.notices import SecurityNotices
     from app.modules.identity.recovery import AccountRecoveryService
     from app.modules.identity.services import (
         AuthService,
@@ -71,7 +75,12 @@ def _services(c: Any) -> None:
             mailer=lambda: c.resolve(CapabilityIndex).optional("notifications.email"),
             frontend_base_url=c.resolve(Settings).frontend_base_url,
             hash_password=hash_password,
+            check_password=check_password_hash,
         ),
+    )
+    c.register(
+        SecurityNotices,
+        lambda c: SecurityNotices(mailer=lambda: c.resolve(CapabilityIndex).optional("notifications.email")),
     )
     c.register(IdentityAdmin, lambda c: IdentityAdminService(c.resolve(UnitOfWorkFactory), c.resolve(Clock)))
 
@@ -96,6 +105,19 @@ manifest = ModuleManifest(
         SubscriptionSpec(
             UserRegistered.NAME, "identity.send_verification_mail", "app.modules.identity.handlers:on_user_registered"
         ),
+        SubscriptionSpec(
+            PasswordChanged.NAME,
+            "identity.notify_password_changed",
+            "app.modules.identity.handlers:on_password_changed",
+        ),
+        SubscriptionSpec(
+            EmailChanged.NAME, "identity.notify_email_changed", "app.modules.identity.handlers:on_email_changed"
+        ),
+        SubscriptionSpec(
+            NewDeviceSignedIn.NAME,
+            "identity.notify_new_device",
+            "app.modules.identity.handlers:on_new_device_signed_in",
+        ),
     ),
     # Dropped automatically when the notifications module is disabled.
     extensions=(ExtensionSpec("notifications.templates", "app.modules.identity.emails:templates"),),
@@ -117,6 +139,7 @@ manifest = ModuleManifest(
         EmailDeliveryUnavailableError: (503, "EMAIL_DELIVERY_UNAVAILABLE"),
         EmailMissingError: (409, "EMAIL_MISSING"),
         EmailAlreadyVerifiedError: (409, "EMAIL_ALREADY_VERIFIED"),
+        EmailUnchangedError: (422, "EMAIL_UNCHANGED"),
     },
     cli=("app.modules.identity.cli:identity_cli",),
     post_boot="app.modules.identity.post_boot:validate_roles",

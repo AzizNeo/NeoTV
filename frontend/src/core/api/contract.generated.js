@@ -484,6 +484,17 @@ export const OPERATIONS = Object.freeze({
     "idempotent": false,
     "errors": []
   },
+  "identity_confirm_email_change": {
+    "method": "POST",
+    "path": "/api/v1/auth/email/change/confirm",
+    "auth": "public",
+    "profile": false,
+    "idempotent": false,
+    "errors": [
+      "ACTION_TOKEN_INVALID",
+      "EMAIL_TAKEN"
+    ]
+  },
   "identity_forgot_password": {
     "method": "POST",
     "path": "/api/v1/auth/password/forgot",
@@ -558,6 +569,19 @@ export const OPERATIONS = Object.freeze({
       "INVALID_USERNAME"
     ]
   },
+  "identity_request_email_change": {
+    "method": "POST",
+    "path": "/api/v1/auth/email/change",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": [
+      "INVALID_CREDENTIALS",
+      "EMAIL_UNCHANGED",
+      "EMAIL_TAKEN",
+      "EMAIL_DELIVERY_UNAVAILABLE"
+    ]
+  },
   "identity_reset_password": {
     "method": "POST",
     "path": "/api/v1/auth/password/reset",
@@ -567,6 +591,17 @@ export const OPERATIONS = Object.freeze({
     "errors": [
       "ACTION_TOKEN_INVALID",
       "WEAK_PASSWORD"
+    ]
+  },
+  "identity_revert_email_change": {
+    "method": "POST",
+    "path": "/api/v1/auth/email/change/revert",
+    "auth": "public",
+    "profile": false,
+    "idempotent": false,
+    "errors": [
+      "ACTION_TOKEN_INVALID",
+      "EMAIL_TAKEN"
     ]
   },
   "identity_send_email_verification": {

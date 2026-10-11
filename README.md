@@ -43,7 +43,8 @@ subscriptions, DRM, recommendations and a back office — built around a small k
   pluggable license-issuer extension point (ClearKey built in).
 - **Security by default.** Stateless access tokens + rotating refresh tokens with reuse detection, login throttling,
   password policy, account recovery with hashed single-use links (secret in the URL fragment, no account
-  enumeration), SSRF-guarded egress, signed webhooks.
+  enumeration), e-mail change confirmed from the new inbox with a takeover-proof undo link for the old one,
+  security notices (password changed, sign-in from a new device), SSRF-guarded egress, signed webhooks.
 - **Quality gates.** 180+ backend tests (unit, contract, end-to-end, migration chain, PostgreSQL + Redis
   integration, architecture fitness), 20+ frontend tests, ruff + mypy + ESLint, hash-locked dependencies, secret
   scanning, and a **fresh-install smoke test on Windows and Linux** on every push.

@@ -46,6 +46,11 @@ class UsernameCheckRequest(_Strict):
     username: str = Field(min_length=1, max_length=64)
 
 
+class ChangeEmailRequest(_Strict):
+    new_email: EmailStr
+    password: str = Field(min_length=1, max_length=128)
+
+
 class ChangePasswordRequest(_Strict):
     current_password: str = Field(min_length=1, max_length=128)
     new_password: str = Field(min_length=1, max_length=128)
@@ -61,6 +66,10 @@ class ResetPasswordRequest(_Strict):
 
 
 class VerifyEmailRequest(_Strict):
+    token: str = Field(min_length=20, max_length=200)
+
+
+class EmailChangeLinkRequest(_Strict):
     token: str = Field(min_length=20, max_length=200)
 
 
@@ -289,3 +298,44 @@ def send_email_verification() -> Response:
 def verify_email(body: VerifyEmailRequest) -> Response:
     resolve(AccountRecoveryService).verify_email(raw_token=body.token)
     return ok(None, message="E-mail address verified.")
+
+
+@blueprint.post("/email/change")
+@endpoint(
+    summary="Request an e-mail change: confirmation link to the new address, warning to the current one",
+    rate=Rate("auth.email_change", rps=0.05, burst=5),
+    body=ChangeEmailRequest,
+    status=202,
+    errors=("INVALID_CREDENTIALS", "EMAIL_UNCHANGED", "EMAIL_TAKEN", "EMAIL_DELIVERY_UNAVAILABLE"),
+)
+def request_email_change(body: ChangeEmailRequest) -> Response:
+    resolve(AccountRecoveryService).request_email_change(
+        user_id=current_user.id, password=body.password, new_email=str(body.new_email)
+    )
+    return ok(None, status=202, message="Confirmation link sent to the new address.")
+
+
+@blueprint.post("/email/change/confirm")
+@endpoint(
+    auth="public",
+    summary="Confirm an e-mail change with the link sent to the new address",
+    rate=Rate("auth.email_change_confirm", rps=0.5, burst=5, per="ip"),
+    body=EmailChangeLinkRequest,
+    errors=("ACTION_TOKEN_INVALID", "EMAIL_TAKEN"),
+)
+def confirm_email_change(body: EmailChangeLinkRequest) -> Response:
+    resolve(AccountRecoveryService).confirm_email_change(raw_token=body.token)
+    return ok(None, message="E-mail address changed.")
+
+
+@blueprint.post("/email/change/revert")
+@endpoint(
+    auth="public",
+    summary="Undo an e-mail change from the old address (ends every session, mails a reset link)",
+    rate=Rate("auth.email_change_revert", rps=0.2, burst=5, per="ip"),
+    body=EmailChangeLinkRequest,
+    errors=("ACTION_TOKEN_INVALID", "EMAIL_TAKEN"),
+)
+def revert_email_change(body: EmailChangeLinkRequest) -> Response:
+    resolve(AccountRecoveryService).revert_email_change(raw_token=body.token)
+    return _clear_cookie(ok(None, message="E-mail change undone. Every session was signed out; check your inbox."))

@@ -956,6 +956,238 @@
         }
       }
     },
+    "/api/v1/auth/email/change": {
+      "post": {
+        "operationId": "identity_request_email_change",
+        "summary": "Request an e-mail change: confirmation link to the new address, warning to the current one",
+        "tags": [
+          "identity"
+        ],
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {},
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-error-codes": [
+          "INVALID_CREDENTIALS",
+          "EMAIL_UNCHANGED",
+          "EMAIL_TAKEN",
+          "EMAIL_DELIVERY_UNAVAILABLE"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "new_email": {
+                    "format": "email",
+                    "title": "New Email",
+                    "type": "string"
+                  },
+                  "password": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "title": "Password",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "new_email",
+                  "password"
+                ],
+                "title": "ChangeEmailRequest",
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/email/change/confirm": {
+      "post": {
+        "operationId": "identity_confirm_email_change",
+        "summary": "Confirm an e-mail change with the link sent to the new address",
+        "tags": [
+          "identity"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {},
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "public",
+        "x-error-codes": [
+          "ACTION_TOKEN_INVALID",
+          "EMAIL_TAKEN"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "token": {
+                    "maxLength": 200,
+                    "minLength": 20,
+                    "title": "Token",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "token"
+                ],
+                "title": "EmailChangeLinkRequest",
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/email/change/revert": {
+      "post": {
+        "operationId": "identity_revert_email_change",
+        "summary": "Undo an e-mail change from the old address (ends every session, mails a reset link)",
+        "tags": [
+          "identity"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {},
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "public",
+        "x-error-codes": [
+          "ACTION_TOKEN_INVALID",
+          "EMAIL_TAKEN"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "token": {
+                    "maxLength": 200,
+                    "minLength": 20,
+                    "title": "Token",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "token"
+                ],
+                "title": "EmailChangeLinkRequest",
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/email/verification": {
       "post": {
         "operationId": "identity_send_email_verification",

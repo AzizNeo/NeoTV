@@ -44,3 +44,8 @@ export const forgotPasswordSchema = z.object({
 export const resetPasswordSchema = z
   .object({ password: passwordRule, confirm: z.string() })
   .refine((v) => v.password === v.confirm, { path: ['confirm'], message: 'Şifreler eşleşmiyor' });
+
+export const changeEmailSchema = z.object({
+  email: z.string().trim().min(1, 'E-posta gerekli').email('Geçerli bir e-posta girin'),
+  password: z.string().min(1, 'Mevcut şifre gerekli'),
+});

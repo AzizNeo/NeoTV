@@ -12,7 +12,7 @@ describe('installed features', () => {
     expect(registry.features).toHaveLength(FEATURES.length);
     expect(registry.routes.some((r) => r.path === '/admin/*' && r.guard === 'admin')).toBe(true);
     // Links opened from e-mail must work signed in *and* signed out.
-    expect(registry.routes.filter((r) => r.guard === 'any').map((r) => r.path).sort()).toEqual(['/reset-password', '/verify-email']);
+    expect(registry.routes.filter((r) => r.guard === 'any').map((r) => r.path).sort()).toEqual(['/confirm-email-change', '/reset-password', '/revert-email-change', '/verify-email']);
     expect(buildRouteTree(registry)).toHaveLength(1);
   });
 

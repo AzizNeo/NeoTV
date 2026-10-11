@@ -44,6 +44,44 @@ class UserStatusChanged:
 
 
 @dataclass(frozen=True, slots=True)
+class PasswordChanged:
+    """The account password was replaced; every session was revoked in the same transaction.
+
+    ``method`` is ``"change"`` (signed-in user knew the old password) or ``"reset"`` (one-time e-mail link).
+    """
+
+    NAME: ClassVar[str] = "identity.password_changed"
+    VERSION: ClassVar[int] = 1
+    user_id: int
+    method: str
+    occurred_at: str
+
+
+@dataclass(frozen=True, slots=True)
+class EmailChanged:
+    """The account's e-mail address was replaced after the new address was proven by a one-time link."""
+
+    NAME: ClassVar[str] = "identity.email_changed"
+    VERSION: ClassVar[int] = 1
+    user_id: int
+    old_email: str | None
+    new_email: str
+    occurred_at: str
+
+
+@dataclass(frozen=True, slots=True)
+class NewDeviceSignedIn:
+    """devices → *: a sign-in from a device this account has never used before (not the very first device)."""
+
+    NAME: ClassVar[str] = "devices.new_device_signed_in"
+    VERSION: ClassVar[int] = 1
+    user_id: int
+    device_label: str
+    ip: str
+    occurred_at: str
+
+
+@dataclass(frozen=True, slots=True)
 class DeviceRevoked:
     NAME: ClassVar[str] = "devices.device_revoked"
     VERSION: ClassVar[int] = 1
@@ -117,7 +155,10 @@ ALL_EVENTS: tuple[type, ...] = (
     UserRegistered,
     UserLoggedIn,
     UserStatusChanged,
+    PasswordChanged,
+    EmailChanged,
     DeviceRevoked,
+    NewDeviceSignedIn,
     ProfileDeleted,
     SubscriptionChanged,
     ContentRemoved,

@@ -32,6 +32,8 @@ def role_grants(role: str, permission: str) -> bool:
 class TokenPurpose(StrEnum):
     VERIFY_EMAIL = "verify_email"
     RESET_PASSWORD = "reset_password"  # noqa: S105 - purpose label, not a secret
+    CHANGE_EMAIL = "change_email"  # sent to the *new* address; proves control of it
+    REVERT_EMAIL = "revert_email"  # sent to the *old* address after a change; undoes a takeover
 
 
 #: Lifetimes of one-time links. Short for resets (account takeover window),
@@ -39,9 +41,17 @@ class TokenPurpose(StrEnum):
 TOKEN_TTL: Mapping[TokenPurpose, timedelta] = {
     TokenPurpose.RESET_PASSWORD: timedelta(minutes=30),
     TokenPurpose.VERIFY_EMAIL: timedelta(hours=48),
+    TokenPurpose.CHANGE_EMAIL: timedelta(hours=24),
+    TokenPurpose.REVERT_EMAIL: timedelta(days=7),
 }
 #: At most one mail per purpose and account in this window (mail-bombing guard).
 TOKEN_COOLDOWN = timedelta(seconds=60)
+
+
+def mask_email(address: str) -> str:
+    """``jane.doe@example.com`` → ``j***@example.com`` — enough to recognise, not enough to harvest."""
+    local, _, domain = address.partition("@")
+    return f"{local[:1]}***@{domain}" if domain else "***"
 
 
 # ── Errors ──────────────────────────────────────────────────────────────────
@@ -162,3 +172,7 @@ class EmailMissingError(IdentityError):
 
 class EmailAlreadyVerifiedError(IdentityError):
     pass
+
+
+class EmailUnchangedError(IdentityError):
+    """The requested address is already the account's address."""

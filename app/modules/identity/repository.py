@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import func, or_, select, update
+from sqlalchemy import true as sa_true
 from sqlalchemy.orm import Session
 
 from app.kernel.time import utcnow
@@ -109,6 +110,33 @@ class ActionTokenRepository:
         result = self._s.execute(
             update(ActionToken)
             .where(ActionToken.user_id == user_id, ActionToken.purpose == purpose, ActionToken.used_at.is_(None))
+            .values(used_at=now)
+        )
+        return int(result.rowcount or 0)
+
+    def consume_all_open(self, user_id: int, now: datetime, *, keep: frozenset[str] = frozenset()) -> int:
+        """Burn every open link of the account except the purposes in ``keep``."""
+        result = self._s.execute(
+            update(ActionToken)
+            .where(
+                ActionToken.user_id == user_id,
+                ActionToken.used_at.is_(None),
+                ActionToken.purpose.not_in(keep) if keep else sa_true(),
+            )
+            .values(used_at=now)
+        )
+        return int(result.rowcount or 0)
+
+    def consume_open_since(self, user_id: int, purpose: str, since: datetime, now: datetime) -> int:
+        """Burn open links of ``purpose`` created at/after ``since`` (later links in a chain)."""
+        result = self._s.execute(
+            update(ActionToken)
+            .where(
+                ActionToken.user_id == user_id,
+                ActionToken.purpose == purpose,
+                ActionToken.used_at.is_(None),
+                ActionToken.created_at >= since,
+            )
             .values(used_at=now)
         )
         return int(result.rowcount or 0)

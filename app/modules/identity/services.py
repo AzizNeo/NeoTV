@@ -35,7 +35,7 @@ from app.modules.identity.domain import (
 from app.modules.identity.guard import CaptchaVerifier, LoginAttemptGuard
 from app.modules.identity.models import RefreshToken, User
 from app.modules.identity.repository import RefreshTokenRepository, UserRepository
-from app.shared_kernel.events import UserLoggedIn, UserRegistered, UserStatusChanged
+from app.shared_kernel.events import PasswordChanged, UserLoggedIn, UserRegistered, UserStatusChanged
 
 PASSWORD_METHOD = "scrypt"  # noqa: S105 - hash algorithm name
 _DUMMY_HASH = generate_password_hash("timing-equaliser-not-a-password", method=PASSWORD_METHOD)
@@ -230,6 +230,8 @@ class AuthService:
             user.token_version += 1
             RefreshTokenRepository(uow.session).revoke_user(user_id)
             session = self._issue(uow.session, user, client, family_id=str(uuid.uuid4()))
+            # Security notice to the owner rides on the outbox: committed atomically with the change.
+            uow.outbox.add(PasswordChanged(user_id=user.id, method="change", occurred_at=self._clock.now().isoformat()))
         return session
 
     def revoke_device_sessions(self, *, user_id: int, device_key: str, session: Any) -> int:

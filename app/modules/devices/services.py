@@ -43,8 +43,14 @@ class DeviceService:
     def current_key(self, user_id: int, client_device_id: str | None, user_agent: str | None) -> str:
         return self._keys.key(user_id, client_device_id, user_agent)
 
-    def touch(self, *, session: Any, user_id: int, client_device_id: str | None, user_agent: str, ip: str) -> None:
-        """Atomic upsert on (user_id, device_key) — no read-then-insert race (RT-06)."""
+    def touch(
+        self, *, session: Any, user_id: int, client_device_id: str | None, user_agent: str, ip: str
+    ) -> str | None:
+        """Atomic upsert on (user_id, device_key) — no read-then-insert race (RT-06).
+
+        Returns the device's display name when this sign-in is the account's first from this device *and* the
+        account already had another one (the very first device — signup — is not news). ``None`` otherwise.
+        """
         agent = parse_user_agent(user_agent)
         now = self._clock.now()
         stmt = dialect_insert(session, Device.__table__).values(
@@ -61,7 +67,7 @@ class DeviceService:
             last_seen_at=now,
             created_at=now,
         )
-        session.execute(
+        login_count = session.execute(
             stmt.on_conflict_do_update(
                 index_elements=["user_id", "device_key"],
                 set_={
@@ -70,8 +76,12 @@ class DeviceService:
                     "is_active": True,
                     "login_count": Device.__table__.c.login_count + 1,
                 },
-            )
-        )
+            ).returning(Device.__table__.c.login_count)  # 1 ⇔ this statement inserted the row
+        ).scalar_one()
+        if login_count != 1:
+            return None
+        others = session.execute(select(func.count(Device.id)).where(Device.user_id == user_id)).scalar_one()
+        return agent.display_name[:100] if others > 1 else None
 
     def list(self, *, user_id: int, current_key: str) -> list[DeviceView]:
         with self._uow() as uow:
