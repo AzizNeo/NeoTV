@@ -1039,5 +1039,47 @@ export const OPERATIONS = Object.freeze({
       "PLAY_SOURCE_NOT_FOUND",
       "TITLE_RATING_CONFLICT"
     ]
+  },
+  "titles_browse": {
+    "method": "GET",
+    "path": "/api/v1/titles",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
+  },
+  "titles_detail": {
+    "method": "GET",
+    "path": "/api/v1/titles/{slug}",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": [
+      "TITLE_NOT_FOUND"
+    ]
+  },
+  "titles_featured": {
+    "method": "GET",
+    "path": "/api/v1/titles/featured",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
+  },
+  "titles_genres": {
+    "method": "GET",
+    "path": "/api/v1/titles/genres",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
+  },
+  "titles_rails": {
+    "method": "GET",
+    "path": "/api/v1/titles/rails",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
   }
 });

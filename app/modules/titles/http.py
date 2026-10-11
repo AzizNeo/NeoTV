@@ -11,8 +11,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.kernel.container import resolve
 from app.kernel.http.endpoint import endpoint
+from app.kernel.http.profile_context import current_profile
 from app.kernel.http.responses import no_content, ok
+from app.kernel.resilience.rate_limit import Rate
 from app.modules.titles.domain import EpisodeDraft, SeasonDraft, TitleDraft, TitleKind
+from app.modules.titles.queries import TitleQuery, TitleQueryService
 from app.modules.titles.services import TitleAdminService
 
 blueprint = Blueprint("titles", __name__)
@@ -111,6 +114,91 @@ class TitleAdminPageOut(BaseModel):
     next_cursor: str | None
 
 
+class BrowseQuery(BaseModel):
+    kind: Literal["movie", "series"] | None = None
+    genre: str | None = Field(default=None, max_length=80)
+    search: str | None = Field(default=None, max_length=100)
+    year_from: int | None = Field(default=None, ge=1888, le=2100)
+    year_to: int | None = Field(default=None, ge=1888, le=2100)
+    sort: Literal["recent", "name", "year"] = "recent"
+    page: int = Field(default=1, ge=1, le=10_000)
+    per_page: int = Field(default=24, ge=1, le=100)
+
+
+class RailsQuery(BaseModel):
+    genres: int = Field(default=6, ge=1, le=20)
+    per_rail: int = Field(default=12, ge=1, le=30)
+
+
+class FeaturedQuery(BaseModel):
+    limit: int = Field(default=5, ge=1, le=10)
+
+
+class TitleCardOut(BaseModel):
+    slug: str
+    kind: str
+    name: str
+    year: int | None
+    rating: str
+    runtime_minutes: int | None
+    season_count: int
+    genres: list[str]
+    poster_url: str | None
+    backdrop_url: str | None
+    available: bool
+
+
+class TitlePageOut(BaseModel):
+    items: list[TitleCardOut]
+    total: int
+    page: int
+    per_page: int
+
+
+class GenreOut(BaseModel):
+    slug: str
+    name: str
+    count: int
+
+
+class RailOut(BaseModel):
+    genre: GenreOut
+    items: list[TitleCardOut]
+
+
+class FeaturedOut(BaseModel):
+    card: TitleCardOut
+    synopsis: str | None
+    play_ref: str | None
+
+
+class EpisodeOut(BaseModel):
+    number: int
+    name: str
+    synopsis: str | None
+    runtime_minutes: int | None
+    still_url: str | None
+    play_ref: str | None
+    available: bool
+
+
+class SeasonOut(BaseModel):
+    number: int
+    name: str | None
+    episodes: list[EpisodeOut]
+
+
+class TitleDetailOut(BaseModel):
+    card: TitleCardOut
+    synopsis: str | None
+    play_ref: str | None
+    seasons: list[SeasonOut]
+
+
+def _kids() -> bool:
+    return current_profile().is_kids
+
+
 def _doc(draft: TitleDraft) -> dict[str, object]:
     return TitleDocOut.model_validate(asdict(draft)).model_dump(mode="json")
 
@@ -157,3 +245,68 @@ def admin_put(slug: str, body: TitleDocIn) -> Response:
 def admin_delete(slug: str) -> Response:
     resolve(TitleAdminService).delete(slug)
     return no_content()
+
+
+# ── Browsing (profile-aware: a kids profile sees only what it may play) ───────
+_BROWSE_RATE = Rate("titles.browse", rps=10, burst=30)
+
+
+@blueprint.get("")
+@endpoint(
+    summary="Browse titles (filters, search, sort)",
+    profile=True,
+    query=BrowseQuery,
+    response=TitlePageOut,
+    rate=_BROWSE_RATE,
+)
+def browse(query: BrowseQuery) -> object:
+    return resolve(TitleQueryService).page(
+        TitleQuery(
+            kids_only=_kids(),
+            kind=TitleKind(query.kind) if query.kind else None,
+            genre=query.genre,
+            search=query.search,
+            year_from=query.year_from,
+            year_to=query.year_to,
+            sort=query.sort,
+            page=query.page,
+            per_page=query.per_page,
+        )
+    )
+
+
+@blueprint.get("/genres")
+@endpoint(summary="Genres with title counts", profile=True, response=list[GenreOut])
+def genres() -> object:
+    return resolve(TitleQueryService).genres(kids_only=_kids())
+
+
+@blueprint.get("/rails")
+@endpoint(
+    summary="Home rows: biggest genres with their titles",
+    profile=True,
+    query=RailsQuery,
+    response=list[RailOut],
+    rate=_BROWSE_RATE,
+)
+def rails(query: RailsQuery) -> object:
+    return resolve(TitleQueryService).rails(kids_only=_kids(), genres=query.genres, per_rail=query.per_rail)
+
+
+@blueprint.get("/featured")
+@endpoint(
+    summary="Hero titles (playable only, by featured rank)",
+    profile=True,
+    query=FeaturedQuery,
+    response=list[FeaturedOut],
+)
+def featured(query: FeaturedQuery) -> object:
+    return resolve(TitleQueryService).featured(kids_only=_kids(), limit=query.limit)
+
+
+@blueprint.get("/<string:slug>")
+@endpoint(
+    summary="Title detail with seasons and episodes", profile=True, response=TitleDetailOut, errors=("TITLE_NOT_FOUND",)
+)
+def detail(slug: str) -> object:
+    return resolve(TitleQueryService).detail(slug, kids_only=_kids())

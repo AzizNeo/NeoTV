@@ -15,7 +15,15 @@ from app.modules.titles.domain import (
 
 
 def _services(c: Any) -> None:
+    from app.modules.titles.queries import TitleQueryService
     from app.modules.titles.services import TitleAdminService
+
+    c.register(
+        TitleQueryService,
+        lambda c: TitleQueryService(
+            c.resolve(UnitOfWorkFactory), c.resolve(CapabilityIndex).required("playback.content")
+        ),
+    )
 
     c.register(
         TitleAdminService,

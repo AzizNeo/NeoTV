@@ -30,6 +30,8 @@ RUNTIME_RANGE = (1, 1000)  # minutes
 
 _SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 _SLUG_MAX = 80
+#: Path segments of /api/v1/titles/<…> that are not titles (see http.py).
+RESERVED_SLUGS = frozenset({"admin", "featured", "genres", "rails"})
 # Turkish letters that NFKD does not decompose into ASCII.
 _TRANSLIT = str.maketrans({"ı": "i", "İ": "i", "ş": "s", "Ş": "s", "ğ": "g", "Ğ": "g", "ç": "c", "Ç": "c",
                            "ö": "o", "Ö": "o", "ü": "u", "Ü": "u"})  # fmt: skip
@@ -134,6 +136,8 @@ def validate(draft: TitleDraft) -> None:
 
     if not valid_slug(draft.slug):
         add("slug: lowercase letters, digits and single dashes, at most 80 characters")
+    elif draft.slug in RESERVED_SLUGS:
+        add(f"slug: {draft.slug!r} is reserved")
     if not draft.name.strip() or len(draft.name) > MAX_NAME:
         add(f"name: 1–{MAX_NAME} characters")
     if draft.rating not in RATINGS:

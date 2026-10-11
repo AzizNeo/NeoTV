@@ -89,3 +89,7 @@ def test_numbers_must_be_unique_and_refs_well_formed() -> None:
     assert any("episode numbers must be unique" in p for p in problems)
     assert any("expected '<namespace>:<id>'" in p for p in _problems(_movie(play_ref="catalog-2")))
     assert any("cannot play another title" in p for p in _problems(_movie(play_ref="titles:1")))
+
+
+def test_route_words_are_reserved_slugs() -> None:
+    assert _problems(_movie(slug="genres")) == ["slug: 'genres' is reserved"]
