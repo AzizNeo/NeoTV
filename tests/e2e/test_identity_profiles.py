@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from tests.support.client import PASSWORD, Api
 
 CSRF = {"X-Requested-With": "XMLHttpRequest"}
@@ -100,3 +102,18 @@ def test_devices_are_tracked_from_login_events(api: Api) -> None:
     assert api.delete(f"/api/v1/devices/{devices[0]['id']}", token=token).status == 204
     # the revoked device's refresh tokens are gone (identity consumer of devices.device_revoked)
     assert api.post("/api/v1/auth/refresh", headers=CSRF).status == 401
+
+
+def test_cli_created_admin_gets_the_same_onboarding_as_signup(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Regression: create-admin bypassed UserRegistered, so admins had no billing row
+    and the dashboard's plan distribution missed them."""
+    from app.kernel.container import resolve
+    from app.modules.billing.api import BillingReports
+    from app.modules.identity.cli import create_admin
+
+    monkeypatch.setenv("NEOTV_ADMIN_PASSWORD", "Cli-Created-42!")
+    result = api.app.test_cli_runner().invoke(create_admin, ["--username", "boss"])
+    assert result.exit_code == 0, result.output
+    api.register("viewer2")
+    with api.app.app_context():
+        assert resolve(BillingReports).plan_distribution() == {"free": 2}

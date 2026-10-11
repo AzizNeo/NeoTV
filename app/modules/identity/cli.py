@@ -8,12 +8,14 @@ import click
 from flask.cli import AppGroup
 
 from app.kernel.container import resolve
+from app.kernel.outbox.trigger import dispatch_if_pending
 from app.kernel.time import Clock
 from app.kernel.uow import UnitOfWorkFactory
 from app.modules.identity.domain import MIN_PASSWORD_LENGTH, Role, WeakPasswordError, validate_password
 from app.modules.identity.models import User
 from app.modules.identity.repository import UserRepository
 from app.modules.identity.services import hash_password
+from app.shared_kernel.events import UserRegistered
 
 identity_cli = AppGroup("identity", help="Identity administration.")
 
@@ -74,7 +76,8 @@ def create_admin(username: str, email: str | None, password_env: str, skip_exist
         users = UserRepository(uow.session)
         if users.username_exists(username):  # raced with another process
             raise click.ClickException(f"user '{username}' already exists — refusing to modify it")
-        users.add(
+        now = resolve(Clock).now()
+        user = users.add(
             User(
                 username=username,
                 email=email,
@@ -82,9 +85,15 @@ def create_admin(username: str, email: str | None, password_env: str, skip_exist
                 role=Role.ADMIN,
                 is_active=True,
                 token_version=1,
-                created_at=resolve(Clock).now(),
+                created_at=now,
             )
         )
+        # Same onboarding as a self-service signup (billing row, default profile, …):
+        # consumers react to the event, the CLI must not bypass it.
+        uow.outbox.add(
+            UserRegistered(user_id=user.id, username=user.username, email=user.email, registered_at=now.isoformat())
+        )
+    dispatch_if_pending(op="identity.create_admin")
     click.echo(f"admin '{username}' created")
 
 

@@ -528,7 +528,11 @@ class BillingReportService:
         self._grace = timedelta(days=grace_days)
 
     def plan_distribution(self) -> dict[str, int]:
-        """Effective plan → number of accounts (accounts without a row count as free)."""
+        """Effective plan → number of subscription rows.
+
+        Every account gets its row from the ``UserRegistered`` consumer, so this equals the account count as
+        long as no code path creates users without publishing that event.
+        """
         now = self._clock.now()
         result: dict[str, int] = {}
         with self._uow() as uow:
