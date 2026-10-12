@@ -693,6 +693,14 @@ export const OPERATIONS = Object.freeze({
     "idempotent": false,
     "errors": []
   },
+  "library_get_progress_many": {
+    "method": "GET",
+    "path": "/api/v1/library/progress",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
+  },
   "library_history": {
     "method": "GET",
     "path": "/api/v1/library/history",

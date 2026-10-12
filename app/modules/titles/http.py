@@ -188,11 +188,17 @@ class SeasonOut(BaseModel):
     episodes: list[EpisodeOut]
 
 
+class GenreLinkOut(BaseModel):
+    slug: str
+    name: str
+
+
 class TitleDetailOut(BaseModel):
     card: TitleCardOut
     synopsis: str | None
     play_ref: str | None
     seasons: list[SeasonOut]
+    genre_links: list[GenreLinkOut]
 
 
 def _kids() -> bool:

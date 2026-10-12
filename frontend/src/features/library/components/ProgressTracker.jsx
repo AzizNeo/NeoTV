@@ -50,6 +50,7 @@ export function ProgressTracker({ video, contentRef, isLive }) {
       save();
       queryClient.invalidateQueries({ queryKey: libraryKeys.continue });
       queryClient.invalidateQueries({ queryKey: libraryKeys.history });
+      queryClient.invalidateQueries({ queryKey: libraryKeys.progress });
     };
   }, [video, contentRef, isLive, queryClient]);
 

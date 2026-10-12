@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { Lock, Radio } from 'lucide-react';
+import { Rail } from '../Rail/Rail';
 import styles from './ContentRow.module.css';
 
 /**
@@ -8,19 +9,22 @@ import styles from './ContentRow.module.css';
  * `actions(item)` renders per-card extras (e.g. a favourite toggle from the
  * library feature) without this component knowing about them.
  */
-export function ContentRow({ title, subtitle, items, onSelect, actions, variant = 'landscape' }) {
+export function ContentRow({ title, subtitle, items, onSelect, actions, variant = 'landscape', layout = 'rail' }) {
   if (!items?.length) return null;
+  const cards = items.map((item) => (
+    <ContentCard key={item.key ?? item.ref} item={item} onSelect={onSelect} actions={actions} variant={variant} />
+  ));
   return (
     <section className={styles.row} aria-label={title}>
       <header className={styles.header}>
         <h2 className={styles.title}>{title}</h2>
         {subtitle && <span className={styles.subtitle}>{subtitle}</span>}
       </header>
-      <div className={`${styles.grid} ${styles[variant]}`}>
-        {items.map((item) => (
-          <ContentCard key={item.key ?? item.ref} item={item} onSelect={onSelect} actions={actions} variant={variant} />
-        ))}
-      </div>
+      {layout === 'rail' ? (
+        <Rail size={variant} label={title}>{cards}</Rail>
+      ) : (
+        <div className={`${styles.grid} ${styles[variant]}`}>{cards}</div>
+      )}
     </section>
   );
 }
@@ -38,7 +42,7 @@ export function ContentCard({ item, onSelect, actions, variant = 'landscape' }) 
           )}
           {item.live && (
             <span className={styles.liveBadge}>
-              <Radio size={12} aria-hidden="true" /> CANLI
+              <Radio size={12} aria-hidden="true" /> Canlı
             </span>
           )}
           {item.locked && (
@@ -80,5 +84,6 @@ ContentRow.propTypes = {
   onSelect: PropTypes.func,
   actions: PropTypes.func,
   variant: PropTypes.oneOf(['landscape', 'poster']),
+  layout: PropTypes.oneOf(['rail', 'grid']),
 };
 ContentCard.propTypes = { item: itemShape.isRequired, onSelect: PropTypes.func, actions: PropTypes.func, variant: PropTypes.string };

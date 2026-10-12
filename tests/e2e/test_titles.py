@@ -146,6 +146,7 @@ def test_detail_featured_and_availability_follow_sources(api: Api, admin: str, v
     src = _shelf(api, admin)
     shorts = api.get(f"{BROWSE}/shorts", token=viewer).data
     assert shorts["card"]["season_count"] == 1 and len(shorts["seasons"][0]["episodes"]) == 2
+    assert shorts["genre_links"] == [{"slug": "animasyon", "name": "Animasyon"}]
     assert api.get(f"{BROWSE}/draft", token=viewer).code == "TITLE_NOT_FOUND"  # unpublished: invisible
 
     hero = api.get(f"{BROWSE}/featured", token=viewer).data

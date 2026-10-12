@@ -7,6 +7,6 @@ export default defineFeature({
   requires: ['auth', 'player'],
   routes: [{ path: '/', lazy: () => import('./pages/HomePage') }],
   nav: [{ to: '/', label: 'Ana Sayfa', icon: Home, order: 10 }],
-  // Rows on the home screen contributed by other features.
-  slots: ['home.rows'],
+  // The home screen is composed from contributions: a billboard and rows (continue watching, titles …).
+  slots: ['home.hero', 'home.rows'],
 });

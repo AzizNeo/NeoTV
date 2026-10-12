@@ -81,6 +81,13 @@ class HistoryQuery(BaseModel):
     before_id: int | None = Field(default=None, ge=1)
 
 
+class ProgressBatchQuery(BaseModel):
+    refs: str = Field(min_length=3, max_length=8000, description="Comma-separated content refs (at most 200)")
+
+    def items(self) -> list[str]:
+        return [r for r in (part.strip() for part in self.refs.split(",")) if r][:200]
+
+
 class ClearedOut(BaseModel):
     deleted: int
 
@@ -132,6 +139,18 @@ def add_favorite(content_ref: str) -> object:
 def remove_favorite(content_ref: str) -> object:
     _svc().remove_favorite(current_profile(), content_ref)
     return no_content()
+
+
+@blueprint.get("/progress")
+@endpoint(
+    summary="Resume state for several items (only those with progress)",
+    tags=_TAGS,
+    profile=True,
+    query=ProgressBatchQuery,
+    response=list[ProgressOut],
+)
+def get_progress_many(query: ProgressBatchQuery) -> object:
+    return _svc().progress_many(current_profile(), query.items())
 
 
 @blueprint.get(f"/progress/{_REF_RULE}")

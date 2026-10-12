@@ -210,3 +210,14 @@ def test_abuse_flags(api: Api, app: Flask, admin: str) -> None:
     )
     assert resolved.data["status"] == "dismissed"
     assert api.get("/api/v1/admin/abuse/flags", token=admin).data == []
+
+
+def test_progress_batch_returns_only_items_with_progress(api: Api, admin: str, viewer: str) -> None:
+    one = api.channel(admin, "Ep One", group="Shorts")["ref"]
+    two = api.channel(admin, "Ep Two", group="Shorts")["ref"]
+    api.put(f"/api/v1/library/progress/{one}", token=viewer, json={"position_s": 300, "duration_s": 600})
+    batch = api.get("/api/v1/library/progress", token=viewer, query_string={"refs": f"{one},{two}, {one}"}).data
+    assert [(p["content_ref"], p["progress_percent"]) for p in batch] == [(one, 50)]
+    assert api.get("/api/v1/library/progress", token=viewer, query_string={"refs": "catalog:1,garbage"}).code == (
+        "INVALID_CONTENT_REF"
+    )

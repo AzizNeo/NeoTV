@@ -1,0 +1,79 @@
+.rail {
+  position: relative;
+}
+
+/* Bleeds to the page edges so cards slide under the gutter, but snaps to the content column. */
+.track {
+  display: grid;
+  grid-auto-flow: column;
+  gap: var(--space-3);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: var(--gutter);
+  margin-inline: calc(-1 * var(--gutter));
+  padding: var(--space-2) var(--gutter) var(--space-3);
+  scrollbar-width: none;
+}
+.track::-webkit-scrollbar {
+  display: none;
+}
+.landscape {
+  grid-auto-columns: clamp(220px, 21vw, 320px);
+}
+.poster {
+  grid-auto-columns: clamp(132px, 13vw, 200px);
+}
+.cell {
+  scroll-snap-align: start;
+  min-width: 0;
+}
+
+.arrow {
+  position: absolute;
+  top: var(--space-2);
+  bottom: var(--space-3);
+  width: calc(var(--gutter) + 8px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+.prev {
+  left: calc(-1 * var(--gutter));
+  background: linear-gradient(90deg, rgb(8 11 20 / 0.75), transparent);
+}
+.next {
+  right: calc(-1 * var(--gutter));
+  background: linear-gradient(270deg, rgb(8 11 20 / 0.75), transparent);
+}
+@media (hover: hover) and (pointer: fine) {
+  .arrow {
+    display: flex;
+  }
+  .rail:hover .arrow {
+    opacity: 1;
+  }
+}
+
+.skeletonRow {
+  margin-bottom: var(--space-6);
+}
+.skeletonTitle {
+  width: 180px;
+  height: 1.4rem;
+  margin-bottom: var(--space-3);
+}
+.skeletonArt {
+  width: 100%;
+}
+.landscape .skeletonArt {
+  aspect-ratio: 16 / 9;
+}
+.poster .skeletonArt {
+  aspect-ratio: 2 / 3;
+}

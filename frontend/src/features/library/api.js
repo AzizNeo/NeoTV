@@ -5,6 +5,7 @@ export const libraryKeys = {
   favorites: ['library', 'favorites'],
   continue: ['library', 'continue'],
   history: ['library', 'history'],
+  progress: ['library', 'progress'],
 };
 
 export const toCard = (content, extra = {}) => ({

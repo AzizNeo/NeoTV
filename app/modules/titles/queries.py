@@ -75,11 +75,18 @@ class SeasonView:
 
 
 @dataclass(frozen=True, slots=True)
+class GenreLink:
+    slug: str
+    name: str
+
+
+@dataclass(frozen=True, slots=True)
 class TitleDetail:
     card: TitleCard
     synopsis: str | None
     play_ref: str | None
     seasons: list[SeasonView]
+    genre_links: list[GenreLink]  # card.genres are display names; these also carry the browse filter slug
 
 
 @dataclass(frozen=True, slots=True)
@@ -188,6 +195,7 @@ class TitleQueryService:
                     )
                     for s in title.seasons
                 ],
+                genre_links=[GenreLink(slug=g.slug, name=g.name) for g in title.genres],
             )
 
     # ── internals ──────────────────────────────────────────────────────────

@@ -35,6 +35,7 @@ export default function HistoryPage() {
     >
       {data?.length ? (
         <ContentRow
+          layout="grid"
           title="Son izlenenler"
           items={data.map((h) => ({ ...toCard(h.content), ref: h.content.ref, key: h.id, caption: `${when(h.watched_at)} · ${minutes(h.watched_seconds)}` }))}
           onSelect={play}

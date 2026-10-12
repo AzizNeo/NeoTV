@@ -204,6 +204,28 @@ class LibraryService:
                 ref, True, row.position_s, row.duration_s, round(row.ratio * 100), bool(row.completed), row.updated_at
             )
 
+    def progress_many(self, ctx: ProfileContext, content_refs: list[str]) -> list[ProgressView]:
+        """Resume state for several items in one query (episode lists); items without progress are omitted."""
+        refs = sorted({str(ContentRef.parse(r)) for r in content_refs})
+        if not refs:
+            return []
+        with self._uow() as uow:
+            rows = uow.session.execute(
+                select(Progress).where(Progress.profile_id == ctx.profile_id, Progress.content_ref.in_(refs))
+            ).scalars()
+            return [
+                ProgressView(
+                    r.content_ref,
+                    True,
+                    r.position_s,
+                    r.duration_s,
+                    round(r.ratio * 100),
+                    bool(r.completed),
+                    r.updated_at,
+                )
+                for r in rows
+            ]
+
     def clear_progress(self, ctx: ProfileContext, content_ref: str) -> None:
         ref = str(ContentRef.parse(content_ref))
         with self._uow() as uow:

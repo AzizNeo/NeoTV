@@ -7137,6 +7137,83 @@
         ]
       }
     },
+    "/api/v1/library/progress": {
+      "get": {
+        "operationId": "library_get_progress_many",
+        "summary": "Resume state for several items (only those with progress)",
+        "tags": [
+          "library"
+        ],
+        "parameters": [
+          {
+            "name": "refs",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "description": "Comma-separated content refs (at most 200)",
+              "maxLength": 8000,
+              "minLength": 3,
+              "title": "Refs",
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Profile-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/ProgressOut"
+                      },
+                      "type": "array"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/library/progress/{content_ref}": {
       "get": {
         "operationId": "library_get_progress",
@@ -7178,7 +7255,55 @@
                       "const": true
                     },
                     "data": {
-                      "$ref": "#/components/schemas/ProgressOut"
+                      "properties": {
+                        "content_ref": {
+                          "title": "Content Ref",
+                          "type": "string"
+                        },
+                        "has_progress": {
+                          "title": "Has Progress",
+                          "type": "boolean"
+                        },
+                        "position_s": {
+                          "title": "Position S",
+                          "type": "integer"
+                        },
+                        "duration_s": {
+                          "title": "Duration S",
+                          "type": "integer"
+                        },
+                        "progress_percent": {
+                          "title": "Progress Percent",
+                          "type": "integer"
+                        },
+                        "completed": {
+                          "title": "Completed",
+                          "type": "boolean"
+                        },
+                        "updated_at": {
+                          "anyOf": [
+                            {
+                              "format": "date-time",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Updated At"
+                        }
+                      },
+                      "required": [
+                        "content_ref",
+                        "has_progress",
+                        "position_s",
+                        "duration_s",
+                        "progress_percent",
+                        "completed",
+                        "updated_at"
+                      ],
+                      "title": "ProgressOut",
+                      "type": "object"
                     },
                     "message": {
                       "type": "string"
@@ -12860,6 +12985,24 @@
         "title": "FlagOut",
         "type": "object"
       },
+      "GenreLinkOut": {
+        "properties": {
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name"
+        ],
+        "title": "GenreLinkOut",
+        "type": "object"
+      },
       "GenreOut": {
         "properties": {
           "slug": {
@@ -14530,13 +14673,21 @@
             },
             "title": "Seasons",
             "type": "array"
+          },
+          "genre_links": {
+            "items": {
+              "$ref": "#/components/schemas/GenreLinkOut"
+            },
+            "title": "Genre Links",
+            "type": "array"
           }
         },
         "required": [
           "card",
           "synopsis",
           "play_ref",
-          "seasons"
+          "seasons",
+          "genre_links"
         ],
         "title": "TitleDetailOut",
         "type": "object"

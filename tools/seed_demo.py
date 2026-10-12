@@ -216,7 +216,7 @@ def _seed_titles(catalog: CatalogAdminService) -> int:
             year=t.year,
             runtime_minutes=t.runtime_minutes,
             poster_url=_art(f"{t.slug}-poster"),
-            backdrop_url=_art(t.slug),
+            backdrop_url=_art(f"{t.slug}-backdrop"),
             play_ref=ref[t.play] if t.play else None,
             genres=t.genres,
             featured_rank=t.featured_rank,

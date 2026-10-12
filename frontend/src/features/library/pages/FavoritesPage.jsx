@@ -16,7 +16,7 @@ export default function FavoritesPage() {
   return (
     <Page title="Favorilerim">
       {data?.length ? (
-        <ContentRow title={`${data.length} içerik`} items={data.map((f) => toCard(f.content))} onSelect={play} actions={(item) => <Slot name="content.actions" item={item} />} />
+        <ContentRow layout="grid" title={`${data.length} içerik`} items={data.map((f) => toCard(f.content))} onSelect={play} actions={(item) => <Slot name="content.actions" item={item} />} />
       ) : (
         <EmptyState icon={Heart} title="Henüz favoriniz yok">
           Bir içeriğin altındaki kalp simgesine dokunarak favorilere ekleyebilirsiniz.

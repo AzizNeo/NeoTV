@@ -1,0 +1,186 @@
+/* Full-bleed billboard under the top bar. Everything on it sits on artwork → fixed light text. */
+.hero {
+  position: relative;
+  isolation: isolate;
+  margin: calc(-1 * var(--space-5)) calc(-1 * var(--gutter)) var(--space-6);
+  min-height: clamp(420px, 72vh, 760px);
+  display: flex;
+  align-items: flex-end;
+  padding: var(--space-8) var(--gutter) var(--space-7);
+  color: #f4f6fb;
+  background: #0d1220;
+  overflow: hidden;
+}
+.loading {
+  padding: 0;
+}
+.loading > div {
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
+}
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 70% 30%;
+  animation: hero-in var(--dur-slow) var(--ease-out);
+}
+@keyframes hero-in {
+  from {
+    opacity: 0;
+  }
+}
+/* Two scrims: left for the copy column, bottom to melt into the page background. */
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgb(8 11 20 / 0.85) 0%, rgb(8 11 20 / 0.55) 38%, rgb(8 11 20 / 0) 70%),
+    linear-gradient(180deg, rgb(8 11 20 / 0) 55%, var(--hero-fade) 100%);
+}
+
+.content {
+  max-width: min(640px, 100%);
+}
+.genres {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: rgb(244 246 251 / 0.78);
+}
+/* The page's one loud element: big, tight display type. */
+.name {
+  margin: 0;
+  font-size: var(--text-hero);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+  text-shadow: 0 2px 24px rgb(0 0 0 / 0.35);
+}
+.facts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: rgb(244 246 251 / 0.85);
+}
+.synopsis {
+  margin: var(--space-3) 0 0;
+  max-width: 58ch;
+  font-size: var(--text-md);
+  color: rgb(244 246 251 / 0.88);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+.play,
+.more {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-weight: 750;
+  text-decoration: none;
+  cursor: pointer;
+  border: 0;
+}
+.play {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.play:hover {
+  background: var(--accent-hover);
+}
+.more {
+  background: rgb(244 246 251 / 0.16);
+  color: #f4f6fb;
+  backdrop-filter: blur(8px);
+}
+.more:hover {
+  background: rgb(244 246 251 / 0.26);
+}
+
+.picker {
+  position: absolute;
+  right: var(--gutter);
+  bottom: var(--space-7);
+  display: flex;
+  gap: var(--space-2);
+}
+.pick,
+.pickActive {
+  width: 104px;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: #1b2236;
+  color: #fff;
+  font-size: var(--text-2xs);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.pick:hover {
+  opacity: 0.9;
+}
+.pickActive {
+  opacity: 1;
+  border-color: var(--accent);
+}
+.pick,
+.pickActive {
+  position: relative;
+}
+.pick span,
+.pickActive span {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  font-weight: 700;
+  text-shadow: 0 1px 4px rgb(0 0 0 / 0.8);
+}
+.pick img,
+.pickActive img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+@media (max-width: 760px) {
+  .hero {
+    min-height: 68vh;
+    padding-bottom: var(--space-6);
+  }
+  .scrim {
+    background: linear-gradient(180deg, rgb(8 11 20 / 0.1) 0%, rgb(8 11 20 / 0.7) 50%, var(--hero-fade) 100%);
+  }
+  .picker {
+    display: none;
+  }
+}

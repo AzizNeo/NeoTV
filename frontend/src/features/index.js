@@ -14,7 +14,8 @@ import live from './live/manifest';
 import player from './player/manifest';
 import profiles from './profiles/manifest';
 import recommendations from './recommendations/manifest';
+import titles from './titles/manifest';
 
 export const FEATURES = Object.freeze([
-  auth, profiles, player, catalog, live, library, recommendations, billing, devices, admin,
+  auth, profiles, player, catalog, titles, live, library, recommendations, billing, devices, admin,
 ]);

@@ -97,12 +97,35 @@ def render_poster(art: Art) -> str:
 """
 
 
+def render_backdrop(art: Art) -> str:
+    """Text-free 16:9 backdrop (``<slug>-backdrop.svg``) for billboards — like real key art, the UI sets the title."""
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" role="img" aria-label="{escape(art.title)}">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="{art.bottom}"/><stop offset="1" stop-color="{art.top}"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.72" cy="0.38" r="0.6">
+      <stop offset="0" stop-color="{art.accent}" stop-opacity="0.32"/><stop offset="1" stop-color="{art.accent}" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <rect width="1920" height="1080" fill="url(#glow)"/>
+  <g fill="none" stroke="{art.accent}" stroke-opacity="0.16" stroke-width="3">
+    <circle cx="1380" cy="410" r="180"/><circle cx="1380" cy="410" r="300"/><circle cx="1380" cy="410" r="420"/>
+    <circle cx="1380" cy="410" r="540"/>
+  </g>
+  <circle cx="1380" cy="410" r="22" fill="{art.accent}" fill-opacity="0.85"/>
+</svg>
+"""
+
+
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     for art in ARTWORK:
         (OUT / f"{art.slug}.svg").write_text(render(art), encoding="utf-8")
         if not art.live:
             (OUT / f"{art.slug}-poster.svg").write_text(render_poster(art), encoding="utf-8")
+            (OUT / f"{art.slug}-backdrop.svg").write_text(render_backdrop(art), encoding="utf-8")
     print(f"wrote artwork for {len(ARTWORK)} items to {OUT}")
     return 0
 
