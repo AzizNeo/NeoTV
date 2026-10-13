@@ -21,7 +21,12 @@ function formatTime(seconds) {
   return `${h ? `${h}:` : ''}${mm}:${String(s).padStart(2, '0')}`;
 }
 
-export function CustomPlayer({ source, title, onClose, onFatal, onVideo, engineRef, children }) {
+/**
+ * Extension points (all optional) keep this component generic — it knows nothing of episodes or channels:
+ * `subtitle` (title bar), `controlsExtra` (buttons before settings), `overlay` (layers over the video),
+ * `extraKeys` (key → action, overrides defaults: live TV maps ↑/↓ to channels), `onEnded`.
+ */
+export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVideo, onEnded, engineRef, extraKeys, controlsExtra, overlay, children }) {
   const videoRef = useRef(null);
   const playerRef = useRef(null);
   const progressRef = useRef(null);
@@ -43,6 +48,8 @@ export function CustomPlayer({ source, title, onClose, onFatal, onVideo, engineR
   const isLive = source.isLive;
   const onFatalRef = useRef(onFatal);
   onFatalRef.current = onFatal;
+  const onEndedRef = useRef(onEnded);
+  onEndedRef.current = onEnded;
 
   // ── engine lifecycle ────────────────────────────────────────────────────
   useEffect(() => {
@@ -101,6 +108,10 @@ export function CustomPlayer({ source, title, onClose, onFatal, onVideo, engineR
       },
       waiting: () => setIsLoading(true),
       playing: () => setIsLoading(false),
+      ended: () => {
+        setIsPlaying(false);
+        onEndedRef.current?.();
+      },
     };
     for (const [event, fn] of Object.entries(handlers)) video.addEventListener(event, fn);
     return () => {
@@ -160,7 +171,7 @@ export function CustomPlayer({ source, title, onClose, onFatal, onVideo, engineR
 
   // Keyboard: handlers read the latest callbacks through a ref (no stale closures).
   const keyActions = useRef({});
-  keyActions.current = { togglePlay, skip, changeVolume, toggleFullscreen, toggleMute, onClose };
+  keyActions.current = { togglePlay, skip, changeVolume, toggleFullscreen, toggleMute, onClose, extraKeys };
   useEffect(() => {
     const onKey = (event) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
@@ -175,6 +186,7 @@ export function CustomPlayer({ source, title, onClose, onFatal, onVideo, engineR
         f: a.toggleFullscreen,
         m: a.toggleMute,
         Escape: () => (document.fullscreenElement ? document.exitFullscreen() : a.onClose?.()),
+        ...a.extraKeys,
       };
       const action = map[event.key];
       if (action) {
@@ -216,12 +228,14 @@ export function CustomPlayer({ source, title, onClose, onFatal, onVideo, engineR
       )}
 
       {children}
+      {overlay}
 
       <div className={`title-bar ${showControls ? 'visible' : ''}`}>
         <button className="back-btn" onClick={onClose} aria-label="Kapat">
           <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" /></svg>
         </button>
         <span className="title">{title}</span>
+        {subtitle && <span className="subtitle">{subtitle}</span>}
         {isLive && <span className="live-badge">CANLI</span>}
       </div>
 
@@ -298,6 +312,7 @@ export function CustomPlayer({ source, title, onClose, onFatal, onVideo, engineR
           </div>
 
           <div className="controls-right">
+            {controlsExtra}
             {!isLive && (
               <div className="settings-container">
                 <button className="control-btn" onClick={() => setShowSettings((v) => !v)} aria-label="Ayarlar" aria-expanded={showSettings}>
@@ -349,6 +364,11 @@ CustomPlayer.propTypes = {
   }).isRequired,
   title: PropTypes.string.isRequired,
   onClose: PropTypes.func.isRequired,
+  subtitle: PropTypes.string,
+  onEnded: PropTypes.func,
+  extraKeys: PropTypes.objectOf(PropTypes.func),
+  controlsExtra: PropTypes.node,
+  overlay: PropTypes.node,
   onFatal: PropTypes.func,
   onVideo: PropTypes.func,
   engineRef: PropTypes.object,

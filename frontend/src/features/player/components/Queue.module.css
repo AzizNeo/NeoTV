@@ -1,0 +1,169 @@
+/* Player chrome is always dark (it sits on video), so colours here are fixed, not theme tokens. */
+.upNext {
+  position: absolute;
+  right: 2rem;
+  bottom: 7rem;
+  z-index: 6;
+  width: min(360px, calc(100% - 2rem));
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.1rem 1.2rem;
+  background: rgb(14 18 30 / 0.92);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 14px;
+  color: #f4f6fb;
+  box-shadow: 0 18px 50px rgb(0 0 0 / 0.5);
+}
+.upNextLabel {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #ffc56e;
+}
+.upNextTitle {
+  font-size: 1.1rem;
+}
+.upNextSub {
+  font-size: 0.85rem;
+  color: rgb(244 246 251 / 0.7);
+}
+.upNextActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+.primary,
+.secondary {
+  min-height: 40px;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+.primary {
+  background: #ffb547;
+  color: #1d1406;
+}
+.secondary {
+  background: rgb(255 255 255 / 0.12);
+  color: #f4f6fb;
+}
+
+.panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 7;
+  width: min(380px, 90%);
+  display: flex;
+  flex-direction: column;
+  background: rgb(10 13 22 / 0.94);
+  border-left: 1px solid rgb(255 255 255 / 0.1);
+  color: #f4f6fb;
+  animation: panel-in 200ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@keyframes panel-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid rgb(255 255 255 / 0.1);
+}
+.panelHead h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.panelHead button {
+  display: inline-flex;
+  padding: 0.35rem;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.panelList {
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem;
+  overflow-y: auto;
+}
+.panelList button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.65rem 0.7rem;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.panelList button:hover {
+  background: rgb(255 255 255 / 0.08);
+}
+.panelList button[aria-current='true'] {
+  background: rgb(255 181 71 / 0.16);
+  box-shadow: inset 3px 0 0 #ffb547;
+}
+.panelNo {
+  min-width: 2.2rem;
+  font-weight: 800;
+  color: rgb(244 246 251 / 0.6);
+}
+.panelText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.panelText small {
+  color: rgb(244 246 251 / 0.62);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zap {
+  position: absolute;
+  top: 5rem;
+  left: 2rem;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.7rem 1.1rem;
+  background: rgb(10 13 22 / 0.86);
+  border-radius: 12px;
+  color: #f4f6fb;
+  animation: zap-out 3.2s ease forwards;
+  pointer-events: none;
+}
+.zap small {
+  display: block;
+  color: rgb(244 246 251 / 0.7);
+}
+.zapNo {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #ffb547;
+}
+@keyframes zap-out {
+  0%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

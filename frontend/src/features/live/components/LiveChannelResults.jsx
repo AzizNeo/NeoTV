@@ -17,8 +17,9 @@ export function LiveChannelResults({ query }) {
   const needle = norm(query.trim());
   const hits = (data ?? []).filter((c) => norm(c.name).includes(needle) || norm(c.now?.title ?? '').includes(needle));
   if (!hits.length) return null;
+  const cards = hits.map(toLiveCard);
   return (
-    <ContentRow title="Canlı yayınlar" subtitle={`${hits.length} kanal`} items={hits.map(toLiveCard)} onSelect={play}
+    <ContentRow title="Canlı yayınlar" subtitle={`${hits.length} kanal`} items={cards} onSelect={(item) => play(item, { queue: cards })}
       actions={(item) => <Slot name="content.actions" item={item} />} />
   );
 }

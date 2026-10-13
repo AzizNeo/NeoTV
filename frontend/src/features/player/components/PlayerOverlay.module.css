@@ -1,8 +1,11 @@
+/* The player is always dark (video context) in both themes → fixed colours, never theme tokens. */
 .overlay {
   position: fixed;
   inset: 0;
   z-index: 5000;
   background: #000;
+  color: #f4f6fb;
+  color-scheme: dark;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -10,45 +13,59 @@
   gap: 1rem;
 }
 .opening {
-  color: var(--color-text-secondary);
+  color: rgb(244 246 251 / 0.72);
 }
 .card {
   max-width: 460px;
   text-align: center;
   padding: 2.5rem 2rem;
-  background: #181818;
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-lg);
+  background: #141a28;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 16px;
 }
 .card h2 {
   margin: 0.75rem 0 0.5rem;
+  color: #f4f6fb;
 }
 .card p {
-  color: var(--color-text-secondary);
+  color: rgb(244 246 251 / 0.75);
   line-height: 1.6;
 }
 .icon {
-  color: var(--color-primary);
+  color: #ffb547;
 }
-.close {
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+.close,
+.secondary,
+.upgrade {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: 1rem;
-  background: #333;
-  color: #fff;
+  min-height: 42px;
+  padding: 0 1.2rem;
   border: none;
-  padding: 0.7rem 1.4rem;
-  border-radius: var(--border-radius-sm);
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
   cursor: pointer;
 }
+.close,
+.secondary {
+  background: rgb(255 255 255 / 0.12);
+  color: #f4f6fb;
+}
+.close:hover,
+.secondary:hover {
+  background: rgb(255 255 255 / 0.2);
+}
 .upgrade {
-  display: inline-block;
-  margin: 0.5rem 0.75rem 0 0;
-  background: var(--color-primary);
-  color: #fff;
-  text-decoration: none;
-  padding: 0.7rem 1.4rem;
-  border-radius: var(--border-radius-sm);
-  font-weight: 600;
+  background: #ffb547;
+  color: #1d1406;
 }

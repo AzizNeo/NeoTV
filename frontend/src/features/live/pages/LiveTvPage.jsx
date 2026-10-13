@@ -23,6 +23,8 @@ export default function LiveTvPage() {
   });
 
   const cards = useMemo(() => (channels.data ?? []).map(toLiveCard), [channels.data]);
+  // Channel list = play queue: ↑/↓ and the in-player list zap through it, numbered in this order.
+  const zap = (item) => play(item, { queue: cards });
 
   if (channels.isLoading) return <Spinner fullScreen />;
   if (!cards.length) {
@@ -35,8 +37,8 @@ export default function LiveTvPage() {
 
   return (
     <Page title="Canlı TV" subtitle="Şu an yayında olanlar ve yayın akışı">
-      <ContentRow title="Kanallar" items={cards} onSelect={play} actions={(item) => <Slot name="content.actions" item={item} />} />
-      {guide.data?.length > 0 && <GuideGrid channels={channels.data} programs={guide.data} onSelect={play} />}
+      <ContentRow title="Kanallar" items={cards} onSelect={zap} actions={(item) => <Slot name="content.actions" item={item} />} />
+      {guide.data?.length > 0 && <GuideGrid channels={channels.data} programs={guide.data} onSelect={zap} />}
     </Page>
   );
 }

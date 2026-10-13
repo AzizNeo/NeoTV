@@ -44,7 +44,16 @@ export default function TitleDetailPage() {
   const { card } = detail;
   const next = nextUp(detail, progress);
   const left = next?.resume ? remaining(progress.get(next.ref)) : null;
-  const start = (ref, subtitle) => play({ ref, title: subtitle ? `${card.name} · ${subtitle}` : card.name });
+  // A series plays as a queue of its available episodes: "next episode" and the in-player list come free.
+  const queue = detail.seasons.flatMap((s) =>
+    s.episodes
+      .filter((e) => e.available && e.play_ref)
+      .map((e) => ({ ref: e.play_ref, title: card.name, subtitle: `S${s.number} B${e.number} · ${e.name}`, label: `${s.number}.${e.number}` })),
+  );
+  const start = (ref) => {
+    const item = queue.find((q) => q.ref === ref) ?? { ref, title: card.name };
+    play(item, card.kind === 'series' ? { queue } : undefined);
+  };
 
   return (
     <article className={styles.page}>
@@ -71,7 +80,7 @@ export default function TitleDetailPage() {
           </p>
           <div className={styles.actions}>
             {next ? (
-              <button type="button" className={styles.play} onClick={() => start(next.ref, next.episode && `S${next.season} B${next.episode.number} ${next.episode.name}`)}>
+              <button type="button" className={styles.play} onClick={() => start(next.ref)}>
                 <Play size={20} fill="currentColor" aria-hidden="true" /> {next.label}
               </button>
             ) : (
@@ -89,7 +98,7 @@ export default function TitleDetailPage() {
       </section>
 
       {card.kind === 'series' && (
-        <EpisodeList seasons={detail.seasons} progress={progress} initialSeason={next?.season} onPlay={(e, season) => start(e.play_ref, `S${season} B${e.number} ${e.name}`)} />
+        <EpisodeList seasons={detail.seasons} progress={progress} initialSeason={next?.season} onPlay={(e) => start(e.play_ref)} />
       )}
       {detail.genre_links[0] && <SimilarTitles genre={detail.genre_links[0]} exclude={card.slug} />}
     </article>

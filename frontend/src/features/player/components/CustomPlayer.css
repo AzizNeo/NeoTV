@@ -34,7 +34,7 @@
     width: 60px;
     height: 60px;
     border: 4px solid rgba(255, 255, 255, 0.2);
-    border-top-color: #e50914;
+    border-top-color: #ffb547;
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -82,7 +82,7 @@
 }
 
 .back-btn:hover svg {
-    fill: #e50914;
+    fill: #ffb547;
 }
 
 .title {
@@ -92,7 +92,7 @@
 }
 
 .live-badge {
-    background: #e50914;
+    background: #d63b3b;
     color: white;
     padding: 4px 12px;
     border-radius: 4px;
@@ -160,7 +160,7 @@
     top: 0;
     left: 0;
     height: 100%;
-    background: #e50914;
+    background: #ffb547;
     border-radius: 3px;
     pointer-events: none;
 }
@@ -171,7 +171,7 @@
     transform: translate(-50%, -50%) scale(0);
     width: 16px;
     height: 16px;
-    background: #e50914;
+    background: #ffb547;
     border-radius: 50%;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     pointer-events: none;
@@ -198,6 +198,7 @@
 
 /* Control Buttons */
 .control-btn {
+    color: white;
     background: none;
     border: none;
     cursor: pointer;
@@ -221,7 +222,33 @@
 }
 
 .control-btn:hover svg {
-    fill: #e50914;
+    fill: #ffb547;
+}
+
+/* Outline (lucide) icons are stroked, not filled. */
+.control-btn svg.lucide {
+    fill: none;
+    stroke: currentColor;
+}
+.control-btn:hover svg.lucide {
+    fill: none;
+    color: #ffb547;
+}
+.control-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+.control-btn:disabled:hover {
+    background: none;
+}
+
+.subtitle {
+    margin-left: 0.75rem;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Skip buttons */
@@ -344,7 +371,7 @@
 }
 
 .settings-option.active {
-    color: #e50914;
+    color: #ffb547;
 }
 
 .settings-option.active::before {
