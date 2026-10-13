@@ -26,7 +26,7 @@ from app.modules.playback.gate import (
     PlaybackConfigurationError,
     PlaybackDeniedError,
 )
-from app.modules.playback.hls_proxy import UpstreamStatusError
+from app.modules.playback.hls_proxy import UpstreamStatusError, UpstreamUnavailableError
 from app.modules.playback.services import SessionExpiredError, StreamLimitExceededError
 from app.shared_kernel.events import DeviceRevoked, SubscriptionChanged, UserStatusChanged
 
@@ -136,6 +136,7 @@ manifest = ModuleManifest(
         NoContentProviderError: (404, "CONTENT_PROVIDER_UNAVAILABLE"),
         SessionInactiveError: (403, "SESSION_INACTIVE"),
         UpstreamStatusError: (502, "UPSTREAM_STATUS"),
+        UpstreamUnavailableError: (502, "UPSTREAM_UNAVAILABLE"),
         PlaybackConfigurationError: (500, "PLAYBACK_MISCONFIGURED"),
     },
 )

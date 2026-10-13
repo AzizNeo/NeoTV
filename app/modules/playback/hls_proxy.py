@@ -10,12 +10,13 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Iterator
 from dataclasses import dataclass
 from urllib.parse import urljoin
 
-from app.kernel.security.egress import EgressGateway
+from app.kernel.security.egress import EgressDeniedError, EgressGateway, EgressNetworkError
 from app.modules.playback.api import INTERNAL_URI_PREFIX, MediaGrant
 from app.modules.playback.grants import SignedStreamUrlFactory
 
@@ -34,10 +35,26 @@ class ProxyResponse:
     headers: dict[str, str]
 
 
+_log = logging.getLogger("playback.proxy")
+
+
 class UpstreamStatusError(Exception):
     def __init__(self, status: int) -> None:
         super().__init__(f"upstream HTTP {status}")
         self.status = status
+        self.details = {"status": status}
+
+
+class UpstreamUnavailableError(Exception):
+    """The origin could not be reached. ``details.reason``: dns, tls, timeout, connect, body or blocked.
+
+    Viewer-facing: carries *why*, never *where* — origin URLs (which may embed provider credentials)
+    are only logged server-side.
+    """
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(f"Upstream unavailable ({reason})")
+        self.details = {"reason": reason}
 
 
 def is_playlist(url: str, content_type: str) -> bool:
@@ -52,9 +69,17 @@ class HlsProxyService:
 
     def fetch(self, grant: MediaGrant, *, range_header: str | None = None) -> ProxyResponse:
         headers = {"Range": range_header} if range_header else None
-        upstream = self._egress.get(grant.target, stream=True, headers=headers)
+        try:
+            upstream = self._egress.get(grant.target, stream=True, headers=headers)
+        except EgressNetworkError as exc:
+            _log.warning("proxy upstream unreachable (%s): %s", exc.kind, exc)
+            raise UpstreamUnavailableError(exc.kind) from exc
+        except EgressDeniedError as exc:
+            _log.warning("proxy upstream denied (%s): %s", exc.reason, exc.url)
+            raise UpstreamUnavailableError("dns" if exc.reason == "dns" else "blocked") from exc
         if upstream.status_code not in (200, 206):
             upstream.close()
+            _log.warning("proxy upstream HTTP %s: %s", upstream.status_code, grant.target)
             raise UpstreamStatusError(upstream.status_code)
         content_type = upstream.headers.get("Content-Type", "")
         final_url = upstream.url or grant.target

@@ -189,7 +189,7 @@ def record_qoe(body: QoeRequest) -> CreatedResponse:
     auth="public",
     summary="Signed upstream media proxy (grant in query string; no credentials needed)",
     rate=Rate("playback.proxy", rps=40, burst=120, per="ip"),
-    errors=("GRANT_INVALID", "GRANT_EXPIRED", "SESSION_INACTIVE", "UPSTREAM_STATUS"),
+    errors=("GRANT_INVALID", "GRANT_EXPIRED", "SESSION_INACTIVE", "UPSTREAM_STATUS", "UPSTREAM_UNAVAILABLE"),
 )
 def proxy() -> Response:
     verifier: GrantVerifier = resolve(GrantVerifier)

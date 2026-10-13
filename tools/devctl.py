@@ -8,6 +8,7 @@
     python -m tools.devctl api | worker | beat
     python -m tools.devctl create-admin --username NAME
     python -m tools.devctl openapi           regenerate openapi/openapi.json
+    python -m tools.devctl stream-check [URL ...]  can this server reach its stream sources?
 
 Design rules (RT-08):
 * Only processes started *by this tool* are ever signalled — no `taskkill /IM
@@ -440,6 +441,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--email")
     p.add_argument("--skip-existing", action="store_true", help="succeed if the user already exists")
     sub.add_parser("openapi", help="regenerate openapi/openapi.json")
+    p = sub.add_parser("stream-check", help="can this server reach its stream sources (and why not)?")
+    p.add_argument("urls", nargs="*")
     return parser
 
 
@@ -490,6 +493,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                     "openapi/openapi.json",
                 ]
             )
+        case "stream-check":
+            return cmd_single([sys.executable, "-m", "tools.stream_check", *args.urls])
     return 2
 
 

@@ -47,6 +47,8 @@ const ERRORS = {
   PLAYBACK_DENIED: 'Bu içeriği izleme yetkiniz yok.',
   UPSTREAM_STATUS: 'Yayın kaynağı yanıt vermiyor.',
   UPSTREAM_UNREACHABLE: 'Yayın kaynağına ulaşılamıyor.',
+  UPSTREAM_UNAVAILABLE: 'Sunucu yayın kaynağına ulaşamadı.',
+  STREAM_TIMEOUT: 'Yayın başlatılamadı: kaynak zamanında yanıt vermedi.',
   LIVE_OFFLINE: 'Kanal şu an yayında değil.',
   STREAM_FAILED: 'Yayın oynatılamadı. Kaynak yanıt vermiyor olabilir.',
   DRM_LICENSE_FAILED: 'Koruma lisansı alınamadı.',

@@ -40,6 +40,23 @@ export function PlayerProvider({ children }) {
   );
 }
 
+const REASONS = {
+  dns: 'Kaynak sunucunun adı çözülemedi (DNS). İnternet bağlantınızı ya da DNS ayarlarınızı kontrol edin.',
+  tls: 'Kaynakla güvenli bağlantı kurulamadı (TLS). Antivirüs ya da proxy HTTPS trafiğini engelliyor olabilir.',
+  timeout: 'Kaynak zamanında yanıt vermedi.',
+  connect: 'Kaynağa bağlanılamadı (güvenlik duvarı ya da ağ).',
+  blocked: 'Bu kaynak adresi güvenlik kuralları gereği engellendi.',
+  body: 'Kaynak bağlantısı aktarım sırasında koptu.',
+};
+
+/** One extra line of "why" for support and curious viewers (never the origin URL). */
+function failureHint(fatal) {
+  if (!fatal) return null;
+  if (fatal.reason && REASONS[fatal.reason]) return REASONS[fatal.reason];
+  if (fatal.code === 'UPSTREAM_STATUS' && fatal.status) return `Kaynak HTTP ${fatal.status} döndürdü.`;
+  return null;
+}
+
 export function usePlayer() {
   const ctx = useContext(PlayerContext);
   if (!ctx) throw new Error('usePlayer() outside <PlayerProvider>');
@@ -91,6 +108,7 @@ function PlayerOverlay({ item, queue, onJump, onClose }) {
           <AlertTriangle size={44} className={styles.icon} aria-hidden="true" />
           <h2>{item.title}</h2>
           <p>{messageFor(problem, 'Yayın oynatılamadı.')}</p>
+          {failureHint(fatal) && <p className={styles.hint}>{failureHint(fatal)}</p>}
           <div className={styles.actions}>
             {problem === 'STREAM_LIMIT_EXCEEDED' && billing && (
               <Link to="/plans" className={styles.upgrade} onClick={onClose}>

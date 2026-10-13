@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from urllib.parse import parse_qs, urlsplit
 
+import pytest
 from flask import Flask
 
 from app.kernel.container import resolve
+from app.kernel.security.egress import EgressDeniedError, EgressGateway, EgressNetworkError
 from app.modules.playback.api import MediaGrant
 from app.modules.playback.grants import SignedStreamUrlFactory
 from app.modules.playback.hls_proxy import HlsProxyService
@@ -133,3 +135,26 @@ def test_live_ingest_key_is_shown_once_and_callbacks_are_internal(api: Api, admi
     assert ok.status == 302 and ok.headers["Location"].endswith(created.data["channel"]["playback_id"])
     outsider = api.post("/api/v1/live/ingest/on-publish", data={"name": key}, environ_base={"REMOTE_ADDR": "8.8.8.8"})
     assert outsider.status == 403
+
+
+@pytest.mark.parametrize(
+    ("failure", "reason"),
+    [
+        (EgressNetworkError("SSLError: https://cdn.example.com/A.m3u8", kind="tls"), "tls"),
+        (EgressNetworkError("ConnectTimeout: https://cdn.example.com/A.m3u8", kind="timeout"), "timeout"),
+        (EgressDeniedError("dns", "https://cdn.example.com/A.m3u8"), "dns"),
+        (EgressDeniedError("non_public_ip:10.0.0.1", "https://cdn.example.com/A.m3u8"), "blocked"),
+    ],
+)
+def test_proxy_failures_say_why_but_never_where(
+    api: Api, admin: str, viewer: str, monkeypatch: pytest.MonkeyPatch, failure: Exception, reason: str
+) -> None:
+    def fail(*_args: object, **_kw: object) -> None:
+        raise failure
+
+    monkeypatch.setattr(EgressGateway, "get", fail)
+    url = api.open_session(viewer, api.channel(admin, "A")["ref"]).data["manifest_url"]
+    reply = api.get(url)
+    assert reply.status == 502 and reply.code == "UPSTREAM_UNAVAILABLE"
+    assert reply.body["error"]["details"] == {"reason": reason}
+    assert b"cdn.example.com" not in reply.raw  # origin URLs (may embed provider credentials) never reach viewers

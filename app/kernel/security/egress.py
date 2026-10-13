@@ -36,7 +36,25 @@ class EgressBodyTooLargeError(Exception):
 
 class EgressNetworkError(Exception):
     """Transport failure (DNS/TCP/TLS/timeout/broken body) — wraps the HTTP client's exceptions so
-    no other module needs to import ``requests``."""
+    no other module needs to import ``requests``. ``kind`` is one of dns, tls, timeout, connect, body."""
+
+    def __init__(self, message: str, *, kind: str = "connect") -> None:
+        super().__init__(message)
+        self.kind = kind
+
+
+def _network_kind(exc: BaseException) -> str:
+    """Classify a ``requests`` failure without leaking ``requests`` types to callers."""
+    if isinstance(exc, requests.exceptions.SSLError):
+        return "tls"
+    if isinstance(exc, requests.exceptions.Timeout):
+        return "timeout"
+    text = repr(exc)
+    if "NameResolution" in text or "getaddrinfo" in text or "Name or service not known" in text:
+        return "dns"
+    if isinstance(exc, (requests.exceptions.ChunkedEncodingError, requests.exceptions.ContentDecodingError)):
+        return "body"
+    return "connect"
 
 
 @dataclass(frozen=True)
@@ -110,7 +128,7 @@ class EgressGateway:
                     verify=host not in self.policy.insecure_tls_hosts,
                 )
             except requests.RequestException as exc:
-                raise EgressNetworkError(f"{type(exc).__name__}: {current}") from exc
+                raise EgressNetworkError(f"{type(exc).__name__}: {current}", kind=_network_kind(exc)) from exc
             if not response.is_redirect:
                 response.url = current  # final URL after manual redirects
                 return response
@@ -132,7 +150,7 @@ class EgressGateway:
                 verify=host not in self.policy.insecure_tls_hosts,
             )
         except requests.RequestException as exc:
-            raise EgressNetworkError(f"{type(exc).__name__}: {url}") from exc
+            raise EgressNetworkError(f"{type(exc).__name__}: {url}", kind=_network_kind(exc)) from exc
 
     @staticmethod
     def read_capped(response: requests.Response, limit: int, chunk: int = 64 * 1024) -> bytes:
@@ -143,7 +161,7 @@ class EgressGateway:
                 if len(buffer) > limit:
                     raise EgressBodyTooLargeError(f"body exceeds {limit} bytes")
         except requests.RequestException as exc:
-            raise EgressNetworkError(f"{type(exc).__name__} while reading body") from exc
+            raise EgressNetworkError(f"{type(exc).__name__} while reading body", kind="body") from exc
         finally:
             response.close()
         return bytes(buffer)
@@ -153,7 +171,7 @@ class EgressGateway:
         try:
             yield from response.iter_content(chunk)
         except requests.RequestException as exc:
-            raise EgressNetworkError(f"{type(exc).__name__} while streaming body") from exc
+            raise EgressNetworkError(f"{type(exc).__name__} while streaming body", kind="body") from exc
         finally:
             response.close()
 

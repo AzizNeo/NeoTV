@@ -31,6 +31,11 @@
   color: rgb(244 246 251 / 0.75);
   line-height: 1.6;
 }
+.hint {
+  margin-top: -0.25rem;
+  font-size: 0.875rem;
+  color: rgb(244 246 251 / 0.6) !important;
+}
 .icon {
   color: #ffb547;
 }

@@ -21,6 +21,8 @@ function formatTime(seconds) {
   return `${h ? `${h}:` : ''}${mm}:${String(s).padStart(2, '0')}`;
 }
 
+const STARTUP_TIMEOUT_MS = 25_000;
+
 /**
  * Extension points (all optional) keep this component generic — it knows nothing of episodes or channels:
  * `subtitle` (title bar), `controlsExtra` (buttons before settings), `overlay` (layers over the video),
@@ -58,8 +60,13 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
     let engine = null;
     let disposed = false;
     setIsLoading(true);
+    // Watchdog: whatever goes wrong upstream, a viewer never stares at an endless spinner.
+    const watchdog = setTimeout(() => {
+      if (!disposed) onFatalRef.current?.({ code: 'STREAM_TIMEOUT' });
+    }, STARTUP_TIMEOUT_MS);
     createEngine(video, source, {
       onReady: () => {
+        clearTimeout(watchdog);
         setIsLoading(false);
         video.play().catch(() => {
           /* autoplay blocked: user presses play */
@@ -79,6 +86,7 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
       .catch((error) => onFatalRef.current?.({ code: error.code ?? 'UNSUPPORTED_PLAYBACK', detail: error.message }));
     return () => {
       disposed = true;
+      clearTimeout(watchdog);
       engine?.destroy();
       if (engineRef) engineRef.current = null;
     };

@@ -880,7 +880,8 @@ export const OPERATIONS = Object.freeze({
       "GRANT_INVALID",
       "GRANT_EXPIRED",
       "SESSION_INACTIVE",
-      "UPSTREAM_STATUS"
+      "UPSTREAM_STATUS",
+      "UPSTREAM_UNAVAILABLE"
     ]
   },
   "playback_record_event": {
