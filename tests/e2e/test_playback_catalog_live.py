@@ -158,3 +158,44 @@ def test_proxy_failures_say_why_but_never_where(
     assert reply.status == 502 and reply.code == "UPSTREAM_UNAVAILABLE"
     assert reply.body["error"]["details"] == {"reason": reason}
     assert b"cdn.example.com" not in reply.raw  # origin URLs (may embed provider credentials) never reach viewers
+
+
+def test_one_device_opening_concurrently_never_hits_its_own_limit(api: Api, admin: str, viewer: str) -> None:
+    """Regression: replace-same-device ran outside the atomic acquire, so two simultaneous opens from one
+    device (React StrictMode, a double click, two tabs) both missed each other and one got
+    STREAM_LIMIT_EXCEEDED on a 1-screen plan."""
+    import threading
+
+    from app.modules.playback.concurrency import StreamConcurrencyGuard
+
+    if api.app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite"):
+        pytest.skip("concurrent requests need a real database: runs in tests/integration (PostgreSQL + Redis)")
+
+    ref = api.channel(admin, "Race")["ref"]
+    headers = {"Authorization": f"Bearer {viewer}", "User-Agent": "race-test", "X-Device-ID": "race-device-01"}
+    barrier = threading.Barrier(4)  # within the open rate-limit burst (5)
+    statuses: list[int] = []
+    bodies: list[str] = []
+
+    def open_once() -> None:
+        client = api.app.test_client()
+        barrier.wait()
+        reply = client.post("/api/v1/playback/sessions", json={"content_ref": ref}, headers=headers)
+        statuses.append(reply.status_code)
+        bodies.append(reply.get_data(as_text=True)[:160])
+
+    threads = [threading.Thread(target=open_once) for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert statuses == [201] * 4, bodies
+    with api.app.app_context():
+        assert resolve(StreamConcurrencyGuard).active_count(_user_id(api, viewer)) == 1
+
+    other = api.open_session(viewer, ref, headers={"User-Agent": "race-test", "X-Device-ID": "other-device-02"})
+    assert other.code == "STREAM_LIMIT_EXCEEDED"  # a *different* device still respects the plan
+
+
+def _user_id(api: Api, token: str) -> int:
+    return int(api.get("/api/v1/auth/me", token=token).data["id"])

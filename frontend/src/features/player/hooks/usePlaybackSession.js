@@ -26,34 +26,41 @@ export function usePlaybackSession(contentRef) {
       api.beacon('playback_release', { session_token: token });
     };
 
-    api
-      .call('playback_open_session', { body: { content_ref: contentRef }, signal: controller.signal })
-      .then((session) => {
-        tokenRef.current = session.session_token;
-        if (controller.signal.aborted) {
-          release();
-          return;
-        }
-        setState({ ref: contentRef, status: 'ready', session, error: null });
-        timer = setInterval(() => {
-          api
-            .call('playback_heartbeat', { body: { session_token: session.session_token } })
-            .catch((error) => {
-              if (error?.status >= 400 && error?.status < 500) {
-                clearInterval(timer);
-                tokenRef.current = null;
-                setState((s) => ({ ...s, status: 'expired', error }));
-              } // transient (5xx / network): keep the stream, retry next tick
-            });
-        }, Math.max(5, session.heartbeat_interval_s) * 1000);
-      })
-      .catch((error) => {
-        if (error?.name === 'AbortError') return;
-        setState({ ref: contentRef, status: 'denied', session: null, error });
-      });
+    // Opened on the next tick, not synchronously: an effect that is set up and torn down at once
+    // (React StrictMode, a fast re-render) must not reach the server. An aborted fetch still lands
+    // there, and the server would let that phantom session replace the real one (same device).
+    const open = () =>
+      api
+        .call('playback_open_session', { body: { content_ref: contentRef }, signal: controller.signal })
+        .then((session) => {
+          tokenRef.current = session.session_token;
+          if (controller.signal.aborted) {
+            release();
+            return;
+          }
+          setState({ ref: contentRef, status: 'ready', session, error: null });
+          timer = setInterval(() => {
+            api
+              .call('playback_heartbeat', { body: { session_token: session.session_token } })
+              .catch((error) => {
+                if (error?.status >= 400 && error?.status < 500) {
+                  clearInterval(timer);
+                  tokenRef.current = null;
+                  setState((s) => ({ ...s, status: 'expired', error }));
+                } // transient (5xx / network): keep the stream, retry next tick
+              });
+          }, Math.max(5, session.heartbeat_interval_s) * 1000);
+        })
+        .catch((error) => {
+          if (error?.name === 'AbortError') return;
+          setState({ ref: contentRef, status: 'denied', session: null, error });
+        });
+
+    const pending = setTimeout(open, 0);
 
     window.addEventListener('pagehide', release);
     return () => {
+      clearTimeout(pending);
       controller.abort();
       clearInterval(timer);
       window.removeEventListener('pagehide', release);

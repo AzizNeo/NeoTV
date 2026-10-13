@@ -47,6 +47,12 @@ export function createHlsJsEngine(video, { isLive, onFatal, onReady, maxHeight }
     }
     onFatal?.(data.type === Hls.ErrorTypes.NETWORK_ERROR ? describeNetworkFailure(data) : { code: 'STREAM_FAILED', detail: data.details });
   });
+  // Remember which MediaSource URL is ours: teardown must never clear a <video> another engine owns
+  // (an overlapping mount/unmount — React StrictMode — once wiped the live engine's media this way).
+  let ownedSrc = null;
+  hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+    ownedSrc = video.currentSrc || video.src || null;
+  });
   hls.attachMedia(video);
 
   return {
@@ -57,9 +63,12 @@ export function createHlsJsEngine(video, { isLive, onFatal, onReady, maxHeight }
       return { bitrateKbps: level ? Math.round(level.bitrate / 1000) : null, resolution: level?.height ? `${level.height}p` : null };
     },
     destroy() {
+      const stillOurs = ownedSrc !== null && (video.currentSrc || video.src) === ownedSrc;
       hls.destroy();
-      video.removeAttribute('src');
-      video.load();
+      if (stillOurs) {
+        video.removeAttribute('src');
+        video.load();
+      }
     },
   };
 }

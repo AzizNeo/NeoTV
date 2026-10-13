@@ -112,17 +112,17 @@ class PlaybackSessionService:
             self._metrics.playback_open.labels("denied").inc()
             raise
 
-        # Switching channels on the same device replaces the previous stream (no slot leak).
-        for previous in self._guard.tokens(user_id):
-            owner = self._guard.owner(previous)
-            if owner is not None and owner.device_key == device_key:
-                self.release(previous, reason="replaced")
-
+        # Switching channels on the same device replaces the previous stream — atomically, inside acquire
+        # (a check-then-release here raced when one device opened twice at once).
         limit = self._max_streams(user_id)
-        granted, active = self._guard.acquire(user_id=user_id, token=token, limit=limit, device_key=device_key)
-        if not granted:
+        acquired = self._guard.acquire(user_id=user_id, token=token, limit=limit, device_key=device_key)
+        if not acquired.granted:
             self._metrics.playback_open.labels("limit").inc()
-            raise StreamLimitExceededError(active, limit)
+            raise StreamLimitExceededError(acquired.active, limit)
+        if acquired.replaced:
+            with self._uow() as uow:
+                for previous in acquired.replaced:
+                    self._end_record(uow, previous, "replaced")
         try:
             source = gate.resolve(ctx, descriptor)
             now = self._clock.now()

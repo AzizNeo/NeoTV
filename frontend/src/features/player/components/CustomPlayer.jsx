@@ -64,6 +64,8 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
     const watchdog = setTimeout(() => {
       if (!disposed) onFatalRef.current?.({ code: 'STREAM_TIMEOUT' });
     }, STARTUP_TIMEOUT_MS);
+    // Created on the next tick: a mount that is torn down at once (StrictMode) builds no engine at all.
+    const start = setTimeout(() =>
     createEngine(video, source, {
       onReady: () => {
         clearTimeout(watchdog);
@@ -83,9 +85,10 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
         if (engineRef) engineRef.current = created;
         return created.load(source.url);
       })
-      .catch((error) => onFatalRef.current?.({ code: error.code ?? 'UNSUPPORTED_PLAYBACK', detail: error.message }));
+      .catch((error) => onFatalRef.current?.({ code: error.code ?? 'UNSUPPORTED_PLAYBACK', detail: error.message })), 0);
     return () => {
       disposed = true;
+      clearTimeout(start);
       clearTimeout(watchdog);
       engine?.destroy();
       if (engineRef) engineRef.current = null;
