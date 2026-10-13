@@ -256,10 +256,18 @@
 .tabbar {
   display: none;
 }
+.menuOverflow {
+  display: none;
+}
 
 @media (max-width: 760px) {
   .primary {
     display: none;
+  }
+  .menuOverflow {
+    display: flex;
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--border);
   }
   .topbar {
     gap: var(--space-3);

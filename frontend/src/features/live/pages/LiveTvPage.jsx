@@ -8,31 +8,21 @@ import { ContentRow } from '@/shared/components/ContentRow/ContentRow';
 import { EmptyState } from '@/shared/components/EmptyState/EmptyState';
 import { Page } from '@/shared/components/Page/Page';
 import { Spinner } from '@/shared/components/Spinner/Spinner';
+import { fetchLiveChannels, liveKeys, toLiveCard } from '../api';
 import { GuideGrid } from './GuideGrid';
 
-const time = (iso) => new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 
 export default function LiveTvPage() {
   const { play } = usePlayer();
-  const channels = useQuery({ queryKey: ['live', 'channels'], queryFn: () => api.call('live_list_channels'), refetchInterval: 60_000 });
+  const channels = useQuery({ queryKey: liveKeys.channels, queryFn: fetchLiveChannels, refetchInterval: 60_000 });
   const guide = useQuery({
-    queryKey: ['live', 'guide'],
+    queryKey: liveKeys.guide,
     queryFn: () => api.call('live_guide', { query: { hours: 6 } }),
     enabled: Boolean(channels.data?.length),
     staleTime: 5 * 60_000,
   });
 
-  const cards = useMemo(
-    () =>
-      (channels.data ?? []).map((c) => ({
-        ref: c.ref,
-        title: c.name,
-        image: c.logo,
-        live: c.is_live,
-        caption: c.now ? `${time(c.now.starts_at)} ${c.now.title}${c.next ? ` · Sonra: ${c.next.title}` : ''}` : c.description ?? undefined,
-      })),
-    [channels.data],
-  );
+  const cards = useMemo(() => (channels.data ?? []).map(toLiveCard), [channels.data]);
 
   if (channels.isLoading) return <Spinner fullScreen />;
   if (!cards.length) {

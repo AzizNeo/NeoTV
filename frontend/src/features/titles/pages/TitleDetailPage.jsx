@@ -52,7 +52,16 @@ export default function TitleDetailPage() {
         {card.backdrop_url && <img className={styles.backdrop} src={card.backdrop_url} alt="" referrerPolicy="no-referrer" />}
         <div className={styles.scrim} />
         <div className={styles.content}>
-          {detail.genre_links.length > 0 && <p className={styles.genres}>{detail.genre_links.map((g) => g.name).join(', ')}</p>}
+          {detail.genre_links.length > 0 && (
+            <p className={styles.genres}>
+              {detail.genre_links.map((g, i) => (
+                <span key={g.slug}>
+                  {i > 0 && ', '}
+                  <Link to={`/browse?genre=${encodeURIComponent(g.slug)}`}>{g.name}</Link>
+                </span>
+              ))}
+            </p>
+          )}
           <h1 className={styles.name}>{card.name}</h1>
           <p className={styles.facts}>
             {factLine(card).map((fact) => (

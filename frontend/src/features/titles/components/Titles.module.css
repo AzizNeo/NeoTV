@@ -84,3 +84,20 @@
   text-decoration: none;
   opacity: 0.9;
 }
+
+.searchAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.searchAction:hover {
+  color: var(--text-1);
+  border-color: var(--border);
+}

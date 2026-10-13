@@ -23,7 +23,7 @@ class Art:
     top: str  # gradient colours
     bottom: str
     accent: str
-    live: bool = False
+    live: bool = False  # live channels get no poster/backdrop; the UI draws the LIVE badge itself
 
 
 ARTWORK: tuple[Art, ...] = (
@@ -40,13 +40,6 @@ ARTWORK: tuple[Art, ...] = (
 
 def render(art: Art) -> str:
     title_size = 120 if len(art.title) <= 10 else 96
-    live_badge = (
-        '<g transform="translate(80,96)"><rect width="150" height="54" rx="10" fill="#e50914"/>'
-        '<circle cx="34" cy="27" r="9" fill="#fff"/>'
-        '<text x="56" y="38" font-size="30" font-weight="800" fill="#fff">LIVE</text></g>'
-        if art.live
-        else ""
-    )
     return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" role="img" aria-label="{escape(art.title)}">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
@@ -61,7 +54,6 @@ def render(art: Art) -> str:
   <g fill="none" stroke="{art.accent}" stroke-opacity="0.18" stroke-width="2">
     <circle cx="1040" cy="170" r="140"/><circle cx="1040" cy="170" r="220"/><circle cx="1040" cy="170" r="300"/>
   </g>
-  {live_badge}
   <g font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
     <text x="80" y="560" font-size="{title_size}" font-weight="800" fill="#ffffff" letter-spacing="-2">{escape(art.title)}</text>
     <rect x="80" y="592" width="90" height="8" rx="4" fill="{art.accent}"/>

@@ -12,7 +12,6 @@
   <g fill="none" stroke="#ff7a59" stroke-opacity="0.18" stroke-width="2">
     <circle cx="1040" cy="170" r="140"/><circle cx="1040" cy="170" r="220"/><circle cx="1040" cy="170" r="300"/>
   </g>
-  
   <g font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
     <text x="80" y="560" font-size="120" font-weight="800" fill="#ffffff" letter-spacing="-2">Sintel</text>
     <rect x="80" y="592" width="90" height="8" rx="4" fill="#ff7a59"/>

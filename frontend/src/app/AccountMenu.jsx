@@ -16,7 +16,7 @@ const THEMES = [
  * Profile / account menu (disclosure pattern): who is watching, account pages from the feature
  * manifests (`section: 'account'`), theme and sign-out. Closes on Escape, outside click and navigation.
  */
-export function AccountMenu({ items }) {
+export function AccountMenu({ items, overflow = [] }) {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const hasProfile = useSlot('shell.user').length > 0;
@@ -68,6 +68,16 @@ export function AccountMenu({ items }) {
             <div className={styles.menuProfile}>
               <Slot name="shell.user" />
             </div>
+          )}
+          {overflow.length > 0 && (
+            // Phone only: main-menu items that do not fit the bottom tab bar.
+            <nav aria-label="Diğer" className={`${styles.menuLinks} ${styles.menuOverflow}`}>
+              {overflow.map(({ to, label, icon: Icon, feature }) => (
+                <NavLink key={`${feature}:${to}`} to={to} className={({ isActive }) => (isActive ? styles.menuLinkActive : styles.menuLink)}>
+                  <Icon size={18} aria-hidden="true" /> {label}
+                </NavLink>
+              ))}
+            </nav>
           )}
           {items.length > 0 && (
             <nav aria-label="Hesap" className={styles.menuLinks}>

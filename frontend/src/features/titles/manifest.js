@@ -1,5 +1,7 @@
+import { Clapperboard } from 'lucide-react';
 import { defineFeature } from '@/core/featureKit';
 import { HeroBillboard } from './components/HeroBillboard';
+import { SearchAction } from './components/SearchAction';
 import { TitleRails } from './components/TitleRails';
 
 /**
@@ -9,10 +11,17 @@ import { TitleRails } from './components/TitleRails';
 export default defineFeature({
   id: 'titles',
   backendModule: 'titles',
-  requires: ['auth', 'player', 'catalog'],
-  routes: [{ path: '/title/:slug', lazy: () => import('./pages/TitleDetailPage') }],
+  requires: ['auth', 'player', 'catalog', 'profiles'],
+  routes: [
+    { path: '/browse', lazy: () => import('./pages/BrowsePage') },
+    { path: '/title/:slug', lazy: () => import('./pages/TitleDetailPage') },
+  ],
+  nav: [{ to: '/browse', label: 'Keşfet', icon: Clapperboard, order: 15 }],
+  // Other features add their own matches to a search (live channels from catalog …).
+  slots: ['search.results'],
   contributes: [
     { slot: 'home.hero', component: HeroBillboard, order: 10 },
     { slot: 'home.rows', component: TitleRails, order: 15 },
+    { slot: 'shell.actions', component: SearchAction, order: 10 },
   ],
 });

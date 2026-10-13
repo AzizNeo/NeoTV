@@ -37,7 +37,7 @@ export function AppShell() {
         </nav>
         <div className={styles.tools}>
           <Slot name="shell.actions" />
-          <AccountMenu items={account} />
+          <AccountMenu items={account} overflow={main.slice(TABBAR_MAX)} />
         </div>
       </header>
       <main id="main" className={styles.main} tabIndex={-1}>

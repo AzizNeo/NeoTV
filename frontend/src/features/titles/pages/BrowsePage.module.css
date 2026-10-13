@@ -1,0 +1,212 @@
+.page {
+  min-width: 0;
+}
+.heading {
+  margin: var(--space-2) 0 var(--space-4);
+}
+
+/* ── Search ───────────────────────────────────────────────────────────── */
+.searchBox {
+  position: relative;
+  max-width: 640px;
+  margin-bottom: var(--space-5);
+}
+.searchBox input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 3rem 0 3rem;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-1);
+  font-size: var(--text-lg);
+  outline: none;
+}
+.searchBox input::-webkit-search-cancel-button {
+  display: none;
+}
+.searchBox input::placeholder {
+  color: var(--text-3);
+}
+.searchBox input:focus {
+  border-color: var(--accent);
+}
+.searchIcon {
+  position: absolute;
+  left: 1rem;
+  top: 26px;
+  transform: translateY(-50%);
+  color: var(--text-3);
+  pointer-events: none;
+}
+.clearTerm {
+  position: absolute;
+  right: 0.5rem;
+  top: 26px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  padding: var(--space-2);
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-3);
+  cursor: pointer;
+}
+.clearTerm:hover {
+  color: var(--text-1);
+  background: var(--surface-2);
+}
+.recent {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  top: calc(100% + var(--space-1));
+  padding: var(--space-2);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+}
+.recentHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-1) var(--space-2) var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-3);
+}
+.recentHead button {
+  border: 0;
+  background: none;
+  color: var(--accent-ink);
+  font-weight: 700;
+  cursor: pointer;
+}
+.recent ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.recent li button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-1);
+  text-align: left;
+  cursor: pointer;
+}
+.recent li button:hover {
+  background: var(--surface-2);
+}
+
+/* ── Filters ──────────────────────────────────────────────────────────── */
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+.chips {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-inline: calc(-1 * var(--gutter));
+  padding: 2px var(--gutter);
+}
+.chip {
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  color: var(--text-2);
+  font-weight: 650;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.chip:hover {
+  color: var(--text-1);
+  border-color: var(--border-strong);
+}
+.chip[aria-pressed='true'] {
+  background: var(--text-1);
+  border-color: var(--text-1);
+  color: var(--bg);
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
+.segmented button {
+  min-height: 34px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-2);
+  font-weight: 650;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.segmented button[aria-pressed='true'] {
+  background: var(--surface-1);
+  color: var(--text-1);
+  box-shadow: var(--shadow-1);
+}
+.select {
+  min-height: 38px;
+  padding: 0 var(--space-3);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-1);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+/* ── Results ──────────────────────────────────────────────────────────── */
+.count {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-3);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-5) var(--space-3);
+}
+.skeletonCard {
+  aspect-ratio: 2 / 3;
+}
+.more {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6) 0;
+}
+.noTitles {
+  margin: var(--space-2) 0 var(--space-6);
+  color: var(--text-2);
+}
+.noTitles button {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--accent-ink);
+  font-weight: 700;
+  cursor: pointer;
+}
