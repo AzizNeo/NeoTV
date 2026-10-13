@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 #: (title, stream, group, artwork slug) — Blender open movies: © Blender Foundation, CC BY.
 DEMO_VOD = (
     ("Big Buck Bunny", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "Open Movies", "big-buck-bunny"),
-    ("Sintel", "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8", "Open Movies", "sintel"),
+    ("Sintel", "https://d2zihajmogu5jn.cloudfront.net/sintel/master.m3u8", "Open Movies", "sintel"),
     (
         "Tears of Steel",
         "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
@@ -46,6 +46,14 @@ DEMO_VOD = (
         "Test Streams",
         "bipbop-advanced",
     ),
+)
+
+#: Demo sources that stopped working (host now answers 403/404). Re-running the seed retires their
+#: channels so an existing database moves to the replacement instead of keeping a dead duplicate.
+RETIRED_URLS = frozenset(
+    {
+        "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8",  # Bitmovin: 403 since 2026
+    }
 )
 
 #: Public test streams published for player developers (no broadcast content).
@@ -120,6 +128,12 @@ def main(argv: list[str] | None = None) -> int:
         from app.modules.live.services import EpgService, LiveChannelService
 
         catalog = resolve(CatalogAdminService)
+        channels, _ = catalog.list_channels(page=1, per_page=200, search=None, include_inactive=False)
+        for channel in channels:
+            if channel.stream_url in RETIRED_URLS:
+                catalog.remove_channel(channel.id)
+                print(f"catalog  - {channel.name} (retired source)")
+
         for name, url, group, slug in DEMO_VOD:
             try:
                 catalog.add_channel(
