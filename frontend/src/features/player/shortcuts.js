@@ -9,7 +9,6 @@
 export const DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
 const KEY_NAMES = {
-  ' ': 'Boşluk',
   ArrowLeft: '←',
   ArrowRight: '→',
   ArrowUp: '↑',
@@ -19,13 +18,15 @@ const KEY_NAMES = {
   Escape: 'Esc',
 };
 
-export function keyName(key) {
+/** How a key is printed in the help; `space` is the only one with a word in it (translated by the caller). */
+export function keyName(key, { space = 'Space', locale = 'tr' } = {}) {
+  if (key === ' ') return space;
   if (KEY_NAMES[key]) return KEY_NAMES[key];
   if (/^[A-Z]$/.test(key)) return `Shift+${key}`; // "N" is what the browser reports for Shift+N
-  return key.length === 1 ? key.toLocaleUpperCase('tr') : key;
+  return key.length === 1 ? key.toLocaleUpperCase(locale) : key;
 }
 
-export function resolveShortcuts(defaults, extra = []) {
+export function resolveShortcuts(defaults, extra = [], names = {}) {
   const taken = new Set(extra.flatMap((s) => s.keys));
   const merged = [
     ...defaults
@@ -38,7 +39,7 @@ export function resolveShortcuts(defaults, extra = []) {
   ];
   const byKey = new Map();
   for (const s of merged) for (const k of s.keys) byKey.set(k, s);
-  return { byKey, list: merged.map((s) => ({ keys: s.display ? [s.display] : s.keys.map(keyName), label: s.label })) };
+  return { byKey, list: merged.map((s) => ({ keys: s.display ? [s.display] : s.keys.map((k) => keyName(k, names)), label: s.label })) };
 }
 
 /** True when a key press belongs to something else: a text field, or a browser/OS shortcut. */

@@ -1,5 +1,6 @@
 import { UserCog } from 'lucide-react';
 import { defineFeature } from '@/core/featureKit';
+import { messages } from './i18n';
 import { EmailChangeSection } from './components/EmailChangeSection';
 import { EmailVerificationNotice } from './components/EmailVerificationNotice';
 
@@ -17,7 +18,7 @@ export default defineFeature({
     { path: '/revert-email-change', lazy: () => import('./pages/RevertEmailChangePage'), guard: 'any', layout: 'bare' },
     { path: '/account', lazy: () => import('./pages/AccountPage') },
   ],
-  nav: [{ to: '/account', label: 'Hesap', icon: UserCog, order: 900, section: 'account' }],
+  nav: [{ to: '/account', label: messages.ref('nav.account'), icon: UserCog, order: 900, section: 'account' }],
   slots: ['account.sections', 'shell.user', 'shell.actions'],
   contributes: [
     { slot: 'account.sections', component: EmailVerificationNotice, order: 0 },

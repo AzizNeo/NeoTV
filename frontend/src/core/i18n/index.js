@@ -1,73 +1,7 @@
 /**
- * Error code → user-facing Turkish text. Backend messages are developer
- * prose; the UI only ever shows these (unknown codes fall back gracefully).
+ * Internationalisation (TR / EN). Features own their texts: `features/<id>/i18n.js` defines a
+ * catalog with defineMessages and components read it with useTranslation. See messages.js.
  */
-const ERRORS = {
-  NETWORK: 'Sunucuya ulaşılamıyor. İnternet bağlantınızı kontrol edin.',
-  INTERNAL_ERROR: 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.',
-  VALIDATION_FAILED: 'Girilen bilgileri kontrol edin.',
-  RATE_LIMITED: 'Çok fazla deneme yaptınız. Biraz bekleyip tekrar deneyin.',
-  REQUEST_IN_PROGRESS: 'İşleminiz sürüyor, lütfen bekleyin.',
-  AUTH_REQUIRED: 'Devam etmek için giriş yapın.',
-  TOKEN_EXPIRED: 'Oturum süreniz doldu.',
-  TOKEN_INVALID: 'Oturumunuz geçersiz. Lütfen yeniden giriş yapın.',
-  INVALID_CREDENTIALS: 'Kullanıcı adı veya şifre hatalı.',
-  ACCOUNT_SUSPENDED: 'Hesabınız askıya alınmış.',
-  USERNAME_TAKEN: 'Bu kullanıcı adı alınmış.',
-  INVALID_USERNAME: 'Kullanıcı adı 3-64 karakter olmalı; harf, rakam, nokta, tire ve alt çizgi içerebilir.',
-  EMAIL_TAKEN: 'Bu e-posta adresi zaten kayıtlı.',
-  WEAK_PASSWORD: 'Şifre en az 10 karakter olmalı ve en az iki karakter türü içermeli.',
-  ACTION_TOKEN_INVALID: 'Bu bağlantı geçersiz, kullanılmış ya da süresi dolmuş. Yeni bir bağlantı isteyin.',
-  EMAIL_DELIVERY_UNAVAILABLE: 'E-posta gönderimi şu anda kullanılamıyor. Lütfen yöneticiye başvurun.',
-  EMAIL_MISSING: 'Hesabınızda kayıtlı bir e-posta adresi yok.',
-  EMAIL_ALREADY_VERIFIED: 'E-posta adresiniz zaten doğrulanmış.',
-  EMAIL_UNCHANGED: 'Bu adres zaten hesabınızın e-posta adresi.',
-  EMAIL_RECIPIENT_INVALID: 'E-posta adresi geçersiz.',
-  CAPTCHA_REQUIRED: 'Güvenlik doğrulaması gerekiyor.',
-  LOGIN_THROTTLED: 'Çok sayıda hatalı giriş. Birkaç dakika sonra tekrar deneyin.',
-  REFRESH_INVALID: 'Oturumunuz sona erdi. Lütfen yeniden giriş yapın.',
-  REFRESH_REUSED: 'Güvenlik nedeniyle tüm oturumlar kapatıldı. Lütfen yeniden giriş yapın.',
-  PERMISSION_DENIED: 'Bu işlem için yetkiniz yok.',
-  PROTECTED_ACCOUNT: 'Bu hesap üzerinde bu işlem yapılamaz.',
-  PROFILE_NOT_FOUND: 'Profil bulunamadı.',
-  PROFILE_LIMIT_REACHED: 'Planınızın profil sınırına ulaştınız. Daha fazla profil için planınızı yükseltin.',
-  PROFILE_NAME_TAKEN: 'Bu isimde bir profil zaten var.',
-  DEFAULT_PROFILE_PROTECTED: 'Ana profil silinemez.',
-  PIN_REQUIRED: 'Bu profil PIN ile korunuyor.',
-  PIN_INVALID: 'PIN hatalı.',
-  PIN_FORMAT: 'PIN 4-8 haneli olmalı.',
-  PIN_LOCKED: 'Çok fazla hatalı PIN denemesi. 15 dakika sonra tekrar deneyin.',
-  STREAM_LIMIT_EXCEEDED: 'Planınızın eşzamanlı izleme sınırına ulaştınız. Başka bir cihazdaki yayını kapatın veya planınızı yükseltin.',
-  SESSION_EXPIRED: 'Yayın oturumu sona erdi.',
-  SESSION_INACTIVE: 'Yayın oturumu sona erdi.',
-  CONTENT_NOT_FOUND: 'İçerik bulunamadı.',
-  CONTENT_PROVIDER_UNAVAILABLE: 'Bu içerik türü şu an kullanılamıyor.',
-  CONTENT_NOT_ALLOWED_FOR_KIDS: 'Bu içerik çocuk profilinde izlenemez.',
-  DEVICE_CLASS_NOT_ALLOWED: 'Bu içerik bu cihaz türünde izlenemez.',
-  PLAYBACK_DENIED: 'Bu içeriği izleme yetkiniz yok.',
-  UPSTREAM_STATUS: 'Yayın kaynağı yanıt vermiyor.',
-  UPSTREAM_UNREACHABLE: 'Yayın kaynağına ulaşılamıyor.',
-  UPSTREAM_UNAVAILABLE: 'Sunucu yayın kaynağına ulaşamadı.',
-  STREAM_TIMEOUT: 'Yayın başlatılamadı: kaynak zamanında yanıt vermedi.',
-  LIVE_OFFLINE: 'Kanal şu an yayında değil.',
-  STREAM_FAILED: 'Yayın oynatılamadı. Kaynak yanıt vermiyor olabilir.',
-  DRM_LICENSE_FAILED: 'Koruma lisansı alınamadı.',
-  UNSUPPORTED_PLAYBACK: 'Bu tarayıcı bu yayını oynatamıyor.',
-  DRM_SYSTEM_UNAVAILABLE: 'Bu içerik için koruma sistemi şu an kullanılamıyor.',
-  TRIAL_ALREADY_USED: 'Ücretsiz deneme hakkınızı daha önce kullandınız.',
-  ALREADY_SUBSCRIBED: 'Bu plana zaten abonesiniz.',
-  NO_PAID_SUBSCRIPTION: 'İptal edilecek aktif bir ücretli aboneliğiniz yok.',
-  NOT_RESUMABLE: 'Abonelik devam ettirilemiyor; yeni bir ödeme başlatın.',
-  PLAN_NOT_PURCHASABLE: 'Bu plan satın alınamaz.',
-  LIBRARY_CONTENT_NOT_FOUND: 'İçerik artık mevcut değil.',
-  FAVORITE_LIMIT_REACHED: 'Favori sınırına ulaştınız.',
-  DEVICE_NOT_FOUND: 'Cihaz bulunamadı.',
-  SERVICE_DEGRADED: 'Servis geçici olarak yoğun. Lütfen tekrar deneyin.',
-  TEMPORARILY_UNAVAILABLE: 'Servis geçici olarak yoğun. Lütfen tekrar deneyin.',
-};
-
-export function messageFor(code, fallback) {
-  if (code && ERRORS[code]) return ERRORS[code];
-  if (code?.startsWith('HTTP_5')) return ERRORS.INTERNAL_ERROR;
-  return fallback && fallback !== code ? fallback : 'İşlem tamamlanamadı.';
-}
+export { DEFAULT_LOCALE, LOCALES, UnknownLocaleError, getLocale, setLocale, subscribeLocale, useLocale } from './locale';
+export { MessageCatalogError, defineMessages, labelOf, translate, useTranslation } from './messages';
+export { errorMessages, messageFor } from './errors';

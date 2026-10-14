@@ -27,12 +27,9 @@ describe('track model', () => {
   });
 
   it('labels tracks by language in Turkish; a shared language is told apart by its name', () => {
-    expect(trackLabels([{ lang: 'tr' }, { lang: 'en', name: 'English' }, { lang: 'en', name: 'Commentary' }, {}])).toEqual([
-      'Türkçe',
-      'İngilizce (English)',
-      'İngilizce (Commentary)',
-      'Parça 4',
-    ]);
+    const tracks = [{ lang: 'tr' }, { lang: 'en', name: 'English' }, { lang: 'en', name: 'Commentary' }, {}];
+    expect(trackLabels(tracks, { locale: 'tr', unnamed: (n) => `Parça ${n}` })).toEqual(['Türkçe', 'İngilizce (English)', 'İngilizce (Commentary)', 'Parça 4']);
+    expect(trackLabels(tracks, { locale: 'en' }).slice(0, 2)).toEqual(['Turkish', 'English']); // the viewer's language, not the track's
     expect(sameLanguage('en-US', 'en')).toBe(true);
     expect(sameLanguage('tr', null)).toBe(false);
   });
@@ -76,7 +73,8 @@ describe('shortcuts', () => {
       { keys: ['+'], label: 'Sesi aç' },
       { keys: ['↑'], label: 'Sonraki kanal' },
     ]);
-    expect([keyName(' '), keyName('N'), keyName('i')]).toEqual(['Boşluk', 'Shift+N', 'İ']);
+    expect([keyName(' ', { space: 'Boşluk' }), keyName('N'), keyName('i')]).toEqual(['Boşluk', 'Shift+N', 'İ']);
+    expect(keyName('i', { locale: 'en' })).toBe('I'); // Turkish dotted İ only in Turkish
   });
 });
 

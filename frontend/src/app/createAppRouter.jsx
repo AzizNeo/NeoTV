@@ -2,16 +2,20 @@ import { createBrowserRouter, Outlet, useLocation } from 'react-router-dom';
 import { RedirectIfAuthenticated, RequireAuth, RequirePermission } from '@/core/auth/guards';
 import { RegistryProvider } from '@/core/featureKit';
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary/ErrorBoundary';
-import NotFound from '@/shared/pages/NotFound';
 import { AppShell } from './AppShell';
+import { useT } from './i18n';
+import NotFound from './NotFound';
 
 /** Feature providers need the router (navigation), so they wrap the route tree here. */
 function RootLayout({ registry }) {
   const location = useLocation();
+  const t = useT();
   const tree = registry.providers.reduceRight((children, Provider) => <Provider>{children}</Provider>, <Outlet />);
   return (
     <RegistryProvider registry={registry}>
-      <ErrorBoundary resetKey={location.pathname}>{tree}</ErrorBoundary>
+      <ErrorBoundary resetKey={location.pathname} labels={{ title: t('error.title'), unknown: t('error.unknown'), reload: t('error.reload') }}>
+        {tree}
+      </ErrorBoundary>
     </RegistryProvider>
   );
 }

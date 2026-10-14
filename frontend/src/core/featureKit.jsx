@@ -41,7 +41,7 @@ const LAYOUTS = new Set(['shell', 'bare']);
 /**
  * @typedef {{ path: string, lazy: () => Promise<{default: import('react').ComponentType}>,
  *             guard?: 'public'|'auth'|'admin'|'any', layout?: 'shell'|'bare' }} RouteDef
- * @typedef {{ to: string, label: string, icon: import('react').ComponentType<any>, order?: number,
+ * @typedef {{ to: string, label: string | {catalog: object, key: string}, icon: import('react').ComponentType<any>, order?: number,
  *             guard?: 'auth'|'admin', section?: 'main'|'account' }} NavDef
  * @typedef {{ slot: string, component: import('react').ComponentType<any>, order?: number }} Contribution
  * @typedef {{ id: string, requires?: string[], backendModule?: string, routes?: RouteDef[], nav?: NavDef[],
@@ -125,7 +125,9 @@ export function buildRegistry(features, { disabled = [], backendModules = null }
       slots.set(contribution.slot, list);
     }
   }
-  nav.sort((a, b) => a.order - b.order || a.label.localeCompare(b.label));
+  // Labels may be message refs (translated at render): ties sort by their key, stable across languages.
+  const sortKey = (item) => String(item.label?.key ?? item.label);
+  nav.sort((a, b) => a.order - b.order || sortKey(a).localeCompare(sortKey(b)));
   for (const list of slots.values()) list.sort((a, b) => a.order - b.order);
 
   return Object.freeze({

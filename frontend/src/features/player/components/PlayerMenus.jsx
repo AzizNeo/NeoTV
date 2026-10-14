@@ -6,20 +6,23 @@ import { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Check, ChevronLeft, ChevronRight, Keyboard, X } from 'lucide-react';
 import { AUTO, OFF, qualityLabel, trackLabels } from '../engines/tracks';
+import { useT } from '../i18n';
 import styles from './PlayerMenus.module.css';
 
-const speedLabel = (s) => (s === 1 ? 'Normal' : `${s}x`);
 
 /** Rows of the main view, each with its current value; a row appears only when there is a choice. */
-function menuModel(tracks, { speed, speeds, isLive }) {
-  const audioNames = trackLabels(tracks.audio);
-  const textNames = trackLabels(tracks.text);
+function menuModel(tracks, { speed, speeds, isLive }, t) {
+  const naming = { locale: t.locale, unnamed: (n) => t('menu.track', { n }) };
+  const audioNames = trackLabels(tracks.audio, naming);
+  const textNames = trackLabels(tracks.text, naming);
+  const speedLabel = (s) => (s === 1 ? t('menu.normal') : `${s}x`);
+  const off = t('menu.off');
   const selected = tracks.quality.find((q) => q.id === tracks.qualityId);
-  const autoName = `Otomatik${tracks.playingHeight ? ` (${tracks.playingHeight}p)` : ''}`;
+  const autoName = `${t('menu.auto')}${tracks.playingHeight ? ` (${tracks.playingHeight}p)` : ''}`;
   const views = {};
   if (tracks.quality.length > 1) {
     views.quality = {
-      title: 'Kalite',
+      title: t('menu.quality'),
       value: selected ? qualityLabel(selected.height) : autoName,
       options: [{ id: AUTO, label: autoName }, ...tracks.quality.map((q) => ({ id: q.id, label: qualityLabel(q.height) }))],
       current: selected ? selected.id : AUTO,
@@ -27,18 +30,18 @@ function menuModel(tracks, { speed, speeds, isLive }) {
   }
   if (tracks.audio.length > 1) {
     const i = tracks.audio.findIndex((t) => t.id === tracks.audioId);
-    views.audio = { title: 'Ses', value: audioNames[i] ?? '', options: tracks.audio.map((t, j) => ({ id: t.id, label: audioNames[j] })), current: tracks.audioId };
+    views.audio = { title: t('menu.audio'), value: audioNames[i] ?? '', options: tracks.audio.map((t, j) => ({ id: t.id, label: audioNames[j] })), current: tracks.audioId };
   }
   if (tracks.text.length) {
     const i = tracks.text.findIndex((t) => t.id === tracks.textId);
     views.text = {
-      title: 'Altyazı',
-      value: i === -1 ? 'Kapalı' : textNames[i],
-      options: [{ id: OFF, label: 'Kapalı' }, ...tracks.text.map((t, j) => ({ id: t.id, label: textNames[j] }))],
+      title: t('menu.subtitles'),
+      value: i === -1 ? off : textNames[i],
+      options: [{ id: OFF, label: off }, ...tracks.text.map((t, j) => ({ id: t.id, label: textNames[j] }))],
       current: i === -1 ? OFF : tracks.textId,
     };
   }
-  if (!isLive) views.speed = { title: 'Oynatma hızı', value: speedLabel(speed), options: speeds.map((s) => ({ id: s, label: speedLabel(s) })), current: speed };
+  if (!isLive) views.speed = { title: t('menu.speed'), value: speedLabel(speed), options: speeds.map((s) => ({ id: s, label: speedLabel(s) })), current: speed };
   return views;
 }
 
@@ -63,9 +66,10 @@ function menuKeyHandler(onBack) {
 }
 
 export function SettingsMenu({ tracks, speed, speeds, isLive, onSelect, onSpeed, onHelp, onClose }) {
+  const t = useT();
   const [view, setView] = useState(null);
   const ref = useRef(null);
-  const views = menuModel(tracks, { speed, speeds, isLive });
+  const views = menuModel(tracks, { speed, speeds, isLive }, t);
   const open = view && views[view];
   const onKeyDown = menuKeyHandler(() => (open ? setView(null) : onClose()));
 
@@ -75,7 +79,7 @@ export function SettingsMenu({ tracks, speed, speeds, isLive, onSelect, onSpeed,
   }, [view]);
 
   return (
-    <div ref={ref} className={styles.menu} role="menu" aria-label={open ? open.title : 'Ayarlar'} onKeyDown={onKeyDown}>
+    <div ref={ref} className={styles.menu} role="menu" aria-label={open ? open.title : t('settings')} onKeyDown={onKeyDown}>
       {open ? (
         <>
           <button type="button" className={styles.back} onClick={() => setView(null)}>
@@ -110,7 +114,7 @@ export function SettingsMenu({ tracks, speed, speeds, isLive, onSelect, onSpeed,
             </button>
           ))}
           <button type="button" role="menuitem" className={styles.row} onClick={onHelp}>
-            <span>Klavye kısayolları</span>
+            <span>{t('menu.shortcuts')}</span>
             <span className={styles.value}>
               <kbd className={styles.kbd}>?</kbd>
             </span>
@@ -123,6 +127,7 @@ export function SettingsMenu({ tracks, speed, speeds, isLive, onSelect, onSpeed,
 
 /** "?" — every shortcut the player understands right now (built from the same list as the handler). */
 export function ShortcutHelp({ shortcuts, onClose }) {
+  const t = useT();
   const closeRef = useRef(null);
   useEffect(() => closeRef.current?.focus(), []);
   return (
@@ -130,9 +135,9 @@ export function ShortcutHelp({ shortcuts, onClose }) {
       <section className={styles.help} role="dialog" aria-modal="true" aria-labelledby="player-help-title">
         <header className={styles.helpHead}>
           <h2 id="player-help-title">
-            <Keyboard size={20} aria-hidden="true" /> Klavye kısayolları
+            <Keyboard size={20} aria-hidden="true" /> {t('menu.shortcuts')}
           </h2>
-          <button ref={closeRef} type="button" className={styles.helpClose} onClick={onClose} aria-label="Kısayolları kapat">
+          <button ref={closeRef} type="button" className={styles.helpClose} onClick={onClose} aria-label={t('menu.closeShortcuts')}>
             <X size={20} aria-hidden="true" />
           </button>
         </header>

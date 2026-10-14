@@ -7,7 +7,10 @@ import styles from './ErrorBoundary.module.css';
  * when the user navigates away, so one broken page never bricks the shell.
  * Named contract errors (FeatureContractError …) show their message: they are
  * configuration problems meant to be read by the developer.
+ * Texts come from the caller (`labels`): shared components never depend on the i18n core.
  */
+const DEFAULT_LABELS = { title: 'Bir şeyler ters gitti.', unknown: 'Beklenmeyen bir arayüz hatası oluştu.', reload: 'Sayfayı yenile' };
+
 export class ErrorBoundary extends Component {
   state = { error: null, resetKey: this.props.resetKey };
 
@@ -28,16 +31,17 @@ export class ErrorBoundary extends Component {
     const { error } = this.state;
     if (!error) return this.props.children;
     if (this.props.fallback) return this.props.fallback;
+    const labels = { ...DEFAULT_LABELS, ...this.props.labels };
     return (
       <div className={styles.container} role="alert">
         <div className={styles.content}>
-          <h2>Bir şeyler ters gitti.</h2>
+          <h2>{labels.title}</h2>
           <p className={styles.message}>
             {error.name?.endsWith('Error') && error.name !== 'Error' ? `${error.name}: ` : ''}
-            {error.message || 'Beklenmeyen bir arayüz hatası oluştu.'}
+            {error.message || labels.unknown}
           </p>
           <button className={styles.button} onClick={() => window.location.reload()}>
-            Sayfayı Yenile
+            {labels.reload}
           </button>
         </div>
       </div>
@@ -49,4 +53,5 @@ ErrorBoundary.propTypes = {
   children: PropTypes.node.isRequired,
   fallback: PropTypes.node,
   resetKey: PropTypes.any,
+  labels: PropTypes.shape({ title: PropTypes.string, unknown: PropTypes.string, reload: PropTypes.string }),
 };

@@ -12,6 +12,7 @@ import { createEngine } from '../engines';
 import { NO_TRACKS, OFF, sameLanguage } from '../engines/tracks';
 import { applyPreferences, readPrefs, writePrefs } from '../prefs';
 import { DIGITS, ignoreKey, resolveShortcuts } from '../shortcuts';
+import { useT } from '../i18n';
 import { SettingsMenu, ShortcutHelp } from './PlayerMenus';
 import './CustomPlayer.css';
 
@@ -36,6 +37,7 @@ const canPip = () => typeof document !== 'undefined' && Boolean(document.picture
  * channels — and show up in the "?" help), `onEnded`.
  */
 export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVideo, onEnded, engineRef, extraKeys, controlsExtra, overlay, children }) {
+  const t = useT();
   const videoRef = useRef(null);
   const playerRef = useRef(null);
   const progressRef = useRef(null);
@@ -271,20 +273,20 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
   const pipAvailable = canPip();
   const shortcuts = resolveShortcuts(
     [
-      { keys: [' ', 'k'], label: 'Oynat / duraklat', run: togglePlay },
-      !isLive && { keys: ['ArrowLeft', 'j'], label: '10 saniye geri', run: () => skip(-10) },
-      !isLive && { keys: ['ArrowRight', 'l'], label: '10 saniye ileri', run: () => skip(10) },
-      !isLive && { keys: DIGITS, display: '0–9', label: 'Videonun %0–90 noktasına git', run: (key) => seekFraction(Number(key) / 10) },
-      { keys: ['ArrowUp', '+', '='], label: 'Sesi aç', run: () => changeVolume(0.1) },
-      { keys: ['ArrowDown', '-'], label: 'Sesi kıs', run: () => changeVolume(-0.1) },
-      { keys: ['m'], label: 'Sesi kapat / aç', run: toggleMute },
-      hasText && { keys: ['c'], label: 'Altyazıyı aç / kapat', run: toggleSubtitles },
-      { keys: ['f'], label: 'Tam ekran', run: toggleFullscreen },
-      pipAvailable && { keys: ['i'], label: 'Resim içinde resim', run: togglePip },
-      { keys: ['?'], label: 'Kısayol listesi', run: () => setShowHelp((v) => !v) },
+      { keys: [' ', 'k'], label: t('keys.playPause'), run: togglePlay },
+      !isLive && { keys: ['ArrowLeft', 'j'], label: t('back10'), run: () => skip(-10) },
+      !isLive && { keys: ['ArrowRight', 'l'], label: t('forward10'), run: () => skip(10) },
+      !isLive && { keys: DIGITS, display: '0–9', label: t('keys.seekPercent'), run: (key) => seekFraction(Number(key) / 10) },
+      { keys: ['ArrowUp', '+', '='], label: t('keys.volumeUp'), run: () => changeVolume(0.1) },
+      { keys: ['ArrowDown', '-'], label: t('keys.volumeDown'), run: () => changeVolume(-0.1) },
+      { keys: ['m'], label: t('keys.muteToggle'), run: toggleMute },
+      hasText && { keys: ['c'], label: t('keys.subtitles'), run: toggleSubtitles },
+      { keys: ['f'], label: t('fullscreen'), run: toggleFullscreen },
+      pipAvailable && { keys: ['i'], label: t('pip'), run: togglePip },
+      { keys: ['?'], label: t('keys.help'), run: () => setShowHelp((v) => !v) },
       {
         keys: ['Escape'],
-        label: 'Menüyü / oynatıcıyı kapat',
+        label: t('keys.escape'),
         run: () => {
           if (showHelp) setShowHelp(false);
           else if (showSettings) setShowSettings(false);
@@ -294,6 +296,7 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
       },
     ].filter(Boolean),
     extraKeys,
+    { space: t('keys.space'), locale: t.locale },
   );
   const shortcutsRef = useRef(shortcuts);
   shortcutsRef.current = shortcuts;
@@ -330,7 +333,7 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
         else togglePlay();
       }}
       role="region"
-      aria-label={`${title} oynatıcı`}
+      aria-label={t('region', { title })}
     >
       <video ref={videoRef} className="video-element" playsInline />
 
@@ -343,9 +346,9 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
       {isPip && (
         <div className="pip-placeholder">
           <PictureInPicture2 size={40} aria-hidden="true" />
-          <span>Resim içinde resim modunda oynatılıyor</span>
+          <span>{t('pipActive')}</span>
           <button type="button" onClick={togglePip}>
-            Buraya geri al
+            {t('pipBack')}
           </button>
         </div>
       )}
@@ -355,12 +358,12 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
       {showHelp && <ShortcutHelp shortcuts={shortcuts.list} onClose={() => setShowHelp(false)} />}
 
       <div className={`title-bar ${showControls ? 'visible' : ''}`}>
-        <button className="back-btn" onClick={onClose} aria-label="Kapat">
+        <button className="back-btn" onClick={onClose} aria-label={t('close')}>
           <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" /></svg>
         </button>
         <span className="title">{title}</span>
         {subtitle && <span className="subtitle">{subtitle}</span>}
-        {isLive && <span className="live-badge">CANLI</span>}
+        {isLive && <span className="live-badge">{t('live')}</span>}
       </div>
 
       <div className={`controls ${showControls ? 'visible' : ''}`}>
@@ -370,7 +373,7 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
             ref={progressRef}
             onClick={seekTo}
             role="slider"
-            aria-label="İlerleme"
+            aria-label={t('progress')}
             aria-valuemin={0}
             aria-valuemax={Math.round(duration) || 0}
             aria-valuenow={Math.round(currentTime)}
@@ -384,7 +387,7 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
 
         <div className="controls-row">
           <div className="controls-left">
-            <button className="control-btn" onClick={togglePlay} aria-label={isPlaying ? 'Duraklat' : 'Oynat'}>
+            <button className="control-btn" onClick={togglePlay} aria-label={t(isPlaying ? 'pause' : 'play')}>
               {isPlaying ? (
                 <svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
               ) : (
@@ -393,18 +396,18 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
             </button>
             {!isLive && (
               <>
-                <button className="control-btn" onClick={() => skip(-10)} aria-label="10 saniye geri">
+                <button className="control-btn" onClick={() => skip(-10)} aria-label={t('back10')}>
                   <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" /></svg>
                   <span className="skip-text">10</span>
                 </button>
-                <button className="control-btn" onClick={() => skip(10)} aria-label="10 saniye ileri">
+                <button className="control-btn" onClick={() => skip(10)} aria-label={t('forward10')}>
                   <svg viewBox="0 0 24 24"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z" /></svg>
                   <span className="skip-text">10</span>
                 </button>
               </>
             )}
             <div className="volume-control" onMouseEnter={() => setShowVolume(true)} onMouseLeave={() => setShowVolume(false)}>
-              <button className="control-btn" onClick={toggleMute} aria-label={isMuted ? 'Sesi aç' : 'Sesi kapat'}>
+              <button className="control-btn" onClick={toggleMute} aria-label={t(isMuted ? 'unmute' : 'mute')}>
                 {isMuted || volume === 0 ? (
                   <svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" /></svg>
                 ) : (
@@ -418,7 +421,7 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
                   min="0"
                   max="1"
                   step="0.05"
-                  aria-label="Ses düzeyi"
+                  aria-label={t('volume')}
                   value={isMuted ? 0 : volume}
                   onChange={(e) => {
                     const v = Number(e.target.value);
@@ -441,19 +444,19 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
               <button
                 className="control-btn"
                 onClick={toggleSubtitles}
-                aria-label={tracks.textId === OFF ? 'Altyazıyı aç' : 'Altyazıyı kapat'}
+                aria-label={t(tracks.textId === OFF ? 'subtitlesOn' : 'subtitlesOff')}
                 aria-pressed={tracks.textId !== OFF}
               >
                 {tracks.textId === OFF ? <CaptionsOff size={24} aria-hidden="true" /> : <Captions size={24} aria-hidden="true" />}
               </button>
             )}
             {pipAvailable && (
-              <button className="control-btn" onClick={togglePip} aria-label={isPip ? 'Resim içinde resimden çık' : 'Resim içinde resim'} aria-pressed={isPip}>
+              <button className="control-btn" onClick={togglePip} aria-label={t(isPip ? 'pipExit' : 'pip')} aria-pressed={isPip}>
                 <PictureInPicture2 size={24} aria-hidden="true" />
               </button>
             )}
             <div className="settings-container">
-              <button className="control-btn" onClick={() => setShowSettings((v) => !v)} aria-label="Ayarlar" aria-haspopup="menu" aria-expanded={showSettings}>
+              <button className="control-btn" onClick={() => setShowSettings((v) => !v)} aria-label={t('settings')} aria-haspopup="menu" aria-expanded={showSettings}>
                 <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" /></svg>
               </button>
               {showSettings && (
@@ -475,7 +478,7 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
                 />
               )}
             </div>
-            <button className="control-btn" onClick={toggleFullscreen} aria-label={isFullscreen ? 'Tam ekrandan çık' : 'Tam ekran'}>
+            <button className="control-btn" onClick={toggleFullscreen} aria-label={t(isFullscreen ? 'fullscreenExit' : 'fullscreen')}>
               {isFullscreen ? (
                 <svg viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z" /></svg>
               ) : (

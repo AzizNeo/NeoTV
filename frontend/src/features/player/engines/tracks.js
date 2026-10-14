@@ -39,25 +39,26 @@ export function qualityLabel(height) {
   return `${height}p`;
 }
 
-let languageNames = null;
-function languageName(code) {
+const languageNames = new Map();
+function languageName(code, locale) {
   try {
-    languageNames ??= new Intl.DisplayNames(['tr'], { type: 'language' });
-    const name = languageNames.of(code);
-    return name && name.toLowerCase() !== code.toLowerCase() ? name.charAt(0).toLocaleUpperCase('tr') + name.slice(1) : null;
+    if (!languageNames.has(locale)) languageNames.set(locale, new Intl.DisplayNames([locale], { type: 'language' }));
+    const name = languageNames.get(locale).of(code);
+    return name && name.toLowerCase() !== code.toLowerCase() ? name.charAt(0).toLocaleUpperCase(locale) + name.slice(1) : null;
   } catch {
     return null; // invalid / unknown tag
   }
 }
 
 /**
- * "Türkçe", "İngilizce", and — when two tracks share a language — "İngilizce (Commentary)".
- * Falls back to the manifest's NAME, then to "Parça 2".
+ * Language names in the viewer's language ("Türkçe", "İngilizce" / "Turkish", "English") and —
+ * when two tracks share a language — "İngilizce (Commentary)". Falls back to the manifest's NAME,
+ * then to `unnamed(n)` ("Parça 2").
  */
-export function trackLabels(tracks) {
-  const base = tracks.map((t) => (t.lang && languageName(t.lang)) || t.name || null);
+export function trackLabels(tracks, { locale = 'tr', unnamed = (n) => `#${n}` } = {}) {
+  const base = tracks.map((t) => (t.lang && languageName(t.lang, locale)) || t.name || null);
   return tracks.map((t, i) => {
-    if (!base[i]) return `Parça ${i + 1}`;
+    if (!base[i]) return unnamed(i + 1);
     const clash = base.some((b, j) => j !== i && b === base[i]);
     return clash && t.name && t.name !== base[i] ? `${base[i]} (${t.name})` : base[i];
   });

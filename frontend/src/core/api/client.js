@@ -12,6 +12,7 @@
 import { env } from '@/core/config/env';
 import { tokenStore } from '@/core/auth/tokenStore';
 import { deviceId } from '@/core/device/deviceId';
+import { getLocale } from '@/core/i18n/locale';
 import { ApiError } from './ApiError';
 import { OPERATIONS } from './contract.generated';
 
@@ -73,7 +74,8 @@ function idempotencyKey() {
 
 async function call(id, { params, query, body, headers, signal, rawBody, contentType, retry = true } = {}) {
   const op = operation(id);
-  const finalHeaders = { 'X-Device-ID': deviceId(), ...CSRF, ...(headers ?? {}) };
+  // Accept-Language: the API (e-mails, server-rendered text) answers in the viewer's language.
+  const finalHeaders = { 'X-Device-ID': deviceId(), 'Accept-Language': getLocale(), ...CSRF, ...(headers ?? {}) };
   const access = tokenStore.getAccess();
   if (access && op.auth !== 'public') finalHeaders.Authorization = `Bearer ${access}`;
   const profile = tokenStore.getProfile();

@@ -196,6 +196,9 @@
   border-top: 1px solid var(--border);
 }
 .theme legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   float: left; /* keeps the legend from cutting through the fieldset's top border */
   width: 100%;
   padding: 0 0 var(--space-2);
@@ -204,7 +207,8 @@
 }
 .themeOptions {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-auto-flow: column; /* 3 themes, 2 languages: equal columns, always full width */
+  grid-auto-columns: 1fr;
   gap: 2px;
   padding: 2px;
   background: var(--surface-2);

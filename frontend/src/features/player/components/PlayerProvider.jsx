@@ -19,6 +19,7 @@ import { useQoe } from '../hooks/useQoe';
 import { describeSource } from '../engines';
 import { makeQueue, step } from '../queue';
 import { DIGITS } from '../shortcuts';
+import { useT } from '../i18n';
 import { ChannelEntry, NextEpisodeCard, QueueButtons, QueuePanel, UpNext, ZapBadge } from './QueueParts';
 import styles from './PlayerOverlay.module.css';
 
@@ -44,20 +45,11 @@ export function PlayerProvider({ children }) {
   );
 }
 
-const REASONS = {
-  dns: 'Kaynak sunucunun adı çözülemedi (DNS). İnternet bağlantınızı ya da DNS ayarlarınızı kontrol edin.',
-  tls: 'Kaynakla güvenli bağlantı kurulamadı (TLS). Antivirüs ya da proxy HTTPS trafiğini engelliyor olabilir.',
-  timeout: 'Kaynak zamanında yanıt vermedi.',
-  connect: 'Kaynağa bağlanılamadı (güvenlik duvarı ya da ağ).',
-  blocked: 'Bu kaynak adresi güvenlik kuralları gereği engellendi.',
-  body: 'Kaynak bağlantısı aktarım sırasında koptu.',
-};
-
 /** One extra line of "why" for support and curious viewers (never the origin URL). */
-function failureHint(fatal) {
+function failureHint(fatal, t) {
   if (!fatal) return null;
-  if (fatal.reason && REASONS[fatal.reason]) return REASONS[fatal.reason];
-  if (fatal.code === 'UPSTREAM_STATUS' && fatal.status) return `Kaynak HTTP ${fatal.status} döndürdü.`;
+  if (fatal.reason && ['dns', 'tls', 'timeout', 'connect', 'blocked', 'body'].includes(fatal.reason)) return t(`overlay.reasons.${fatal.reason}`);
+  if (fatal.code === 'UPSTREAM_STATUS' && fatal.status) return t('overlay.status', { status: fatal.status });
   return null;
 }
 
@@ -68,6 +60,7 @@ export function usePlayer() {
 }
 
 function PlayerOverlay({ item, queue, onJump, onClose }) {
+  const t = useT();
   const { status, session, error } = usePlaybackSession(item.ref);
   const [fatal, setFatal] = useState(null);
   const [video, setVideo] = useState(null);
@@ -106,16 +99,16 @@ function PlayerOverlay({ item, queue, onJump, onClose }) {
     if (!hasQueue) return undefined;
     if (live) {
       return [
-        { keys: ['ArrowUp', 'PageUp'], label: 'Sonraki kanal', run: goNext },
-        { keys: ['ArrowDown', 'PageDown'], label: 'Önceki kanal', run: goPrev },
-        { keys: DIGITS, display: '0–9', label: 'Kanal numarasıyla geç', run: channelEntry.press },
+        { keys: ['ArrowUp', 'PageUp'], label: t('queue.nextChannel'), run: goNext },
+        { keys: ['ArrowDown', 'PageDown'], label: t('queue.prevChannel'), run: goPrev },
+        { keys: DIGITS, display: '0–9', label: t('keys.channelNumber'), run: channelEntry.press },
       ];
     }
     return [
-      { keys: ['N'], label: 'Sonraki bölüm', run: goNext },
-      { keys: ['P'], label: 'Önceki bölüm', run: goPrev },
+      { keys: ['N'], label: t('queue.nextEpisode'), run: goNext },
+      { keys: ['P'], label: t('queue.prevEpisode'), run: goPrev },
     ];
-  }, [hasQueue, live, goNext, goPrev, channelEntry.press]);
+  }, [hasQueue, live, goNext, goPrev, channelEntry.press, t]);
 
   // Post-play (on demand, with a next item): a card during the credits, a countdown at the end.
   const phase = useEndgame(video, { enabled: !live && next !== null, creditsAt: item.creditsAt ?? null });
@@ -137,21 +130,21 @@ function PlayerOverlay({ item, queue, onJump, onClose }) {
         <div className={styles.card}>
           <AlertTriangle size={44} className={styles.icon} aria-hidden="true" />
           <h2>{item.title}</h2>
-          <p>{messageFor(problem, 'Yayın oynatılamadı.')}</p>
-          {failureHint(fatal) && <p className={styles.hint}>{failureHint(fatal)}</p>}
+          <p>{messageFor(problem, t('overlay.failed'))}</p>
+          {failureHint(fatal, t) && <p className={styles.hint}>{failureHint(fatal, t)}</p>}
           <div className={styles.actions}>
             {problem === 'STREAM_LIMIT_EXCEEDED' && billing && (
               <Link to="/plans" className={styles.upgrade} onClick={onClose}>
-                Planları gör
+                {t('overlay.plans')}
               </Link>
             )}
             {next !== null && (
               <button className={styles.secondary} onClick={goNext}>
-                <SkipForward size={18} aria-hidden="true" /> {live ? 'Sonraki kanal' : 'Sonraki bölüm'}
+                <SkipForward size={18} aria-hidden="true" /> {t(live ? 'queue.nextChannel' : 'queue.nextEpisode')}
               </button>
             )}
             <button className={styles.close} onClick={onClose} autoFocus>
-              <X size={18} aria-hidden="true" /> Kapat
+              <X size={18} aria-hidden="true" /> {t('close')}
             </button>
           </div>
         </div>
@@ -163,9 +156,9 @@ function PlayerOverlay({ item, queue, onJump, onClose }) {
     return (
       <div className={styles.overlay} role="dialog" aria-modal="true" aria-busy="true" aria-label={item.title}>
         <Spinner size="lg" />
-        <p className={styles.opening}>{item.title} açılıyor…</p>
+        <p className={styles.opening}>{t('overlay.opening', { title: item.title })}</p>
         <button className={styles.close} onClick={onClose}>
-          Vazgeç
+          {t('overlay.giveUp')}
         </button>
       </div>
     );

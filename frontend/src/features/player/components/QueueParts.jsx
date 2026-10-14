@@ -1,21 +1,23 @@
 import { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { ListVideo, Play, SkipBack, SkipForward, X } from 'lucide-react';
+import { useT } from '../i18n';
 import styles from './Queue.module.css';
 
 const COUNTDOWN_S = 10;
 
 /** Previous / next / list buttons for the control bar. */
 export function QueueButtons({ live, canPrev, canNext, onPrev, onNext, onList }) {
+  const t = useT();
   return (
     <>
-      <button type="button" className="control-btn" onClick={onPrev} disabled={!canPrev} aria-label={live ? 'Önceki kanal' : 'Önceki bölüm'}>
+      <button type="button" className="control-btn" onClick={onPrev} disabled={!canPrev} aria-label={t(live ? 'queue.prevChannel' : 'queue.prevEpisode')}>
         <SkipBack size={22} aria-hidden="true" />
       </button>
-      <button type="button" className="control-btn" onClick={onNext} disabled={!canNext} aria-label={live ? 'Sonraki kanal' : 'Sonraki bölüm'}>
+      <button type="button" className="control-btn" onClick={onNext} disabled={!canNext} aria-label={t(live ? 'queue.nextChannel' : 'queue.nextEpisode')}>
         <SkipForward size={22} aria-hidden="true" />
       </button>
-      <button type="button" className="control-btn" onClick={onList} aria-label={live ? 'Kanal listesi' : 'Bölümler'}>
+      <button type="button" className="control-btn" onClick={onList} aria-label={t(live ? 'queue.channelList' : 'queue.episodes')}>
         <ListVideo size={22} aria-hidden="true" />
       </button>
     </>
@@ -27,17 +29,18 @@ export function QueueButtons({ live, canPrev, canNext, onPrev, onNext, onList })
  * nothing happens unless the viewer asks for it. Never steals focus.
  */
 export function NextEpisodeCard({ item, onPlay, onDismiss }) {
+  const t = useT();
   return (
-    <section className={styles.nextCard} aria-label="Sonraki bölüm" aria-live="polite">
+    <section className={styles.nextCard} aria-label={t('queue.nextEpisode')} aria-live="polite">
       {item.image && <img className={styles.nextThumb} src={item.image} alt="" referrerPolicy="no-referrer" />}
       <div className={styles.nextText}>
-        <span className={styles.upNextLabel}>Sonraki bölüm</span>
+        <span className={styles.upNextLabel}>{t('queue.nextEpisode')}</span>
         <strong>{item.subtitle ?? item.title}</strong>
       </div>
       <button type="button" className={styles.primary} onClick={onPlay}>
-        <Play size={16} aria-hidden="true" /> Oynat
+        <Play size={16} aria-hidden="true" /> {t('play')}
       </button>
-      <button type="button" className={styles.dismiss} onClick={onDismiss} aria-label="İzlemeye devam et">
+      <button type="button" className={styles.dismiss} onClick={onDismiss} aria-label={t('queue.keepWatching')}>
         <X size={16} aria-hidden="true" />
       </button>
     </section>
@@ -49,6 +52,7 @@ export function NextEpisodeCard({ item, onPlay, onDismiss }) {
  * the next episode starts when it reaches zero, unless cancelled.
  */
 export function UpNext({ item, onPlay, onCancel }) {
+  const t = useT();
   const [left, setLeft] = useState(COUNTDOWN_S);
   useEffect(() => {
     const id = setInterval(() => setLeft((s) => s - 1), 1000);
@@ -59,7 +63,7 @@ export function UpNext({ item, onPlay, onCancel }) {
   }, [left, onPlay]);
   return (
     <div className={styles.postPlay} role="alertdialog" aria-labelledby="upnext-title" aria-describedby="upnext-count">
-      <button type="button" className={styles.ringButton} onClick={onPlay} autoFocus aria-label={`Şimdi oynat: ${item.subtitle ?? item.title}`}>
+      <button type="button" className={styles.ringButton} onClick={onPlay} autoFocus aria-label={t('queue.playNow', { title: item.subtitle ?? item.title })}>
         <svg className={styles.ring} viewBox="0 0 100 100" aria-hidden="true">
           <circle className={styles.ringTrack} cx="50" cy="50" r="46" />
           <circle className={styles.ringFill} cx="50" cy="50" r="46" pathLength="100" style={{ animationDuration: `${COUNTDOWN_S}s` }} />
@@ -67,14 +71,14 @@ export function UpNext({ item, onPlay, onCancel }) {
         <Play size={40} aria-hidden="true" />
       </button>
       <span id="upnext-count" className={styles.upNextLabel}>
-        Sıradaki bölüm {Math.max(left, 0)} sn içinde
+        {t('queue.countdown', { s: Math.max(left, 0) })}
       </span>
       <strong id="upnext-title" className={styles.upNextTitle}>
         {item.subtitle ?? item.title}
       </strong>
       {item.subtitle && <span className={styles.upNextSub}>{item.title}</span>}
       <button type="button" className={styles.secondary} onClick={onCancel}>
-        İptal
+        {t('queue.cancel')}
       </button>
     </div>
   );
@@ -82,11 +86,13 @@ export function UpNext({ item, onPlay, onCancel }) {
 
 /** Side panel listing the queue (episodes or channels); the current item is marked. */
 export function QueuePanel({ live, items, index, onPick, onClose }) {
+  const t = useT();
+  const heading = t(live ? 'queue.channels' : 'queue.episodes');
   return (
-    <aside className={styles.panel} aria-label={live ? 'Kanallar' : 'Bölümler'}>
+    <aside className={styles.panel} aria-label={heading}>
       <header className={styles.panelHead}>
-        <h2>{live ? 'Kanallar' : 'Bölümler'}</h2>
-        <button type="button" onClick={onClose} aria-label="Listeyi kapat"><X size={20} aria-hidden="true" /></button>
+        <h2>{heading}</h2>
+        <button type="button" onClick={onClose} aria-label={t('queue.closeList')}><X size={20} aria-hidden="true" /></button>
       </header>
       <ol className={styles.panelList}>
         {items.map((item, i) => (
@@ -121,11 +127,12 @@ export function ZapBadge({ number, title, caption }) {
 
 /** The number being typed on live TV ("12_"), or "kanal yok" when it does not exist. */
 export function ChannelEntry({ digits, invalid }) {
+  const t = useT();
   if (!digits) return null;
   return (
     <div className={`${styles.entry} ${invalid ? styles.entryInvalid : ''}`} role="status">
       <span className={styles.zapNo}>{digits}</span>
-      {invalid ? <small>Kanal yok</small> : <span className={styles.caret} aria-hidden="true" />}
+      {invalid ? <small>{t('queue.noChannel')}</small> : <span className={styles.caret} aria-hidden="true" />}
     </div>
   );
 }

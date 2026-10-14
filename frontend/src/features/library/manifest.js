@@ -1,5 +1,6 @@
 import { Heart, History } from 'lucide-react';
 import { defineFeature } from '@/core/featureKit';
+import { messages } from './i18n';
 import { ContinueWatchingRow } from './components/ContinueWatchingRow';
 import { FavoriteToggle } from './components/FavoriteToggle';
 import { ProgressTracker } from './components/ProgressTracker';
@@ -13,8 +14,8 @@ export default defineFeature({
     { path: '/history', lazy: () => import('./pages/HistoryPage') },
   ],
   nav: [
-    { to: '/favorites', label: 'Favoriler', icon: Heart, order: 30 },
-    { to: '/history', label: 'Geçmiş', icon: History, order: 40 },
+    { to: '/favorites', label: messages.ref('nav.favorites'), icon: Heart, order: 30 },
+    { to: '/history', label: messages.ref('nav.history'), icon: History, order: 40 },
   ],
   contributes: [
     { slot: 'home.rows', component: ContinueWatchingRow, order: 10 },

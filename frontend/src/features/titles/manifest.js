@@ -1,5 +1,6 @@
 import { Clapperboard } from 'lucide-react';
 import { defineFeature } from '@/core/featureKit';
+import { messages } from './i18n';
 import { HeroBillboard } from './components/HeroBillboard';
 import { SearchAction } from './components/SearchAction';
 import { TitleRails } from './components/TitleRails';
@@ -16,7 +17,7 @@ export default defineFeature({
     { path: '/browse', lazy: () => import('./pages/BrowsePage') },
     { path: '/title/:slug', lazy: () => import('./pages/TitleDetailPage') },
   ],
-  nav: [{ to: '/browse', label: 'Keşfet', icon: Clapperboard, order: 15 }],
+  nav: [{ to: '/browse', label: messages.ref('nav.browse'), icon: Clapperboard, order: 15 }],
   // Other features add their own matches to a search (live channels from catalog …).
   slots: ['search.results'],
   contributes: [

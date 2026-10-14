@@ -1,5 +1,6 @@
 import { Crown } from 'lucide-react';
 import { defineFeature } from '@/core/featureKit';
+import { messages } from './i18n';
 import { SubscriptionSummary } from './components/SubscriptionSummary';
 
 export default defineFeature({
@@ -11,6 +12,6 @@ export default defineFeature({
     { path: '/billing/return', lazy: () => import('./pages/CheckoutReturnPage') },
     { path: '/billing/checkout/fake', lazy: () => import('./pages/FakeCheckoutPage') },
   ],
-  nav: [{ to: '/plans', label: 'Premium', icon: Crown, order: 60 }],
+  nav: [{ to: '/plans', label: messages.ref('nav.plans'), icon: Crown, order: 60 }],
   contributes: [{ slot: 'account.sections', component: SubscriptionSummary, order: 10 }],
 });
