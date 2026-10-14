@@ -36,5 +36,14 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.js'],
     css: { modules: { classNameStrategy: 'non-scoped' } },
+    // `npm run coverage` (CI). Floors are a ratchet: raise them as tests grow, never lower them.
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{js,jsx}'],
+      exclude: ['src/**/*.test.{js,jsx}', 'src/test/**', 'src/core/api/contract.generated.js', 'src/main.jsx'],
+      reporter: ['text-summary', 'json-summary', 'html'],
+      reportsDirectory: 'coverage',
+      thresholds: { statements: 26, branches: 20, functions: 17, lines: 26 },
+    },
   },
 });

@@ -8,6 +8,8 @@ subscriptions, DRM, recommendations and a back office — built around a small k
 ![Python](https://img.shields.io/badge/python-3.12%20%7C%203.14-3776AB?logo=python&logoColor=white)
 ![React](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)
 ![License](https://img.shields.io/badge/license-MIT-green)
+[![Backend coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FAzizNeo%2FNeoTV%2Fbadges%2Fbackend-coverage.json)](#quality-gates)
+[![Frontend coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FAzizNeo%2FNeoTV%2Fbadges%2Ffrontend-coverage.json)](#quality-gates)
 
 <p align="center"><img src="docs/screenshots/demo.gif" alt="NeoTV walk-through: home, title page, player with subtitle menu and keyboard shortcuts" width="800"></p>
 
@@ -178,13 +180,22 @@ In development, e-mails are written to `var/mail/*.eml` and their links are prin
 ```bash
 pytest                                                       # SQLite + in-process Redis
 TEST_DATABASE_URL=postgresql://… TEST_REDIS_URL=redis://… pytest tests/integration
+pytest --cov --cov-report=json && python -m tools.coverage_report coverage.json   # coverage per module vs. floors
 ruff check . && ruff format --check . && mypy && lint-imports
-(cd frontend && npm run lint && npm test -- --run && npm run build)
+(cd frontend && npm run lint && npm run coverage && npm run build)
 python -m tools.smoke_boot                                   # fresh install → API → login → password reset by e-mail
 ```
 
 CI runs all of the above on every push — backend on PostgreSQL + Redis, the smoke test on Windows (Python 3.12
 and 3.14) and Linux — plus a pinned, checksum-verified secret scan and Docker image builds.
+
+**Coverage is measured per module**, the unit this codebase is built from. Each backend module has a floor in
+`pyproject.toml` (`[tool.neotv.coverage]`); dropping below it fails CI *by module name*, a new module without a
+floor is refused, and a module that stays well above its floor is flagged so the floor can be raised — a ratchet,
+never lowered to make a build pass. The per-module tables land on each CI run's summary page and the HTML reports
+are kept as artifacts. Today: backend ≈ 83% (statements + branches, lowest: `live` — ffmpeg process supervision —
+and `catalog` — remote playlist fetching), frontend ≈ 25% (unit tests cover logic — player, i18n, routing
+contracts; user flows get end-to-end tests next).
 
 ## Project layout
 

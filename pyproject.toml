@@ -64,3 +64,25 @@ omit = ["app/modules/_template/*"]
 [tool.coverage.report]
 skip_covered = true
 show_missing = true
+
+# Floors per module (statements + branches, %), enforced in CI by tools/coverage_report.py.
+# Ratchet: raise a floor when a module stays well above it; never lower one to make CI pass.
+[tool.neotv.coverage]
+total = 81
+
+[tool.neotv.coverage.modules]
+kernel = 80
+shared_kernel = 93
+admin = 92
+billing = 86
+catalog = 67
+devices = 90
+drm = 82
+identity = 85
+library = 87
+live = 55
+notifications = 90
+playback = 85
+profile = 80
+recommendations = 87
+titles = 93
