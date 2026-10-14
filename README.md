@@ -9,12 +9,26 @@ subscriptions, DRM, recommendations and a back office — built around a small k
 ![React](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+<p align="center"><img src="docs/screenshots/demo.gif" alt="NeoTV walk-through: home, title page, player with subtitle menu and keyboard shortcuts" width="800"></p>
+
 ![NeoTV home screen](docs/screenshots/home.png)
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/live-tv.png" alt="Live TV with programme guide"><br><sub>Live TV with programme guide</sub></td>
-    <td width="50%"><img src="docs/screenshots/admin.png" alt="Admin dashboard"><br><sub>Back office dashboard</sub></td>
+    <td width="50%"><img src="docs/screenshots/player.png" alt="Player with quality, audio and subtitle menu"><br><sub>Player — quality, audio and subtitle choice, remembered per device</sub></td>
+    <td width="50%"><img src="docs/screenshots/up-next.png" alt="Next-episode card during the credits"><br><sub>"Next episode" during the credits, countdown at the end</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/title.png" alt="Series page with episodes"><br><sub>Series page — resume where you left off</sub></td>
+    <td><img src="docs/screenshots/browse.png" alt="Browse with filters"><br><sub>Browse — genre, type, decade and sort, all in the URL</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/live-tv.png" alt="Live TV with programme guide"><br><sub>Live TV with programme guide</sub></td>
+    <td><img src="docs/screenshots/admin.png" alt="Admin dashboard"><br><sub>Back office dashboard</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/title-en.png" alt="The interface in English"><br><sub>Turkish and English, per account (e-mails included)</sub></td>
+    <td><img src="docs/screenshots/home-light.png" alt="Light theme"><br><sub>Dark and light themes</sub></td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/plans.png" alt="Subscription plans"><br><sub>Subscription plans</sub></td>
@@ -24,8 +38,10 @@ subscriptions, DRM, recommendations and a back office — built around a small k
 
 <p align="center"><img src="docs/screenshots/home-mobile.png" alt="Mobile layout" width="260"><br><sub>Responsive mobile layout</sub></p>
 
-<sub>Screenshots are of the seeded demo (`python -m tools.seed_demo`); refresh them with
-`frontend/scripts/screenshots.mjs`. The UI language is currently Turkish.</sub>
+<sub>Screenshots and the GIF come from the seeded demo (`python -m tools.seed_demo`) and are reproducible with
+`frontend/scripts/screenshots.mjs`. Artwork is original (`tools/demo_art.py`); the open movies' streams are
+© Blender Foundation (CC BY). In the captures the video is a locally generated clip of that artwork, since
+the capture machine has no internet access.</sub>
 
 ## Highlights
 
@@ -45,9 +61,17 @@ subscriptions, DRM, recommendations and a back office — built around a small k
   password policy, account recovery with hashed single-use links (secret in the URL fragment, no account
   enumeration), e-mail change confirmed from the new inbox with a takeover-proof undo link for the old one,
   security notices (password changed, sign-in from a new device), SSRF-guarded egress, signed webhooks.
+- **Viewer experience.** Storefront with hero, genre rails and URL-driven browse; series pages that resume
+  where you left off; a player with quality / audio / subtitle menus on one track model for every engine,
+  picture-in-picture, OS media controls, a `?` shortcut sheet generated from the same table as the key handler,
+  live-TV zapping by arrow keys or channel number, and Netflix-style post-play.
+- **Two languages, one contract.** Each feature owns its TR/EN catalog; a missing key, language or placeholder
+  fails at start-up (and in tests), never on screen. The account language follows the user across devices and
+  into e-mails ([ADR-0002](docs/adr/0002-i18n-feature-owned-catalogs.md)).
 - **Quality gates.** 180+ backend tests (unit, contract, end-to-end, migration chain, PostgreSQL + Redis
-  integration, architecture fitness), 20+ frontend tests, ruff + mypy + ESLint, hash-locked dependencies, secret
-  scanning, and a **fresh-install smoke test on Windows and Linux** on every push.
+  integration, architecture fitness), 65+ frontend tests, ruff + mypy + ESLint, hash-locked dependencies, secret
+  scanning, and a **fresh-install smoke test on Windows and Linux** on every push. Decisions are recorded as
+  [ADRs](docs/adr/).
 
 ## Architecture
 

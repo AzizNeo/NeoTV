@@ -158,11 +158,21 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
     };
     for (const [event, fn] of Object.entries(handlers)) video.addEventListener(event, fn);
     // Subtitles sit on the bottom line by default — under the control bar. Lift cues that carry no
-    // position of their own three lines up (standard VTTCue API: works with every engine and browser).
+    // position of their own four lines up (standard VTTCue API: works with every engine and browser).
     // "No position" is 'auto', or -1 (the bottom line), which hls.js writes in its place for Safari.
-    // All cues of the track, not just the active ones: a cue moved while on screen is not re-laid out.
+    // Every cue of the track is moved up front; one already on screen is re-added, because a
+    // browser does not re-lay out a cue that changes while it is displayed.
+    const unplaced = (cue) => cue.line === 'auto' || cue.line === -1;
     const lift = (event) => {
-      for (const cue of event.target.cues ?? []) if (cue.line === 'auto' || cue.line === -1) cue.line = -3;
+      const track = event.target;
+      const showing = new Set(track.activeCues ?? []);
+      for (const cue of [...(track.cues ?? [])].filter(unplaced)) {
+        cue.line = -4;
+        if (showing.has(cue)) {
+          track.removeCue(cue);
+          track.addCue(cue);
+        }
+      }
     };
     const watch = (event) => event.track.addEventListener('cuechange', lift);
     for (const track of video.textTracks ?? []) track.addEventListener('cuechange', lift);
