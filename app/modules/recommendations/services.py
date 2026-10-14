@@ -50,6 +50,21 @@ class _CapabilitiesLike(Protocol):
     def optional(self, capability: str) -> Any | None: ...
 
 
+#: Why an item is recommended — a *code* plus its subject, so every client words it in its own
+#: language ("Because you like {subject}" / "{subject} sevdiğiniz için"). `reason` keeps the English
+#: sentence for older clients.
+REASON_TEXT = {
+    "trending": "trending",
+    "recommended": "recommended",
+    "likes_group": "Because you like {subject}",
+    "watched": "Because you watched {subject}",
+}
+
+
+def reason_text(code: str, subject: str | None) -> str:
+    return REASON_TEXT.get(code, code).format(subject=subject or "")
+
+
 @dataclass(frozen=True, slots=True)
 class RecoCard:
     ref: str
@@ -58,7 +73,12 @@ class RecoCard:
     group: str | None
     kind: str
     rating: str
-    reason: str
+    reason_code: str
+    reason_subject: str | None = None
+
+    @property
+    def reason(self) -> str:
+        return reason_text(self.reason_code, self.reason_subject)
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +86,7 @@ class Row:
     key: str
     title: str
     items: list[RecoCard]
+    subject: str | None = None  # "because:<ref>" rows: the title that was watched
 
 
 def _hour(at: datetime) -> datetime:
@@ -151,7 +172,7 @@ class RecommendationService:
     def trending(self, *, is_kids: bool, hours: int, limit: int) -> Row:
         # Over-fetch: kids filtering / removed content may drop some.
         refs = self.trending_refs(hours=hours, limit=limit * 3)
-        return Row("trending", "Trending Now", self._hydrate(refs, is_kids, limit, lambda _c: "trending"))
+        return Row("trending", "Trending Now", self._hydrate(refs, is_kids, limit, lambda _c: ("trending", None)))
 
     # ── personalised ──────────────────────────────────────────────────────
     def for_you(self, *, profile_id: int, is_kids: bool, limit: int) -> Row:
@@ -164,13 +185,16 @@ class RecommendationService:
             best_effort(
                 lambda: self._redis.set(cache_key, json.dumps(pairs), ex=FOR_YOU_TTL_S), op="reco.for_you.cache_set"
             )
-        reasons = dict(pairs)
-        items = self._hydrate([ref for ref, _ in pairs], is_kids, limit, lambda c: reasons.get(c.ref, "recommended"))
+        # [ref, code, subject]; a pre-upgrade cache entry is [ref, sentence] → shown as "recommended".
+        reasons = {p[0]: (p[1], p[2]) if len(p) == 3 else ("recommended", None) for p in pairs}
+        items = self._hydrate(
+            [p[0] for p in pairs], is_kids, limit, lambda c: reasons.get(c.ref, ("recommended", None))
+        )
         if not items:  # cold start → popular content
             return Row("for_you", "For You", self.trending(is_kids=is_kids, hours=24 * 7, limit=limit).items)
         return Row("for_you", "For You", items)
 
-    def _compute_for_you(self, profile_id: int, is_kids: bool, limit: int) -> list[tuple[str, str]]:
+    def _compute_for_you(self, profile_id: int, is_kids: bool, limit: int) -> list[tuple[str, str, str | None]]:
         catalog: _CatalogReaderLike | None = self._capabilities.optional("catalog.read")
         if catalog is None:
             return []
@@ -191,10 +215,10 @@ class RecommendationService:
             return []
         exclude = [ContentRef.parse(r).id for r in signals if r.startswith(f"{CATALOG_NAMESPACE}:")]
         per_group = max(1, (limit * 2) // len(groups))
-        pairs: list[tuple[str, str]] = []
+        pairs: list[tuple[str, str, str | None]] = []
         for group in groups:
             for channel_id in catalog.by_groups([group], exclude_ids=exclude, limit=per_group):
-                pairs.append((f"{CATALOG_NAMESPACE}:{channel_id}", f"Because you like {group}"))
+                pairs.append((f"{CATALOG_NAMESPACE}:{channel_id}", "likes_group", group))
         return list(dict.fromkeys(pairs))[: limit * 2]
 
     def because_you_watched(self, *, profile_id: int, is_kids: bool, limit: int) -> Row | None:
@@ -209,10 +233,10 @@ class RecommendationService:
             if source is None or (is_kids and not allowed_for_kids(str(source.rating))):
                 continue
             similar = [f"{CATALOG_NAMESPACE}:{i}" for i in catalog.similar(parsed.id, limit * 2)]
-            reason = f"Because you watched {source.title}"
-            items = self._hydrate(similar, is_kids, limit, lambda _c, reason=reason: reason)
+            why = ("watched", source.title)
+            items = self._hydrate(similar, is_kids, limit, lambda _c, why=why: why)
             if items:
-                return Row(f"because:{ref}", f"Because you watched {source.title}", items)
+                return Row(f"because:{ref}", reason_text(*why), items, subject=source.title)
         return None
 
     def home(self, *, profile_id: int, is_kids: bool, limit: int) -> list[Row]:
@@ -245,7 +269,7 @@ class RecommendationService:
             if card is None or (is_kids and not allowed_for_kids(str(card.rating))):
                 continue
             out.append(
-                RecoCard(card.ref, card.title, card.image, card.group, str(card.kind), str(card.rating), reason(card))
+                RecoCard(card.ref, card.title, card.image, card.group, str(card.kind), str(card.rating), *reason(card))
             )
             if len(out) >= limit:
                 break

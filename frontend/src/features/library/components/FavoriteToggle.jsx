@@ -3,9 +3,11 @@ import { Heart } from 'lucide-react';
 import { useToast } from '@/shared/components/Toast/Toast';
 import { getFavoriteRefs, libraryKeys, setFavorite } from '../api';
 import styles from './FavoriteToggle.module.css';
+import { useT } from '../i18n';
 
 /** Contributed to `content.actions`: a heart on every playable card, wherever it is rendered. */
 export function FavoriteToggle({ item }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const toast = useToast();
   const { data: refs } = useQuery({ queryKey: libraryKeys.favoriteRefs, queryFn: getFavoriteRefs, staleTime: 60_000 });
@@ -31,7 +33,7 @@ export function FavoriteToggle({ item }) {
       type="button"
       className={`${styles.heart} ${isFavorite ? styles.on : ''}`}
       aria-pressed={isFavorite}
-      aria-label={isFavorite ? `${item.title} favorilerden çıkar` : `${item.title} favorilere ekle`}
+      aria-label={t(isFavorite ? 'favorites.remove' : 'favorites.add', { title: item.title })}
       onClick={(e) => {
         e.stopPropagation();
         toggle.mutate(!isFavorite);

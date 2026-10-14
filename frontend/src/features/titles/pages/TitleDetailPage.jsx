@@ -10,12 +10,14 @@ import { fetchTitle, titleKeys } from '../api';
 import { EpisodeList } from '../components/EpisodeList';
 import { RatingBadge } from '../components/RatingBadge';
 import { SimilarTitles } from '../components/SimilarTitles';
-import { factLine } from '../format';
+import { episodeCode, factLine } from '../format';
+import { useT } from '../i18n';
 import { nextUp, remaining } from '../nextUp';
 import styles from './TitleDetailPage.module.css';
 
 export default function TitleDetailPage() {
   const { slug } = useParams();
+  const t = useT();
   const { play } = usePlayer();
   const library = useFeature('library');
   const { data: detail, isLoading, isError, error } = useQuery({ queryKey: titleKeys.detail(slug), queryFn: ({ signal }) => fetchTitle(slug, { signal }) });
@@ -35,15 +37,15 @@ export default function TitleDetailPage() {
   if (isLoading) return <div className={`${styles.hero} ${styles.loading}`} aria-busy="true"><div className="skeleton" /></div>;
   if (isError) {
     return (
-      <EmptyState icon={Film} title={error?.code === 'TITLE_NOT_FOUND' ? 'Bu içerik bulunamadı' : 'İçerik yüklenemedi'} action={<Link to="/">Ana sayfaya dön</Link>}>
-        {error?.code === 'TITLE_NOT_FOUND' ? 'Kaldırılmış olabilir ya da bu profilde görüntülenemiyor.' : error?.userMessage}
+      <EmptyState icon={Film} title={t(error?.code === 'TITLE_NOT_FOUND' ? 'detail.notFound' : 'detail.loadFailed')} action={<Link to="/">{t('detail.home')}</Link>}>
+        {error?.code === 'TITLE_NOT_FOUND' ? t('detail.notFoundBody') : error?.userMessage}
       </EmptyState>
     );
   }
 
   const { card } = detail;
-  const next = nextUp(detail, progress);
-  const left = next?.resume ? remaining(progress.get(next.ref)) : null;
+  const next = nextUp(detail, progress, t);
+  const left = next?.resume ? remaining(progress.get(next.ref), t) : null;
   // A series plays as a queue of its available episodes: "next episode" and the in-player list come free.
   const queue = detail.seasons.flatMap((s) =>
     s.episodes
@@ -51,7 +53,7 @@ export default function TitleDetailPage() {
       .map((e) => ({
         ref: e.play_ref,
         title: card.name,
-        subtitle: `S${s.number} B${e.number} · ${e.name}`,
+        subtitle: `${episodeCode(s.number, e.number, t)} · ${e.name}`,
         label: `${s.number}.${e.number}`,
         image: e.still_url ?? card.backdrop_url ?? undefined, // next-episode card, OS media controls
       })),
@@ -79,7 +81,7 @@ export default function TitleDetailPage() {
           )}
           <h1 className={styles.name}>{card.name}</h1>
           <p className={styles.facts}>
-            {factLine(card).map((fact) => (
+            {factLine(card, t).map((fact) => (
               <span key={fact}>{fact}</span>
             ))}
             <RatingBadge rating={card.rating} />
@@ -90,7 +92,7 @@ export default function TitleDetailPage() {
                 <Play size={20} fill="currentColor" aria-hidden="true" /> {next.label}
               </button>
             ) : (
-              <span className={styles.unavailable}>Şu an izlenemiyor</span>
+              <span className={styles.unavailable}>{t('unavailable')}</span>
             )}
             {left && <span className={styles.left}>{left}</span>}
             {card.kind === 'movie' && detail.play_ref && (

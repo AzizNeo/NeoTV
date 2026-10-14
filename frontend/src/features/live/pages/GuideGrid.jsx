@@ -1,6 +1,8 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
 import styles from './GuideGrid.module.css';
+import { useFormat } from '@/core/i18n';
+import { useT } from '../i18n';
 
 const HOUR_PX = 240;
 
@@ -16,6 +18,8 @@ function useNow(intervalMs = 60_000) {
 }
 
 export function GuideGrid({ channels, programs, onSelect, hours = 6 }) {
+  const t = useT();
+  const { time } = useFormat();
   const now = useNow();
   const start = new Date(now);
   start.setMinutes(start.getMinutes() < 30 ? 0 : 30, 0, 0);
@@ -31,20 +35,20 @@ export function GuideGrid({ channels, programs, onSelect, hours = 6 }) {
   const slots = Array.from({ length: hours * 2 }, (_, i) => new Date(startMs + i * 1_800_000));
 
   return (
-    <section className={styles.guide} aria-label="Yayın akışı">
-      <h2>Yayın akışı</h2>
+    <section className={styles.guide} aria-label={t('guide')}>
+      <h2>{t('guide')}</h2>
       <div className={styles.scroller}>
         <div className={styles.timeline} style={{ width: hours * HOUR_PX }}>
-          {slots.map((t) => (
-            <span key={t.getTime()} style={{ left: offset(t.getTime()) }}>
-              {t.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+          {slots.map((slot) => (
+            <span key={slot.getTime()} style={{ left: offset(slot.getTime()) }}>
+              {time(slot)}
             </span>
           ))}
           {now > startMs && now < endMs && <span className={styles.now} style={{ left: offset(now) }} aria-hidden="true" />}
         </div>
         {channels.map((channel) => (
           <div key={channel.id} className={styles.lane}>
-            <button className={styles.channel} onClick={() => onSelect({ ref: channel.ref, title: channel.name })} title={`${channel.name} izle`}>
+            <button className={styles.channel} onClick={() => onSelect({ ref: channel.ref, title: channel.name })} title={t('watch', { name: channel.name })}>
               {channel.name}
             </button>
             <div className={styles.track} style={{ width: hours * HOUR_PX }}>
@@ -58,8 +62,8 @@ export function GuideGrid({ channels, programs, onSelect, hours = 6 }) {
                     <div key={p.id} className={`${styles.program} ${airing ? styles.airing : ''}`} style={{ left: offset(s), width: Math.max(2, offset(e) - offset(s) - 2) }} title={p.description ?? p.title}>
                       <strong>{p.title}</strong>
                       <small>
-                        {new Date(p.starts_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}–
-                        {new Date(p.ends_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                        {time(p.starts_at)}–
+                        {time(p.ends_at)}
                       </small>
                     </div>
                   );

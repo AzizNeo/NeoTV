@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Info, Play } from 'lucide-react';
 import { fetchFeatured, titleKeys } from '../api';
 import { factLine } from '../format';
+import { useT } from '../i18n';
 import { RatingBadge } from './RatingBadge';
 import styles from './Hero.module.css';
 
@@ -13,6 +14,7 @@ import styles from './Hero.module.css';
  * No auto-rotation: switching is the viewer's choice (motion only answers an action).
  */
 export function HeroBillboard({ onSelect }) {
+  const t = useT();
   const { data, isLoading } = useQuery({ queryKey: titleKeys.featured, queryFn: fetchFeatured, staleTime: 60_000 });
   const [index, setIndex] = useState(0);
 
@@ -22,14 +24,14 @@ export function HeroBillboard({ onSelect }) {
   const current = data[Math.min(index, data.length - 1)];
   const { card } = current;
   return (
-    <section className={styles.hero} aria-roledescription="öne çıkanlar" aria-label={card.name}>
+    <section className={styles.hero} aria-roledescription={t('heroRole')} aria-label={card.name}>
       {card.backdrop_url && <img key={card.slug} className={styles.backdrop} src={card.backdrop_url} alt="" referrerPolicy="no-referrer" />}
       <div className={styles.scrim} />
       <div className={styles.content}>
         {card.genres.length > 0 && <p className={styles.genres}>{card.genres.join(', ')}</p>}
         <h1 className={styles.name}>{card.name}</h1>
         <p className={styles.facts}>
-          {factLine(card).map((fact) => (
+          {factLine(card, t).map((fact) => (
             <span key={fact}>{fact}</span>
           ))}
           <RatingBadge rating={card.rating} />
@@ -37,15 +39,15 @@ export function HeroBillboard({ onSelect }) {
         {current.synopsis && <p className={styles.synopsis}>{current.synopsis}</p>}
         <div className={styles.actions}>
           <button type="button" className={styles.play} onClick={() => onSelect?.({ ref: current.play_ref, title: card.name })}>
-            <Play size={20} fill="currentColor" aria-hidden="true" /> Oynat
+            <Play size={20} fill="currentColor" aria-hidden="true" /> {t('play')}
           </button>
           <Link to={`/title/${card.slug}`} className={styles.more}>
-            <Info size={20} aria-hidden="true" /> Ayrıntılar
+            <Info size={20} aria-hidden="true" /> {t('details')}
           </Link>
         </div>
       </div>
       {data.length > 1 && (
-        <div className={styles.picker} role="group" aria-label="Öne çıkan içerik seç">
+        <div className={styles.picker} role="group" aria-label={t('heroPick')}>
           {data.map(({ card: c }, i) => (
             <button
               key={c.slug}

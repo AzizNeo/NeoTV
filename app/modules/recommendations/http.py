@@ -23,12 +23,15 @@ class RecoCardOut(BaseModel):
     group: str | None
     kind: str
     rating: str
-    reason: str
+    reason: str  # English sentence (kept for older clients); display from the code below
+    reason_code: str  # trending | recommended | likes_group | watched
+    reason_subject: str | None = None  # the genre / title the reason refers to
 
 
 class RowOut(BaseModel):
-    key: str
-    title: str
+    key: str  # for_you | trending | because:<ref>
+    title: str  # English (kept for older clients); clients word the row from key + subject
+    subject: str | None = None
     items: list[RecoCardOut]
 
 

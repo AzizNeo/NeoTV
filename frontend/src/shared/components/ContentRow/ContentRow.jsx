@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import { Lock, Radio } from 'lucide-react';
 import { Rail } from '../Rail/Rail';
 import styles from './ContentRow.module.css';
+import { useSharedText } from '../SharedText/SharedTextProvider';
 
 /**
  * Presentational row of content cards (catalog, live, library and
@@ -30,10 +31,11 @@ export function ContentRow({ title, subtitle, items, onSelect, actions, variant 
 }
 
 export function ContentCard({ item, onSelect, actions, variant = 'landscape' }) {
+  const text = useSharedText();
   const label = item.reason ? `${item.title} — ${item.reason}` : item.title;
   return (
     <article className={`${styles.card} ${styles[variant]}`}>
-      <button type="button" className={styles.hit} onClick={() => onSelect?.(item)} aria-label={`${item.title} oynat`} title={label}>
+      <button type="button" className={styles.hit} onClick={() => onSelect?.(item)} aria-label={text.playItem(item.title)} title={label}>
         <div className={styles.art}>
           {item.image ? (
             <img src={item.image} alt="" loading="lazy" referrerPolicy="no-referrer" className={styles.img} />
@@ -42,7 +44,7 @@ export function ContentCard({ item, onSelect, actions, variant = 'landscape' }) 
           )}
           {item.live && (
             <span className={styles.liveBadge}>
-              <Radio size={12} aria-hidden="true" /> Canlı
+              <Radio size={12} aria-hidden="true" /> {text.live}
             </span>
           )}
           {item.locked && (

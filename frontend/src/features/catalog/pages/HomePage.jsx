@@ -8,6 +8,7 @@ import { RailSkeleton } from '@/shared/components/Rail/Rail';
 import { catalogKeys, fetchGroups } from '../api';
 import { LazyGroupRow } from '../components/LazyGroupRow';
 import styles from './HomePage.module.css';
+import { useT } from '../i18n';
 
 /**
  * Home = billboard + rows contributed by other features (`home.hero`, `home.rows`) + catalogue groups.
@@ -15,6 +16,7 @@ import styles from './HomePage.module.css';
  * here — the same film never appears twice.
  */
 export default function HomePage() {
+  const t = useT();
   const { play } = usePlayer();
   const storefront = useFeature('titles');
   const kind = storefront ? 'live' : undefined;
@@ -28,13 +30,13 @@ export default function HomePage() {
       <Slot name="home.rows" onSelect={play} kind={kind} />
       {groups.isLoading && <RailSkeleton />}
       {groups.isError && (
-        <EmptyState tone="error" title="Katalog yüklenemedi" action={<Button onClick={() => groups.refetch()}>Tekrar dene</Button>}>
+        <EmptyState tone="error" title={t('loadFailed')} action={<Button onClick={() => groups.refetch()}>{t('retry')}</Button>}>
           {groups.error.userMessage}
         </EmptyState>
       )}
       {groups.data?.length === 0 && !storefront && (
-        <EmptyState icon={Clapperboard} title="Kütüphane boş">
-          Yönetici bir oynatma listesi eklediğinde içerikler burada görünür.
+        <EmptyState icon={Clapperboard} title={t('empty')}>
+          {t('emptyBody')}
         </EmptyState>
       )}
       {groups.data?.map((g) => (

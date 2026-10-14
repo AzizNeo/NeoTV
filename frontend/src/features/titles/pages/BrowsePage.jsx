@@ -11,12 +11,14 @@ import { titleKeys } from '../api';
 import { DECADES, KINDS, SORTS, isFiltered, readFilters, toApiQuery, writeFilters } from '../browseParams';
 import { TitleCard } from '../components/TitleCard';
 import { useRecentSearches } from '../hooks/useRecentSearches';
+import { useT } from '../i18n';
 import styles from './BrowsePage.module.css';
 
 const PER_PAGE = 30;
 const DEBOUNCE_MS = 300;
 
 export default function BrowsePage() {
+  const t = useT();
   const [params, setParams] = useSearchParams();
   const filters = readFilters(params);
   const location = useLocation();
@@ -79,7 +81,7 @@ export default function BrowsePage() {
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.heading}>{searching ? 'Arama' : 'Filmler ve diziler'}</h1>
+      <h1 className={styles.heading}>{t(searching ? 'browse.searchHeading' : 'browse.heading')}</h1>
 
       <form
         className={styles.searchBox}
@@ -97,21 +99,21 @@ export default function BrowsePage() {
           onChange={(e) => setTerm(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150) /* let a click on a recent item land */}
-          placeholder="Film, dizi veya kanal ara"
-          aria-label="Ara"
+          placeholder={t('browse.placeholder')}
+          aria-label={t('search')}
           enterKeyHint="search"
           maxLength={100}
         />
         {term && (
-          <button type="button" className={styles.clearTerm} aria-label="Aramayı temizle" onClick={() => { setTerm(''); input.current?.focus(); }}>
+          <button type="button" className={styles.clearTerm} aria-label={t('browse.clearSearch')} onClick={() => { setTerm(''); input.current?.focus(); }}>
             <X size={18} aria-hidden="true" />
           </button>
         )}
         {showRecent && (
           <div className={styles.recent}>
             <div className={styles.recentHead}>
-              <span>Son aramalar</span>
-              <button type="button" onClick={clear}>Temizle</button>
+              <span>{t('browse.recent')}</span>
+              <button type="button" onClick={clear}>{t('browse.clearRecent')}</button>
             </div>
             <ul>
               {recent.map((s) => (
@@ -127,8 +129,8 @@ export default function BrowsePage() {
       </form>
 
       <div className={styles.filters}>
-        <div className={styles.chips} role="group" aria-label="Tür">
-          <button type="button" className={styles.chip} aria-pressed={!filters.genre} onClick={() => update({ genre: '' })}>Tüm türler</button>
+        <div className={styles.chips} role="group" aria-label={t('browse.genre')}>
+          <button type="button" className={styles.chip} aria-pressed={!filters.genre} onClick={() => update({ genre: '' })}>{t('browse.allGenres')}</button>
           {(genres.data ?? []).map((g) => (
             <button key={g.slug} type="button" className={styles.chip} aria-pressed={filters.genre === g.slug} onClick={() => update({ genre: filters.genre === g.slug ? '' : g.slug })}>
               {g.name}
@@ -136,50 +138,50 @@ export default function BrowsePage() {
           ))}
         </div>
         <div className={styles.controls}>
-          <div className={styles.segmented} role="group" aria-label="İçerik türü">
+          <div className={styles.segmented} role="group" aria-label={t('browse.kind')}>
             {KINDS.map((k) => (
-              <button key={k.id || 'all'} type="button" aria-pressed={filters.kind === k.id} onClick={() => update({ kind: k.id })}>{k.label}</button>
+              <button key={k.id || 'all'} type="button" aria-pressed={filters.kind === k.id} onClick={() => update({ kind: k.id })}>{t(...k.label)}</button>
             ))}
           </div>
-          <select className={styles.select} value={filters.decade} onChange={(e) => update({ decade: e.target.value })} aria-label="Yıl">
-            {DECADES.map((d) => <option key={d.id || 'all'} value={d.id}>{d.label}</option>)}
+          <select className={styles.select} value={filters.decade} onChange={(e) => update({ decade: e.target.value })} aria-label={t('browse.year')}>
+            {DECADES.map((d) => <option key={d.id || 'all'} value={d.id}>{t(...d.label)}</option>)}
           </select>
-          <select className={styles.select} value={filters.sort} onChange={(e) => update({ sort: e.target.value })} aria-label="Sıralama">
-            {SORTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+          <select className={styles.select} value={filters.sort} onChange={(e) => update({ sort: e.target.value })} aria-label={t('browse.sort')}>
+            {SORTS.map((s) => <option key={s.id} value={s.id}>{t(...s.label)}</option>)}
           </select>
         </div>
       </div>
 
       {searching && <Slot name="search.results" query={filters.q} />}
 
-      <section aria-label="Sonuçlar" aria-busy={results.isFetching} onClickCapture={() => searching && remember(filters.q)}>
+      <section aria-label={t('browse.results')} aria-busy={results.isFetching} onClickCapture={() => searching && remember(filters.q)}>
         {results.isLoading ? (
           <div className={styles.grid} aria-hidden="true">
             {Array.from({ length: 12 }, (_, i) => <div key={i} className={`skeleton ${styles.skeletonCard}`} />)}
           </div>
         ) : results.isError ? (
-          <EmptyState tone="error" title="Liste yüklenemedi" action={<Button onClick={() => results.refetch()}>Tekrar dene</Button>}>{results.error.userMessage}</EmptyState>
+          <EmptyState tone="error" title={t('browse.loadFailed')} action={<Button onClick={() => results.refetch()}>{t('browse.retry')}</Button>}>{results.error.userMessage}</EmptyState>
         ) : items.length === 0 && searching ? (
           // Other features may have matched (live channels above): a quiet line, not a full-page "nothing found".
           <p className={styles.noTitles}>
-            &quot;{filters.q}&quot; ile eşleşen film veya dizi yok.{' '}
-            <button type="button" onClick={() => { setTerm(''); setParams(new URLSearchParams()); }}>Aramayı temizle</button>
+            {t('browse.noTitles', { q: filters.q })}{' '}
+            <button type="button" onClick={() => { setTerm(''); setParams(new URLSearchParams()); }}>{t('browse.clearSearch')}</button>
           </p>
         ) : items.length === 0 ? (
-          <EmptyState icon={Clapperboard} title="Bu filtrelere uyan içerik yok"
-            action={isFiltered(filters) ? <Button variant="secondary" onClick={() => { setTerm(''); setParams(new URLSearchParams()); }}>Filtreleri temizle</Button> : null}>
-            Filtrelerden birini kaldırmayı deneyin.
+          <EmptyState icon={Clapperboard} title={t('browse.empty')}
+            action={isFiltered(filters) ? <Button variant="secondary" onClick={() => { setTerm(''); setParams(new URLSearchParams()); }}>{t('browse.clearFilters')}</Button> : null}>
+            {t('browse.emptyBody')}
           </EmptyState>
         ) : (
           <>
-            <p className={styles.count} aria-live="polite">{total} sonuç</p>
+            <p className={styles.count} aria-live="polite">{t('browse.count', { count: total })}</p>
             <div className={styles.grid}>
               {items.map((card) => <TitleCard key={card.slug} card={card} />)}
             </div>
             <div ref={sentinel} className={styles.more}>
               {hasNextPage && (
                 <Button variant="secondary" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
-                  {isFetchingNextPage ? 'Yükleniyor…' : 'Daha fazla göster'}
+                  {t(isFetchingNextPage ? 'browse.loading' : 'browse.more')}
                 </Button>
               )}
             </div>

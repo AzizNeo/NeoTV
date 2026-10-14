@@ -2,6 +2,7 @@ import { useCallback, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import styles from './Titles.module.css';
+import { useT } from '../i18n';
 
 const typing = (el) => el?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el?.tagName);
 
@@ -10,6 +11,7 @@ const typing = (el) => el?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].
  * "/" does the same from anywhere — except while typing, where "/" is just a character.
  */
 export function SearchAction() {
+  const t = useT();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -37,9 +39,9 @@ export function SearchAction() {
     <button
       type="button"
       className={styles.searchAction}
-      aria-label="Ara"
+      aria-label={t('search')}
       aria-keyshortcuts="/"
-      title="Ara  ( / )"
+      title={t('searchHint')}
       onClick={open}
     >
       <Search size={20} aria-hidden="true" />

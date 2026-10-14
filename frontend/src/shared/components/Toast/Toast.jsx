@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import styles from './Toast.module.css';
+import { useSharedText } from '../SharedText/SharedTextProvider';
 
 const ToastContext = createContext(null);
 let nextId = 1;
@@ -35,6 +36,7 @@ export function ToastProvider({ children }) {
     [push, dismiss],
   );
 
+  const text = useSharedText();
   return (
     <ToastContext.Provider value={api}>
       {children}
@@ -42,7 +44,7 @@ export function ToastProvider({ children }) {
         {toasts.map((t) => (
           <div key={t.id} className={`${styles.toast} ${styles[t.tone]}`} role={t.tone === 'error' ? 'alert' : 'status'}>
             <span>{t.text}</span>
-            <button className={styles.close} onClick={() => dismiss(t.id)} aria-label="Kapat">
+            <button className={styles.close} onClick={() => dismiss(t.id)} aria-label={text.close}>
               ×
             </button>
           </div>

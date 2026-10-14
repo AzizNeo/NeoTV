@@ -2,9 +2,11 @@ import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import styles from './Modal.module.css';
+import { useSharedText } from '../SharedText/SharedTextProvider';
 
 export const Modal = ({ isOpen, onClose, title, children }) => {
     const overlayRef = useRef(null);
+    const text = useSharedText();
 
     useEffect(() => {
         const handleEscape = (e) => {
@@ -22,6 +24,7 @@ export const Modal = ({ isOpen, onClose, title, children }) => {
 
     if (!isOpen) return null;
 
+
     const handleOverlayClick = (e) => {
         if (e.target === overlayRef.current) {
             onClose();
@@ -33,7 +36,7 @@ export const Modal = ({ isOpen, onClose, title, children }) => {
             <div className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="modal-title">
                 <div className={styles.header}>
                     <h2 id="modal-title" className={styles.title}>{title}</h2>
-                    <button className={styles.closeBtn} onClick={onClose} aria-label="Close modal">
+                    <button className={styles.closeBtn} onClick={onClose} aria-label={text.close}>
                         &times;
                     </button>
                 </div>

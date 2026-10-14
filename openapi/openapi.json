@@ -10600,6 +10600,18 @@
                           "title": "Title",
                           "type": "string"
                         },
+                        "subject": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "default": null,
+                          "title": "Subject"
+                        },
                         "items": {
                           "items": {
                             "$ref": "#/components/schemas/RecoCardOut"
@@ -14061,6 +14073,22 @@
           "reason": {
             "title": "Reason",
             "type": "string"
+          },
+          "reason_code": {
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "reason_subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reason Subject"
           }
         },
         "required": [
@@ -14070,7 +14098,8 @@
           "group",
           "kind",
           "rating",
-          "reason"
+          "reason",
+          "reason_code"
         ],
         "title": "RecoCardOut",
         "type": "object"
@@ -14116,6 +14145,18 @@
           "title": {
             "title": "Title",
             "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Subject"
           },
           "items": {
             "items": {

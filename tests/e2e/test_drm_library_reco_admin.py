@@ -163,9 +163,15 @@ def test_recommendation_rows(api: Api, app: Flask, admin: str, viewer: str) -> N
     trending = api.get("/api/v1/recommendations/trending", token=viewer).data
     assert [i["ref"] for i in trending["items"]] == [watched]
     for_you = api.get("/api/v1/recommendations/for-you", token=viewer).data
-    assert for_you["items"][0]["ref"] == candidate and for_you["items"][0]["reason"] == "Because you like News"
+    first = for_you["items"][0]
+    assert first["ref"] == candidate and first["reason"] == "Because you like News"  # older clients
+    # Clients word the reason in their own language from code + subject.
+    assert (first["reason_code"], first["reason_subject"]) == ("likes_group", "News")
+    assert trending["items"][0]["reason_code"] == "trending"
     home = api.get("/api/v1/recommendations/home", token=viewer).data
     assert home[0]["key"] == "for_you" and home[-1]["key"] == "trending"
+    because = next(row for row in home if row["key"].startswith("because:"))
+    assert because["subject"] == "News 1" and because["items"][0]["reason_code"] == "watched"
 
 
 # ── admin ──────────────────────────────────────────────────────────────────

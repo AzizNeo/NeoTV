@@ -3,9 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { Slot } from '@/core/featureKit';
 import { ContentRow } from '@/shared/components/ContentRow/ContentRow';
 import { catalogKeys, fetchChannels, toCard } from '../api';
+import { useT } from '../i18n';
 
 /** A catalogue group row that only fetches once it scrolls near the viewport. */
 export function LazyGroupRow({ group, kind, onSelect }) {
+  const t = useT();
   const anchor = useRef(null);
   // Without IntersectionObserver (old browsers, jsdom) every row loads eagerly.
   const [visible, setVisible] = useState(() => !('IntersectionObserver' in window));
@@ -29,7 +31,7 @@ export function LazyGroupRow({ group, kind, onSelect }) {
       {data && (
         <ContentRow
           title={group.name}
-          subtitle={data.total > data.items.length ? `${data.total} içerik` : undefined}
+          subtitle={data.total > data.items.length ? t('items', { count: data.total }) : undefined}
           items={data.items.map(toCard)}
           onSelect={onSelect}
           actions={(item) => <Slot name="content.actions" item={item} />}

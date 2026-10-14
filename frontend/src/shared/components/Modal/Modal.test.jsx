@@ -18,7 +18,7 @@ describe('Modal Component', () => {
     it('calls onClose when close button is clicked', () => {
         const handleClose = vi.fn();
         render(<Modal isOpen={true} onClose={handleClose} title="Test">Content</Modal>);
-        fireEvent.click(screen.getByLabelText('Close modal'));
+        fireEvent.click(screen.getByLabelText('Kapat'));
         expect(handleClose).toHaveBeenCalledTimes(1);
     });
 });

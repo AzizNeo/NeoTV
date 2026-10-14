@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { nextUp, remaining } from './nextUp';
+import { translate } from '@/core/i18n';
+import { messages } from './i18n';
+import { nextUp as pick, remaining as left } from './nextUp';
+
+const t = (key, params) => translate(messages, key, params, 'tr');
+const nextUp = (detail, progress) => pick(detail, progress, t);
+const remaining = (p) => left(p, t);
 
 const ep = (number, ref, available = true) => ({ number, name: `E${number}`, play_ref: ref, available });
 const series = (...seasons) => ({ card: { kind: 'series', available: true }, play_ref: null, seasons });
@@ -38,6 +44,11 @@ describe('nextUp', () => {
 });
 
 describe('remaining', () => {
+  it('speaks the viewer\'s language', () => {
+    expect(left({ completed: false, position_s: 300, duration_s: 900 }, (k, p) => translate(messages, k, p, 'en'))).toBe('10 min left');
+    expect(pick({ card: { kind: 'series' }, seasons: [{ number: 1, episodes: [{ number: 1, available: true, play_ref: 'c:1' }] }] }, new Map(), (k, p) => translate(messages, k, p, 'en')).label).toBe('Play: S1 E1');
+  });
+
   it('rounds to whole minutes and is silent for finished or unknown items', () => {
     expect(remaining({ completed: false, position_s: 300, duration_s: 900 })).toBe('10 dk kaldı');
     expect(remaining({ completed: true, position_s: 900, duration_s: 900 })).toBeNull();

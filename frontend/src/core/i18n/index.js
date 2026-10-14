@@ -5,3 +5,4 @@
 export { DEFAULT_LOCALE, LOCALES, UnknownLocaleError, getLocale, setLocale, subscribeLocale, useLocale } from './locale';
 export { MessageCatalogError, defineMessages, labelOf, translate, useTranslation } from './messages';
 export { errorMessages, messageFor } from './errors';
+export { formatDate, formatDateTime, formatMoney, formatTime, useFormat } from './format';
