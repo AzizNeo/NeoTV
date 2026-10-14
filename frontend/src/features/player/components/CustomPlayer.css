@@ -316,66 +316,47 @@
     font-variant-numeric: tabular-nums;
 }
 
-/* Settings */
+/* Settings (the menu itself: PlayerMenus.module.css) */
 .settings-container {
     position: relative;
 }
 
-.settings-menu {
+/* Subtitles: readable on any picture, above the control bar. */
+.video-element::cue {
+    font-family: var(--font-ui);
+    font-size: clamp(1rem, 0.7rem + 1.4vw, 1.9rem);
+    line-height: 1.35;
+    color: #fff;
+    background: rgb(0 0 0 / 0.62);
+}
+
+/* While the video plays in a picture-in-picture window. */
+.pip-placeholder {
     position: absolute;
-    bottom: 50px;
-    right: 0;
-    background: rgba(28, 28, 28, 0.95);
-    border-radius: 8px;
-    padding: 10px 0;
-    min-width: 180px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(10px);
+    inset: 0;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    color: rgb(244 246 251 / 0.8);
+    background: #0a0d16;
 }
-
-.settings-section {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 8px;
-    margin-bottom: 8px;
-}
-
-.settings-section:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-    margin-bottom: 0;
-}
-
-.settings-title {
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 0.75rem;
-    padding: 5px 15px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.settings-option {
-    display: block;
-    width: 100%;
-    text-align: left;
-    padding: 8px 15px;
+.pip-placeholder button {
+    min-height: 40px;
+    padding: 0 1rem;
+    border: 1px solid rgb(255 255 255 / 0.25);
+    border-radius: 10px;
     background: none;
-    border: none;
-    color: white;
-    font-size: 0.9rem;
+    color: #f4f6fb;
+    font: inherit;
+    font-weight: 700;
     cursor: pointer;
-    transition: background 0.2s ease;
 }
-
-.settings-option:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.settings-option.active {
-    color: #ffb547;
-}
-
-.settings-option.active::before {
-    content: '✓ ';
+.pip-placeholder button:hover {
+    border-color: #ffb547;
+    color: #ffc56e;
 }
 
 /* Responsive */

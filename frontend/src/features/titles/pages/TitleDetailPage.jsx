@@ -48,10 +48,16 @@ export default function TitleDetailPage() {
   const queue = detail.seasons.flatMap((s) =>
     s.episodes
       .filter((e) => e.available && e.play_ref)
-      .map((e) => ({ ref: e.play_ref, title: card.name, subtitle: `S${s.number} B${e.number} · ${e.name}`, label: `${s.number}.${e.number}` })),
+      .map((e) => ({
+        ref: e.play_ref,
+        title: card.name,
+        subtitle: `S${s.number} B${e.number} · ${e.name}`,
+        label: `${s.number}.${e.number}`,
+        image: e.still_url ?? card.backdrop_url ?? undefined, // next-episode card, OS media controls
+      })),
   );
   const start = (ref) => {
-    const item = queue.find((q) => q.ref === ref) ?? { ref, title: card.name };
+    const item = queue.find((q) => q.ref === ref) ?? { ref, title: card.name, image: card.backdrop_url ?? card.poster_url ?? undefined };
     play(item, card.kind === 'series' ? { queue } : undefined);
   };
 

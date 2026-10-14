@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { ListVideo, SkipBack, SkipForward, X } from 'lucide-react';
+import { ListVideo, Play, SkipBack, SkipForward, X } from 'lucide-react';
 import styles from './Queue.module.css';
 
 const COUNTDOWN_S = 10;
@@ -22,7 +22,32 @@ export function QueueButtons({ live, canPrev, canNext, onPrev, onNext, onList })
   );
 }
 
-/** "Up next" card after an episode ends: plays the next one after a countdown unless cancelled. */
+/**
+ * The closing seconds of an episode (credits): a quiet card bottom-left. The episode keeps playing;
+ * nothing happens unless the viewer asks for it. Never steals focus.
+ */
+export function NextEpisodeCard({ item, onPlay, onDismiss }) {
+  return (
+    <section className={styles.nextCard} aria-label="Sonraki bölüm" aria-live="polite">
+      {item.image && <img className={styles.nextThumb} src={item.image} alt="" referrerPolicy="no-referrer" />}
+      <div className={styles.nextText}>
+        <span className={styles.upNextLabel}>Sonraki bölüm</span>
+        <strong>{item.subtitle ?? item.title}</strong>
+      </div>
+      <button type="button" className={styles.primary} onClick={onPlay}>
+        <Play size={16} aria-hidden="true" /> Oynat
+      </button>
+      <button type="button" className={styles.dismiss} onClick={onDismiss} aria-label="İzlemeye devam et">
+        <X size={16} aria-hidden="true" />
+      </button>
+    </section>
+  );
+}
+
+/**
+ * After the episode ends: a big play button in the centre whose ring empties over the countdown;
+ * the next episode starts when it reaches zero, unless cancelled.
+ */
 export function UpNext({ item, onPlay, onCancel }) {
   const [left, setLeft] = useState(COUNTDOWN_S);
   useEffect(() => {
@@ -33,14 +58,24 @@ export function UpNext({ item, onPlay, onCancel }) {
     if (left <= 0) onPlay();
   }, [left, onPlay]);
   return (
-    <div className={styles.upNext} role="alertdialog" aria-label="Sıradaki bölüm">
-      <span className={styles.upNextLabel}>Sıradaki · {Math.max(left, 0)} sn</span>
-      <strong className={styles.upNextTitle}>{item.title}</strong>
-      {item.subtitle && <span className={styles.upNextSub}>{item.subtitle}</span>}
-      <div className={styles.upNextActions}>
-        <button type="button" className={styles.primary} onClick={onPlay} autoFocus>Şimdi oynat</button>
-        <button type="button" className={styles.secondary} onClick={onCancel}>İptal</button>
-      </div>
+    <div className={styles.postPlay} role="alertdialog" aria-labelledby="upnext-title" aria-describedby="upnext-count">
+      <button type="button" className={styles.ringButton} onClick={onPlay} autoFocus aria-label={`Şimdi oynat: ${item.subtitle ?? item.title}`}>
+        <svg className={styles.ring} viewBox="0 0 100 100" aria-hidden="true">
+          <circle className={styles.ringTrack} cx="50" cy="50" r="46" />
+          <circle className={styles.ringFill} cx="50" cy="50" r="46" pathLength="100" style={{ animationDuration: `${COUNTDOWN_S}s` }} />
+        </svg>
+        <Play size={40} aria-hidden="true" />
+      </button>
+      <span id="upnext-count" className={styles.upNextLabel}>
+        Sıradaki bölüm {Math.max(left, 0)} sn içinde
+      </span>
+      <strong id="upnext-title" className={styles.upNextTitle}>
+        {item.subtitle ?? item.title}
+      </strong>
+      {item.subtitle && <span className={styles.upNextSub}>{item.title}</span>}
+      <button type="button" className={styles.secondary} onClick={onCancel}>
+        İptal
+      </button>
     </div>
   );
 }
@@ -84,8 +119,28 @@ export function ZapBadge({ number, title, caption }) {
   );
 }
 
-const itemShape = PropTypes.shape({ ref: PropTypes.string.isRequired, title: PropTypes.string.isRequired, subtitle: PropTypes.string, caption: PropTypes.string, label: PropTypes.string });
+/** The number being typed on live TV ("12_"), or "kanal yok" when it does not exist. */
+export function ChannelEntry({ digits, invalid }) {
+  if (!digits) return null;
+  return (
+    <div className={`${styles.entry} ${invalid ? styles.entryInvalid : ''}`} role="status">
+      <span className={styles.zapNo}>{digits}</span>
+      {invalid ? <small>Kanal yok</small> : <span className={styles.caret} aria-hidden="true" />}
+    </div>
+  );
+}
+
+const itemShape = PropTypes.shape({
+  ref: PropTypes.string.isRequired,
+  title: PropTypes.string.isRequired,
+  subtitle: PropTypes.string,
+  caption: PropTypes.string,
+  label: PropTypes.string,
+  image: PropTypes.string,
+});
 QueueButtons.propTypes = { live: PropTypes.bool, canPrev: PropTypes.bool, canNext: PropTypes.bool, onPrev: PropTypes.func, onNext: PropTypes.func, onList: PropTypes.func };
 UpNext.propTypes = { item: itemShape.isRequired, onPlay: PropTypes.func.isRequired, onCancel: PropTypes.func.isRequired };
 QueuePanel.propTypes = { live: PropTypes.bool, items: PropTypes.arrayOf(itemShape).isRequired, index: PropTypes.number.isRequired, onPick: PropTypes.func.isRequired, onClose: PropTypes.func.isRequired };
 ZapBadge.propTypes = { number: PropTypes.number.isRequired, title: PropTypes.string.isRequired, caption: PropTypes.string };
+NextEpisodeCard.propTypes = { item: itemShape.isRequired, onPlay: PropTypes.func.isRequired, onDismiss: PropTypes.func.isRequired };
+ChannelEntry.propTypes = { digits: PropTypes.string.isRequired, invalid: PropTypes.bool };

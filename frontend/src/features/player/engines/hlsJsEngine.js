@@ -1,11 +1,12 @@
 import Hls from 'hls.js';
+import { AUTO, OFF, qualityOptions } from './tracks';
 
 /**
  * hls.js engine. No credentials are ever attached (FE-03): every playlist,
  * segment and AES-128 key URI is a signed, session-bound URL minted by the
  * backend, so cross-origin CDNs never see an Authorization header.
  */
-export function createHlsJsEngine(video, { isLive, onFatal, onReady, maxHeight }) {
+export function createHlsJsEngine(video, { isLive, onFatal, onReady, onTracks, maxHeight }) {
   const hls = new Hls({
     enableWorker: true,
     lowLatencyMode: isLive,
@@ -26,7 +27,17 @@ export function createHlsJsEngine(video, { isLive, onFatal, onReady, maxHeight }
       if (allowed.length) hls.autoLevelCapping = Math.max(...allowed.map((l) => l.i));
     }
     onReady?.();
+    onTracks?.();
   });
+  for (const event of [
+    Hls.Events.LEVEL_SWITCHED,
+    Hls.Events.AUDIO_TRACKS_UPDATED,
+    Hls.Events.AUDIO_TRACK_SWITCHED,
+    Hls.Events.SUBTITLE_TRACKS_UPDATED,
+    Hls.Events.SUBTITLE_TRACK_SWITCH,
+  ]) {
+    hls.on(event, () => onTracks?.());
+  }
   hls.on(Hls.Events.ERROR, (_event, data) => {
     if (!data.fatal) return;
     // Before the manifest arrives there is nothing to resume: startLoad() would be a silent no-op and
@@ -61,6 +72,28 @@ export function createHlsJsEngine(video, { isLive, onFatal, onReady, maxHeight }
     stats: () => {
       const level = hls.levels?.[hls.currentLevel];
       return { bitrateKbps: level ? Math.round(level.bitrate / 1000) : null, resolution: level?.height ? `${level.height}p` : null };
+    },
+    tracks: () => ({
+      // hls.js addresses levels and tracks by *array index* (its `id` fields are manifest ids): use indexes.
+      quality: qualityOptions((hls.levels ?? []).map((l, id) => ({ id, height: l.height, bitrate: l.bitrate })), maxHeight),
+      qualityId: hls.autoLevelEnabled ? AUTO : hls.manualLevel,
+      playingHeight: hls.levels?.[hls.currentLevel]?.height ?? null,
+      audio: (hls.audioTracks ?? []).map((t, id) => ({ id, lang: t.lang ?? null, name: t.name ?? null })),
+      audioId: hls.audioTrack,
+      text: (hls.subtitleTracks ?? []).map((t, id) => ({ id, lang: t.lang ?? null, name: t.name ?? null })),
+      textId: hls.subtitleDisplay ? hls.subtitleTrack : OFF,
+    }),
+    select(kind, id) {
+      if (kind === 'quality') {
+        // nextLevel: switch at the next fragment — no buffer flush, no stall. -1 hands control back to ABR.
+        hls.nextLevel = id;
+      } else if (kind === 'audio') {
+        hls.audioTrack = id;
+      } else if (kind === 'text') {
+        if (id !== OFF) hls.subtitleDisplay = true;
+        hls.subtitleTrack = id; // -1 also stops downloading the subtitle playlist
+      }
+      onTracks?.();
     },
     destroy() {
       const stillOurs = ownedSrc !== null && (video.currentSrc || video.src) === ownedSrc;

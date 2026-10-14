@@ -7,7 +7,12 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
+import { Captions, CaptionsOff, PictureInPicture2 } from 'lucide-react';
 import { createEngine } from '../engines';
+import { NO_TRACKS, OFF, sameLanguage } from '../engines/tracks';
+import { applyPreferences, readPrefs, writePrefs } from '../prefs';
+import { DIGITS, ignoreKey, resolveShortcuts } from '../shortcuts';
+import { SettingsMenu, ShortcutHelp } from './PlayerMenus';
 import './CustomPlayer.css';
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -22,11 +27,13 @@ function formatTime(seconds) {
 }
 
 const STARTUP_TIMEOUT_MS = 25_000;
+const canPip = () => typeof document !== 'undefined' && Boolean(document.pictureInPictureEnabled);
 
 /**
  * Extension points (all optional) keep this component generic — it knows nothing of episodes or channels:
  * `subtitle` (title bar), `controlsExtra` (buttons before settings), `overlay` (layers over the video),
- * `extraKeys` (key → action, overrides defaults: live TV maps ↑/↓ to channels), `onEnded`.
+ * `extraKeys` (shortcuts `{ keys, label, run }` that win over the defaults — live TV maps ↑/↓ to
+ * channels — and show up in the "?" help), `onEnded`.
  */
 export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVideo, onEnded, engineRef, extraKeys, controlsExtra, overlay, children }) {
   const videoRef = useRef(null);
@@ -46,6 +53,11 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
   const [showSettings, setShowSettings] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [tracks, setTracks] = useState(NO_TRACKS);
+  const [showHelp, setShowHelp] = useState(false);
+  const [isPip, setIsPip] = useState(false);
+  const engineHandle = useRef(null); // the live engine, for menu actions
+  const lastText = useRef(null); // the subtitle language "C" turns back on
 
   const isLive = source.isLive;
   const onFatalRef = useRef(onFatal);
@@ -59,7 +71,10 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
     if (!video) return undefined;
     let engine = null;
     let disposed = false;
+    const applied = { text: false, audio: false }; // remembered languages: applied once per source
+    const prefs = readPrefs();
     setIsLoading(true);
+    setTracks(NO_TRACKS);
     // Watchdog: whatever goes wrong upstream, a viewer never stares at an endless spinner.
     const watchdog = setTimeout(() => {
       if (!disposed) onFatalRef.current?.({ code: 'STREAM_TIMEOUT' });
@@ -75,6 +90,11 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
         });
       },
       onFatal: (failure) => onFatalRef.current?.(failure),
+      onTracks: () => {
+        if (disposed || !engine) return;
+        applyPreferences(engine, engine.tracks(), prefs, applied);
+        setTracks(engine.tracks());
+      },
     })
       .then((created) => {
         if (disposed) {
@@ -82,6 +102,7 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
           return;
         }
         engine = created;
+        engineHandle.current = created;
         if (engineRef) engineRef.current = created;
         return created.load(source.url);
       })
@@ -91,6 +112,7 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
       clearTimeout(start);
       clearTimeout(watchdog);
       engine?.destroy();
+      engineHandle.current = null;
       if (engineRef) engineRef.current = null;
     };
     // The engine depends on the manifest only — never on UI state (FE-07).
@@ -105,6 +127,11 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
   // ── media element → UI state ─────────────────────────────────────────────
   useEffect(() => {
     const video = videoRef.current;
+    const saved = readPrefs();
+    if (Number.isFinite(saved.volume)) video.volume = Math.max(0, Math.min(1, saved.volume));
+    if (typeof saved.muted === 'boolean') video.muted = saved.muted;
+    setVolume(video.volume);
+    setIsMuted(video.muted);
     const handlers = {
       play: () => setIsPlaying(true),
       pause: () => setIsPlaying(false),
@@ -116,7 +143,10 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
       volumechange: () => {
         setVolume(video.volume);
         setIsMuted(video.muted);
+        writePrefs({ volume: video.volume, muted: video.muted });
       },
+      enterpictureinpicture: () => setIsPip(true),
+      leavepictureinpicture: () => setIsPip(false),
       waiting: () => setIsLoading(true),
       playing: () => setIsLoading(false),
       ended: () => {
@@ -125,8 +155,21 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
       },
     };
     for (const [event, fn] of Object.entries(handlers)) video.addEventListener(event, fn);
+    // Subtitles sit on the bottom line by default — under the control bar. Lift cues that carry no
+    // position of their own three lines up (standard VTTCue API: works with every engine and browser).
+    // "No position" is 'auto', or -1 (the bottom line), which hls.js writes in its place for Safari.
+    // All cues of the track, not just the active ones: a cue moved while on screen is not re-laid out.
+    const lift = (event) => {
+      for (const cue of event.target.cues ?? []) if (cue.line === 'auto' || cue.line === -1) cue.line = -3;
+    };
+    const watch = (event) => event.track.addEventListener('cuechange', lift);
+    for (const track of video.textTracks ?? []) track.addEventListener('cuechange', lift);
+    video.textTracks?.addEventListener('addtrack', watch);
     return () => {
       for (const [event, fn] of Object.entries(handlers)) video.removeEventListener(event, fn);
+      video.textTracks?.removeEventListener('addtrack', watch);
+      for (const track of video.textTracks ?? []) track.removeEventListener('cuechange', lift);
+      if (document.pictureInPictureElement === video) document.exitPictureInPicture().catch(() => {});
     };
   }, []);
 
@@ -167,11 +210,54 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
     else document.exitFullscreen().catch(() => {});
   }, []);
 
+  const togglePip = useCallback(() => {
+    if (document.pictureInPictureElement) document.exitPictureInPicture().catch(() => {});
+    else videoRef.current?.requestPictureInPicture?.().catch(() => {});
+  }, []);
+
+  const seekFraction = useCallback(
+    (fraction) => {
+      const video = videoRef.current;
+      if (!isLive && Number.isFinite(video.duration)) video.currentTime = video.duration * fraction;
+    },
+    [isLive],
+  );
+
+  /** Menu choice → engine; languages are remembered for the next episode / visit. */
+  const selectTrack = useCallback((kind, id) => {
+    const engine = engineHandle.current;
+    if (!engine) return;
+    engine.select(kind, id);
+    const chosen = engine.tracks()[kind].find((t) => t.id === id);
+    if (kind === 'text') {
+      if (chosen?.lang) lastText.current = chosen.lang;
+      writePrefs({ textLang: id === OFF ? 'off' : (chosen?.lang ?? null) });
+    } else if (kind === 'audio' && chosen?.lang) {
+      writePrefs({ audioLang: chosen.lang });
+    }
+  }, []);
+
+  const toggleSubtitles = useCallback(() => {
+    const engine = engineHandle.current;
+    if (!engine) return;
+    const { text, textId } = engine.tracks();
+    if (!text.length) return;
+    if (textId !== OFF) {
+      selectTrack('text', OFF);
+      return;
+    }
+    const wanted = lastText.current ?? (readPrefs().textLang !== 'off' ? readPrefs().textLang : null);
+    selectTrack('text', (text.find((t) => sameLanguage(t.lang, wanted)) ?? text[0]).id);
+  }, [selectTrack]);
+
+  // While a menu or the help is open the controls stay put (keyboard users are mid-way through it).
+  const pinned = useRef(false);
+  pinned.current = showSettings || showHelp;
   const revealControls = useCallback(() => {
     setShowControls(true);
     clearTimeout(hideTimer.current);
     hideTimer.current = setTimeout(() => {
-      if (!videoRef.current?.paused) {
+      if (!videoRef.current?.paused && !pinned.current) {
         setShowControls(false);
         setShowSettings(false);
       }
@@ -180,31 +266,45 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
 
   useEffect(() => () => clearTimeout(hideTimer.current), []);
 
-  // Keyboard: handlers read the latest callbacks through a ref (no stale closures).
-  const keyActions = useRef({});
-  keyActions.current = { togglePlay, skip, changeVolume, toggleFullscreen, toggleMute, onClose, extraKeys };
+  // Keyboard: one shortcut list drives the handler *and* the "?" help (see ../shortcuts.js).
+  const hasText = tracks.text.length > 0;
+  const pipAvailable = canPip();
+  const shortcuts = resolveShortcuts(
+    [
+      { keys: [' ', 'k'], label: 'Oynat / duraklat', run: togglePlay },
+      !isLive && { keys: ['ArrowLeft', 'j'], label: '10 saniye geri', run: () => skip(-10) },
+      !isLive && { keys: ['ArrowRight', 'l'], label: '10 saniye ileri', run: () => skip(10) },
+      !isLive && { keys: DIGITS, display: '0–9', label: 'Videonun %0–90 noktasına git', run: (key) => seekFraction(Number(key) / 10) },
+      { keys: ['ArrowUp', '+', '='], label: 'Sesi aç', run: () => changeVolume(0.1) },
+      { keys: ['ArrowDown', '-'], label: 'Sesi kıs', run: () => changeVolume(-0.1) },
+      { keys: ['m'], label: 'Sesi kapat / aç', run: toggleMute },
+      hasText && { keys: ['c'], label: 'Altyazıyı aç / kapat', run: toggleSubtitles },
+      { keys: ['f'], label: 'Tam ekran', run: toggleFullscreen },
+      pipAvailable && { keys: ['i'], label: 'Resim içinde resim', run: togglePip },
+      { keys: ['?'], label: 'Kısayol listesi', run: () => setShowHelp((v) => !v) },
+      {
+        keys: ['Escape'],
+        label: 'Menüyü / oynatıcıyı kapat',
+        run: () => {
+          if (showHelp) setShowHelp(false);
+          else if (showSettings) setShowSettings(false);
+          else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+          else onClose?.();
+        },
+      },
+    ].filter(Boolean),
+    extraKeys,
+  );
+  const shortcutsRef = useRef(shortcuts);
+  shortcutsRef.current = shortcuts;
   useEffect(() => {
     const onKey = (event) => {
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
-      const a = keyActions.current;
-      const map = {
-        ' ': a.togglePlay,
-        k: a.togglePlay,
-        ArrowLeft: () => a.skip(-10),
-        ArrowRight: () => a.skip(10),
-        ArrowUp: () => a.changeVolume(0.1),
-        ArrowDown: () => a.changeVolume(-0.1),
-        f: a.toggleFullscreen,
-        m: a.toggleMute,
-        Escape: () => (document.fullscreenElement ? document.exitFullscreen() : a.onClose?.()),
-        ...a.extraKeys,
-      };
-      const action = map[event.key];
-      if (action) {
-        event.preventDefault();
-        action();
-        revealControls();
-      }
+      if (ignoreKey(event)) return;
+      const shortcut = shortcutsRef.current.byKey.get(event.key);
+      if (!shortcut) return;
+      event.preventDefault();
+      shortcut.run(event.key);
+      revealControls();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -225,7 +325,9 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
       className={`custom-player ${showControls ? '' : 'hide-cursor'}`}
       onMouseMove={revealControls}
       onClick={(e) => {
-        if (e.target === playerRef.current || e.target === videoRef.current) togglePlay();
+        if (e.target !== playerRef.current && e.target !== videoRef.current) return;
+        if (showSettings) setShowSettings(false); // a click outside the menu just closes it (YouTube)
+        else togglePlay();
       }}
       role="region"
       aria-label={`${title} oynatıcı`}
@@ -238,8 +340,19 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
         </div>
       )}
 
+      {isPip && (
+        <div className="pip-placeholder">
+          <PictureInPicture2 size={40} aria-hidden="true" />
+          <span>Resim içinde resim modunda oynatılıyor</span>
+          <button type="button" onClick={togglePip}>
+            Buraya geri al
+          </button>
+        </div>
+      )}
+
       {children}
       {overlay}
+      {showHelp && <ShortcutHelp shortcuts={shortcuts.list} onClose={() => setShowHelp(false)} />}
 
       <div className={`title-bar ${showControls ? 'visible' : ''}`}>
         <button className="back-btn" onClick={onClose} aria-label="Kapat">
@@ -324,33 +437,44 @@ export function CustomPlayer({ source, title, subtitle, onClose, onFatal, onVide
 
           <div className="controls-right">
             {controlsExtra}
-            {!isLive && (
-              <div className="settings-container">
-                <button className="control-btn" onClick={() => setShowSettings((v) => !v)} aria-label="Ayarlar" aria-expanded={showSettings}>
-                  <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" /></svg>
-                </button>
-                {showSettings && (
-                  <div className="settings-menu">
-                    <div className="settings-section">
-                      <div className="settings-title">Oynatma hızı</div>
-                      {SPEEDS.map((s) => (
-                        <button
-                          key={s}
-                          className={`settings-option ${speed === s ? 'active' : ''}`}
-                          onClick={() => {
-                            videoRef.current.playbackRate = s;
-                            setSpeed(s);
-                            setShowSettings(false);
-                          }}
-                        >
-                          {s === 1 ? 'Normal' : `${s}x`}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+            {hasText && (
+              <button
+                className="control-btn"
+                onClick={toggleSubtitles}
+                aria-label={tracks.textId === OFF ? 'Altyazıyı aç' : 'Altyazıyı kapat'}
+                aria-pressed={tracks.textId !== OFF}
+              >
+                {tracks.textId === OFF ? <CaptionsOff size={24} aria-hidden="true" /> : <Captions size={24} aria-hidden="true" />}
+              </button>
             )}
+            {pipAvailable && (
+              <button className="control-btn" onClick={togglePip} aria-label={isPip ? 'Resim içinde resimden çık' : 'Resim içinde resim'} aria-pressed={isPip}>
+                <PictureInPicture2 size={24} aria-hidden="true" />
+              </button>
+            )}
+            <div className="settings-container">
+              <button className="control-btn" onClick={() => setShowSettings((v) => !v)} aria-label="Ayarlar" aria-haspopup="menu" aria-expanded={showSettings}>
+                <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" /></svg>
+              </button>
+              {showSettings && (
+                <SettingsMenu
+                  tracks={tracks}
+                  speed={speed}
+                  speeds={SPEEDS}
+                  isLive={isLive}
+                  onSelect={selectTrack}
+                  onSpeed={(s) => {
+                    videoRef.current.playbackRate = s;
+                    setSpeed(s);
+                  }}
+                  onHelp={() => {
+                    setShowSettings(false);
+                    setShowHelp(true);
+                  }}
+                  onClose={() => setShowSettings(false)}
+                />
+              )}
+            </div>
             <button className="control-btn" onClick={toggleFullscreen} aria-label={isFullscreen ? 'Tam ekrandan çık' : 'Tam ekran'}>
               {isFullscreen ? (
                 <svg viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z" /></svg>
@@ -377,7 +501,9 @@ CustomPlayer.propTypes = {
   onClose: PropTypes.func.isRequired,
   subtitle: PropTypes.string,
   onEnded: PropTypes.func,
-  extraKeys: PropTypes.objectOf(PropTypes.func),
+  extraKeys: PropTypes.arrayOf(
+    PropTypes.shape({ keys: PropTypes.arrayOf(PropTypes.string).isRequired, label: PropTypes.string.isRequired, run: PropTypes.func.isRequired, display: PropTypes.string }),
+  ),
   controlsExtra: PropTypes.node,
   overlay: PropTypes.node,
   onFatal: PropTypes.func,

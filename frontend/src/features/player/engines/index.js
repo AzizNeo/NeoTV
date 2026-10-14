@@ -5,6 +5,9 @@
  *   EME DRM (license URLs present)  → shaka (lazy chunk)
  *   HLS + MediaSource                → hls.js (AES-128 keys handled natively)
  *   HLS on Safari/iOS, MP4 …         → native <video>
+ *
+ * Every engine returns { id, load(url), stats(), tracks(), select(kind, id), destroy() } and reports
+ * through the callbacks { onReady, onFatal, onTracks } — the track model lives in ./tracks.js.
  */
 import { createHlsJsEngine, hlsJsSupported } from './hlsJsEngine';
 import { createNativeEngine } from './nativeEngine';

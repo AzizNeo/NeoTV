@@ -11,11 +11,15 @@ import { AlertTriangle, SkipForward, X } from 'lucide-react';
 import { Slot, useFeature } from '@/core/featureKit';
 import { messageFor } from '@/core/i18n';
 import { Spinner } from '@/shared/components/Spinner/Spinner';
+import { useChannelEntry } from '../hooks/useChannelEntry';
+import { useEndgame } from '../hooks/useEndgame';
+import { useMediaSession } from '../hooks/useMediaSession';
 import { usePlaybackSession } from '../hooks/usePlaybackSession';
 import { useQoe } from '../hooks/useQoe';
 import { describeSource } from '../engines';
 import { makeQueue, step } from '../queue';
-import { QueueButtons, QueuePanel, UpNext, ZapBadge } from './QueueParts';
+import { DIGITS } from '../shortcuts';
+import { ChannelEntry, NextEpisodeCard, QueueButtons, QueuePanel, UpNext, ZapBadge } from './QueueParts';
 import styles from './PlayerOverlay.module.css';
 
 const CustomPlayer = lazy(() => import('./CustomPlayer').then((m) => ({ default: m.CustomPlayer })));
@@ -70,7 +74,7 @@ function PlayerOverlay({ item, queue, onJump, onClose }) {
   const videoRef = useRef(null);
   const engineRef = useRef(null);
   const billing = useFeature('billing');
-  const [ended, setEnded] = useState(false);
+  const [dismissed, setDismissed] = useState(() => new Set()); // post-play cards the viewer closed
   const [listOpen, setListOpen] = useState(false);
 
   const onVideo = useCallback((el) => {
@@ -94,12 +98,38 @@ function PlayerOverlay({ item, queue, onJump, onClose }) {
   const next = step(queue, 1, { wrap: live });
   const goNext = useCallback(() => next !== null && onJump(next), [next, onJump]);
   const goPrev = useCallback(() => prev !== null && onJump(prev), [prev, onJump]);
-  // IPTV convention: ↑/↓ change channel on live TV (volume stays on +/- and the slider); on demand
-  // Shift+N / Shift+P move through episodes.
-  const extraKeys = useMemo(
-    () => (live ? { ArrowUp: goNext, ArrowDown: goPrev, PageUp: goNext, PageDown: goPrev } : { N: goNext, P: goPrev }),
-    [live, goNext, goPrev],
-  );
+  const hasQueue = queue.items.length > 1;
+  const channelEntry = useChannelEntry(queue.items.length, onJump);
+  // IPTV convention: ↑/↓ (and PgUp/PgDn) change channel, digits type a channel number; volume moves to
+  // +/−. On demand, Shift+N / Shift+P move through episodes.
+  const extraKeys = useMemo(() => {
+    if (!hasQueue) return undefined;
+    if (live) {
+      return [
+        { keys: ['ArrowUp', 'PageUp'], label: 'Sonraki kanal', run: goNext },
+        { keys: ['ArrowDown', 'PageDown'], label: 'Önceki kanal', run: goPrev },
+        { keys: DIGITS, display: '0–9', label: 'Kanal numarasıyla geç', run: channelEntry.press },
+      ];
+    }
+    return [
+      { keys: ['N'], label: 'Sonraki bölüm', run: goNext },
+      { keys: ['P'], label: 'Önceki bölüm', run: goPrev },
+    ];
+  }, [hasQueue, live, goNext, goPrev, channelEntry.press]);
+
+  // Post-play (on demand, with a next item): a card during the credits, a countdown at the end.
+  const phase = useEndgame(video, { enabled: !live && next !== null, creditsAt: item.creditsAt ?? null });
+  const dismiss = (which) => setDismissed((d) => new Set(d).add(which));
+  const nextItem = next !== null ? queue.items[next] : null;
+
+  useMediaSession(video, {
+    title: item.title ?? session?.content?.title ?? 'NeoTV',
+    subtitle: item.subtitle ?? item.caption ?? null,
+    artwork: item.image ?? null,
+    isLive: live,
+    onNext: next !== null ? goNext : null,
+    onPrev: prev !== null ? goPrev : null,
+  });
 
   if (problem) {
     return (
@@ -151,18 +181,19 @@ function PlayerOverlay({ item, queue, onJump, onClose }) {
           onClose={onClose}
           onFatal={setFatal}
           onVideo={onVideo}
-          onEnded={() => !live && next !== null && queue.autoNext && setEnded(true)}
           engineRef={engineRef}
-          extraKeys={queue.items.length > 1 ? extraKeys : undefined}
+          extraKeys={extraKeys}
           controlsExtra={
-            queue.items.length > 1 && (
+            hasQueue && (
               <QueueButtons live={live} canPrev={prev !== null} canNext={next !== null} onPrev={goPrev} onNext={goNext} onList={() => setListOpen((o) => !o)} />
             )
           }
           overlay={
             <>
-              {live && queue.items.length > 1 && <ZapBadge number={queue.index + 1} title={item.title} caption={item.caption} />}
-              {ended && next !== null && <UpNext item={queue.items[next]} onPlay={goNext} onCancel={() => setEnded(false)} />}
+              {live && hasQueue && !channelEntry.digits && <ZapBadge number={queue.index + 1} title={item.title} caption={item.caption} />}
+              {live && <ChannelEntry digits={channelEntry.digits} invalid={channelEntry.invalid} />}
+              {phase === 'credits' && !dismissed.has('credits') && <NextEpisodeCard item={nextItem} onPlay={goNext} onDismiss={() => dismiss('credits')} />}
+              {phase === 'ended' && queue.autoNext && !dismissed.has('ended') && <UpNext item={nextItem} onPlay={goNext} onCancel={() => dismiss('ended')} />}
               {listOpen && <QueuePanel live={live} items={queue.items} index={queue.index} onPick={onJump} onClose={() => setListOpen(false)} />}
             </>
           }
