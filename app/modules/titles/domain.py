@@ -11,11 +11,12 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 
 from app.shared_kernel.content import ContentRef, InvalidContentRefError
+from app.shared_kernel.locale import DEFAULT_LOCALE, SUPPORTED_LOCALES
 from app.shared_kernel.ratings import RATINGS
 
 NAMESPACE = "titles"
@@ -88,6 +89,18 @@ def image_ok(url: str | None) -> bool:
 
 # ── The aggregate as a document ─────────────────────────────────────────────
 @dataclass(frozen=True, slots=True)
+class LocalizedText:
+    """A translation of a name (+ synopsis). The original lives in the draft's own fields."""
+
+    name: str
+    synopsis: str | None = None
+
+
+#: locale → text, for locales other than the default (whose text *is* the draft's own fields).
+Translations = Mapping[str, LocalizedText]
+
+
+@dataclass(frozen=True, slots=True)
 class EpisodeDraft:
     number: int
     name: str
@@ -95,6 +108,7 @@ class EpisodeDraft:
     synopsis: str | None = None
     runtime_minutes: int | None = None
     still_url: str | None = None
+    translations: Translations = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,6 +136,7 @@ class TitleDraft:
     featured_rank: int | None = None  # 1 = first slot of the home hero; None = not featured
     is_published: bool = True
     seasons: tuple[SeasonDraft, ...] = field(default=())
+    translations: Translations = field(default_factory=dict)
 
     def play_refs(self) -> set[str]:
         refs = {self.play_ref} if self.play_ref else set()
@@ -156,6 +171,7 @@ def validate(draft: TitleDraft) -> None:
         add("genres: every genre needs at least one letter or digit")
     if draft.featured_rank is not None and draft.featured_rank < 1:
         add("featured_rank: 1 or more")
+    _translations(draft.translations, "translations", add)
 
     if draft.kind is TitleKind.MOVIE:
         if draft.seasons:
@@ -220,3 +236,27 @@ def _seasons(seasons: Sequence[SeasonDraft], report: Report) -> None:
             _runtime(ep.runtime_minutes, f"{at} runtime_minutes", report)
             if not image_ok(ep.still_url):
                 report(f"{at}: still_url must be an https:// URL or same-origin path")
+            _translations(ep.translations, f"{at} translations", report)
+
+
+def _translations(translations: Translations, where: str, report: Report) -> None:
+    for locale, text in translations.items():
+        if locale not in SUPPORTED_LOCALES or locale == DEFAULT_LOCALE:
+            others = ", ".join(sorted(set(SUPPORTED_LOCALES) - {DEFAULT_LOCALE}))
+            report(f"{where}: {locale!r} is not a translation language ({others}; '{DEFAULT_LOCALE}' is the original)")
+            continue
+        if not text.name.strip() or len(text.name) > MAX_NAME:
+            report(f"{where}.{locale}: name 1–{MAX_NAME} characters")
+        if text.synopsis is not None and len(text.synopsis) > MAX_SYNOPSIS:
+            report(f"{where}.{locale}: synopsis at most {MAX_SYNOPSIS} characters")
+
+
+def genre_names_problems(names: Mapping[str, str]) -> list[str]:
+    """Problems with a genre's translated names (empty list = valid)."""
+    problems: list[str] = []
+    for locale, name in names.items():
+        if locale not in SUPPORTED_LOCALES or locale == DEFAULT_LOCALE:
+            problems.append(f"names: {locale!r} is not a translation language")
+        elif not name.strip() or len(name) > 80:
+            problems.append(f"names.{locale}: 1–80 characters")
+    return problems

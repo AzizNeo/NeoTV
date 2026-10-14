@@ -20,16 +20,19 @@ from app.modules.playback.api import ContentDirectory, ContentKind
 from app.modules.titles.domain import (
     EpisodeDraft,
     InvalidTitleError,
+    LocalizedText,
     PlaySourceNotFoundError,
     RatingConflictError,
     SeasonDraft,
     TitleDraft,
     TitleKind,
     TitleNotFoundError,
+    Translations,
+    genre_names_problems,
     slugify,
     validate,
 )
-from app.modules.titles.models import Episode, Genre, Season, Title
+from app.modules.titles.models import Episode, EpisodeText, Genre, GenreText, Season, Title, TitleText
 from app.shared_kernel.ratings import KIDS_ALLOWED
 
 
@@ -51,6 +54,13 @@ class TitleAdminRow:
 class TitleAdminPage:
     items: list[TitleAdminRow]
     next_cursor: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class GenreView:
+    slug: str
+    name: str
+    names: dict[str, str]  # translations by locale
 
 
 # ── Repository ──────────────────────────────────────────────────────────────
@@ -117,8 +127,10 @@ class TitleAdminService:
             title.is_published = draft.is_published
             title.updated_at = self._clock.now()
             title.genres = repo.genres_for(draft.genres)
+            title.texts.clear()
             title.seasons.clear()
-            uow.session.flush()  # delete old children first: (title_id, number) is unique
+            uow.session.flush()  # delete old children first: (title_id, number) and (title_id, locale) are unique
+            title.texts.extend(_title_texts(draft.translations))
             title.seasons.extend(
                 Season(
                     number=s.number,
@@ -131,6 +143,7 @@ class TitleAdminService:
                             runtime_minutes=e.runtime_minutes,
                             still_url=e.still_url,
                             play_ref=e.play_ref,
+                            texts=_episode_texts(e.translations),
                         )
                         for e in s.episodes
                     ],
@@ -144,6 +157,23 @@ class TitleAdminService:
         with self._uow() as uow:
             title = self._get(uow.session, slug)
             return to_draft(title)
+
+    def set_genre_names(self, slug: str, names: dict[str, str]) -> GenreView:
+        """Replace a genre's translated names (the original name is the one titles were saved with)."""
+        problems = genre_names_problems(names)
+        if problems:
+            raise InvalidTitleError("Genre names are invalid", details=problems)
+        with self._uow() as uow:
+            genre = uow.session.execute(select(Genre).where(Genre.slug == slug)).scalar_one_or_none()
+            if genre is None:
+                raise TitleNotFoundError("Genre not found")
+            genre.texts.clear()
+            uow.flush()  # (genre_id, locale) is the key: old rows go before new ones arrive
+            genre.texts.extend(
+                GenreText(locale=loc, name=" ".join(name.split())) for loc, name in sorted(names.items())
+            )
+            uow.flush()
+            return GenreView(slug=genre.slug, name=genre.name, names={t.locale: t.name for t in genre.texts})
 
     def delete(self, slug: str) -> None:
         with self._uow() as uow:
@@ -202,6 +232,24 @@ class TitleAdminService:
         return title
 
 
+def _title_texts(translations: Translations) -> list[TitleText]:
+    return [
+        TitleText(locale=locale, name=text.name.strip(), synopsis=text.synopsis)
+        for locale, text in sorted(translations.items())
+    ]
+
+
+def _episode_texts(translations: Translations) -> list[EpisodeText]:
+    return [
+        EpisodeText(locale=locale, name=text.name.strip(), synopsis=text.synopsis)
+        for locale, text in sorted(translations.items())
+    ]
+
+
+def _translations(texts: Iterable[TitleText | EpisodeText]) -> dict[str, LocalizedText]:
+    return {t.locale: LocalizedText(name=t.name, synopsis=t.synopsis) for t in texts}
+
+
 def to_draft(title: Title) -> TitleDraft:
     return TitleDraft(
         slug=title.slug,
@@ -217,6 +265,7 @@ def to_draft(title: Title) -> TitleDraft:
         genres=tuple(g.name for g in title.genres),
         featured_rank=title.featured_rank,
         is_published=bool(title.is_published),
+        translations=_translations(title.texts),
         seasons=tuple(
             SeasonDraft(
                 number=s.number,
@@ -229,6 +278,7 @@ def to_draft(title: Title) -> TitleDraft:
                         synopsis=e.synopsis,
                         runtime_minutes=e.runtime_minutes,
                         still_url=e.still_url,
+                        translations=_translations(e.texts),
                     )
                     for e in s.episodes
                 ),

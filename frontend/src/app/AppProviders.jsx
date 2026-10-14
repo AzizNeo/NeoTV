@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/core/api/queryClient';
+import { subscribeLocale } from '@/core/i18n';
 import { AuthProvider } from '@/core/auth/AuthProvider';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { SharedTextProvider } from '@/shared/components/SharedText/SharedTextProvider';
@@ -18,12 +19,22 @@ function SharedText({ children }) {
   return <SharedTextProvider value={value}>{children}</SharedTextProvider>;
 }
 
+/**
+ * Server text (titles, synopses, genres …) is answered in the request's language (Accept-Language):
+ * after a switch every cached answer is in the old one, so refetch what is on screen.
+ */
+function RefetchOnLanguageChange() {
+  useEffect(() => subscribeLocale(() => queryClient.invalidateQueries()), []);
+  return null;
+}
+
 /** App-wide, router-independent providers. Feature providers live inside the router (RootLayout). */
 export function AppProviders({ children }) {
   return (
     <ThemeProvider>
       <SharedText>
         <QueryClientProvider client={queryClient}>
+          <RefetchOnLanguageChange />
           <ToastProvider>
             <AuthProvider>
               <LocaleSync />

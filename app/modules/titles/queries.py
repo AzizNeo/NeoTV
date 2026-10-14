@@ -5,6 +5,9 @@ Visibility: only published titles; a kids profile sees only ratings in
 Availability: computed per response with *one* batched ``playback.content``
 lookup — listings flag unplayable titles (``available=False``) instead of hiding
 them, the hero shows only playable ones.
+Language: every read takes the viewer's ``locale``; names, synopses, episode and genre
+names come from its translation when there is one, else from the original. Search
+matches the original and every translation; "A–Z" sorts by the name the viewer sees.
 """
 
 from __future__ import annotations
@@ -12,14 +15,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from sqlalchemy import Select, func, select
+from sqlalchemy import ColumnElement, Select, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.kernel.uow import UnitOfWorkFactory
 from app.modules.playback.api import ContentDirectory
 from app.modules.titles.domain import TitleKind, TitleNotFoundError
-from app.modules.titles.models import Genre, Title, title_genres
+from app.modules.titles.models import Episode, Genre, GenreText, Title, TitleText, title_genres
 from app.modules.titles.services import title_refs
+from app.shared_kernel.locale import DEFAULT_LOCALE
 from app.shared_kernel.ratings import KIDS_ALLOWED
 
 Sort = Literal["recent", "name", "year"]
@@ -105,6 +109,7 @@ class Rail:
 @dataclass(frozen=True, slots=True)
 class TitleQuery:
     kids_only: bool
+    locale: str = DEFAULT_LOCALE
     kind: TitleKind | None = None
     genre: str | None = None
     search: str | None = None
@@ -127,28 +132,32 @@ class TitleQueryService:
             total = int(uow.session.execute(select(func.count()).select_from(stmt.subquery())).scalar_one())
             rows = list(
                 uow.session.execute(
-                    stmt.order_by(*_ORDER[q.sort], Title.id).offset((q.page - 1) * q.per_page).limit(q.per_page)
+                    stmt.order_by(*_order(q.sort, q.locale), Title.id)
+                    .offset((q.page - 1) * q.per_page)
+                    .limit(q.per_page)
                 ).scalars()
             )
-            cards = self._cards(rows)
+            cards = self._cards(rows, q.locale)
         return TitlePage(items=cards, total=total, page=q.page, per_page=q.per_page)
 
-    def genres(self, *, kids_only: bool) -> list[GenreCount]:
+    def genres(self, *, kids_only: bool, locale: str = DEFAULT_LOCALE) -> list[GenreCount]:
         with self._uow() as uow:
-            return _genre_counts(uow.session, kids_only)
+            return _genre_counts(uow.session, kids_only, locale)
 
-    def rails(self, *, kids_only: bool, genres: int, per_rail: int) -> list[Rail]:
+    def rails(self, *, kids_only: bool, genres: int, per_rail: int, locale: str = DEFAULT_LOCALE) -> list[Rail]:
         """Home rows: the biggest genres, each with its titles (featured first, then newest)."""
         with self._uow() as uow:
             rails: list[tuple[GenreCount, list[Title]]] = []
-            for genre in _genre_counts(uow.session, kids_only)[:genres]:
+            for genre in _genre_counts(uow.session, kids_only, locale)[:genres]:
                 stmt = _filtered(_visible(kids_only), TitleQuery(kids_only=kids_only, genre=genre.slug))
-                rows = uow.session.execute(stmt.order_by(*_ORDER["featured"], Title.id).limit(per_rail)).scalars()
+                rows = uow.session.execute(
+                    stmt.order_by(*_order("featured", locale), Title.id).limit(per_rail)
+                ).scalars()
                 rails.append((genre, list(rows)))
             alive = self._alive([t for _, rows in rails for t in rows])
-            return [Rail(genre=g, items=[_card(t, alive) for t in rows]) for g, rows in rails]
+            return [Rail(genre=g, items=[_card(t, alive, locale) for t in rows]) for g, rows in rails]
 
-    def featured(self, *, kids_only: bool, limit: int) -> list[FeaturedTitle]:
+    def featured(self, *, kids_only: bool, limit: int, locale: str = DEFAULT_LOCALE) -> list[FeaturedTitle]:
         with self._uow() as uow:
             rows = list(
                 uow.session.execute(
@@ -161,20 +170,21 @@ class TitleQueryService:
             alive = self._alive(rows)
             out = []
             for t in rows:
-                card = _card(t, alive)
+                card = _card(t, alive, locale)
                 if card.available:
-                    out.append(FeaturedTitle(card=card, synopsis=t.synopsis, play_ref=_first_playable(t, alive)))
+                    synopsis = _text(t, locale)[1]
+                    out.append(FeaturedTitle(card=card, synopsis=synopsis, play_ref=_first_playable(t, alive)))
             return out[:limit]
 
-    def detail(self, slug: str, *, kids_only: bool) -> TitleDetail:
+    def detail(self, slug: str, *, kids_only: bool, locale: str = DEFAULT_LOCALE) -> TitleDetail:
         with self._uow() as uow:
             title = uow.session.execute(_visible(kids_only).where(Title.slug == slug)).scalar_one_or_none()
             if title is None:
                 raise TitleNotFoundError("Title not found")  # also for hidden ones: no existence oracle
             alive = self._alive([title])
             return TitleDetail(
-                card=_card(title, alive),
-                synopsis=title.synopsis,
+                card=_card(title, alive, locale),
+                synopsis=_text(title, locale)[1],
                 play_ref=title.play_ref,
                 seasons=[
                     SeasonView(
@@ -183,8 +193,8 @@ class TitleQueryService:
                         episodes=[
                             EpisodeView(
                                 number=e.number,
-                                name=e.name,
-                                synopsis=e.synopsis,
+                                name=_text(e, locale)[0],
+                                synopsis=_text(e, locale)[1],
                                 runtime_minutes=e.runtime_minutes,
                                 still_url=e.still_url,
                                 play_ref=e.play_ref,
@@ -195,7 +205,7 @@ class TitleQueryService:
                     )
                     for s in title.seasons
                 ],
-                genre_links=[GenreLink(slug=g.slug, name=g.name) for g in title.genres],
+                genre_links=[GenreLink(slug=g.slug, name=_genre_name(g, locale)) for g in title.genres],
             )
 
     # ── internals ──────────────────────────────────────────────────────────
@@ -203,18 +213,28 @@ class TitleQueryService:
         refs = sorted({r for t in titles for r in title_refs(t)})
         return set(self._content.cards(refs)) if refs else set()
 
-    def _cards(self, titles: list[Title]) -> list[TitleCard]:
+    def _cards(self, titles: list[Title], locale: str) -> list[TitleCard]:
         alive = self._alive(titles)
-        return [_card(t, alive) for t in titles]
+        return [_card(t, alive, locale) for t in titles]
 
 
 # ── Query building blocks ───────────────────────────────────────────────────
-_ORDER = {
-    "recent": (Title.created_at.desc(),),
-    "name": (Title.name,),
-    "year": (Title.year.desc().nulls_last(), Title.name),
-    "featured": (Title.featured_rank.asc().nulls_last(), Title.year.desc().nulls_last(), Title.name),
-}
+def _seen_name(locale: str) -> ColumnElement[str]:
+    """The name a viewer in ``locale`` sees: its translation, else the original."""
+    translated = (
+        select(TitleText.name).where(TitleText.title_id == Title.id, TitleText.locale == locale).scalar_subquery()
+    )
+    return func.coalesce(translated, Title.name)
+
+
+def _order(sort: str, locale: str) -> tuple[ColumnElement[object], ...]:
+    name = _seen_name(locale) if locale != DEFAULT_LOCALE else Title.name
+    return {
+        "recent": (Title.created_at.desc(),),
+        "name": (name,),
+        "year": (Title.year.desc().nulls_last(), name),
+        "featured": (Title.featured_rank.asc().nulls_last(), Title.year.desc().nulls_last(), name),
+    }[sort]
 
 
 def _visible(kids_only: bool) -> Select[tuple[Title]]:
@@ -234,7 +254,9 @@ def _filtered(stmt: Select[tuple[Title]], q: TitleQuery) -> Select[tuple[Title]]
             )
         )
     if q.search:
-        stmt = stmt.where(func.lower(Title.name).like(f"%{_escape_like(q.search.strip().lower())}%", escape="\\"))
+        needle = f"%{_escape_like(q.search.strip().lower())}%"
+        translated = select(TitleText.title_id).where(func.lower(TitleText.name).like(needle, escape="\\"))
+        stmt = stmt.where(or_(func.lower(Title.name).like(needle, escape="\\"), Title.id.in_(translated)))
     if q.year_from is not None:
         stmt = stmt.where(Title.year >= q.year_from)
     if q.year_to is not None:
@@ -242,14 +264,18 @@ def _filtered(stmt: Select[tuple[Title]], q: TitleQuery) -> Select[tuple[Title]]
     return stmt
 
 
-def _genre_counts(session: Session, kids_only: bool) -> list[GenreCount]:
+def _genre_counts(session: Session, kids_only: bool, locale: str) -> list[GenreCount]:
     visible = _visible(kids_only).with_only_columns(Title.id).subquery()
+    translated = (
+        select(GenreText.name).where(GenreText.genre_id == Genre.id, GenreText.locale == locale).scalar_subquery()
+    )
+    name = func.coalesce(translated, Genre.name)
     stmt = (
-        select(Genre.slug, Genre.name, func.count(title_genres.c.title_id))
+        select(Genre.slug, name, func.count(title_genres.c.title_id))
         .join(title_genres, title_genres.c.genre_id == Genre.id)
         .where(title_genres.c.title_id.in_(select(visible.c.id)))
         .group_by(Genre.id, Genre.slug, Genre.name)
-        .order_by(func.count(title_genres.c.title_id).desc(), Genre.name)
+        .order_by(func.count(title_genres.c.title_id).desc(), name)
     )
     return [GenreCount(slug=s, name=n, count=int(c)) for s, n, c in session.execute(stmt)]
 
@@ -258,16 +284,28 @@ def _escape_like(text: str) -> str:
     return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
-def _card(t: Title, alive: set[str]) -> TitleCard:
+def _text(owner: Title | Episode, locale: str) -> tuple[str, str | None]:
+    """(name, synopsis) in ``locale``; a translation without a synopsis keeps the original's."""
+    for text in owner.texts:
+        if text.locale == locale:
+            return text.name, text.synopsis if text.synopsis is not None else owner.synopsis
+    return owner.name, owner.synopsis
+
+
+def _genre_name(genre: Genre, locale: str) -> str:
+    return next((t.name for t in genre.texts if t.locale == locale), genre.name)
+
+
+def _card(t: Title, alive: set[str], locale: str) -> TitleCard:
     return TitleCard(
         slug=t.slug,
         kind=t.kind,
-        name=t.name,
+        name=_text(t, locale)[0],
         year=t.year,
         rating=t.rating,
         runtime_minutes=t.runtime_minutes,
         season_count=len(t.seasons),
-        genres=[g.name for g in t.genres],
+        genres=[_genre_name(g, locale) for g in t.genres],
         poster_url=t.poster_url,
         backdrop_url=t.backdrop_url,
         available=_first_playable(t, alive) is not None,

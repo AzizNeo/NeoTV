@@ -4,6 +4,10 @@
 other modules. They are never cleared automatically: a source that disappears (e.g. a
 playlist sync drops it for a day) makes the title *unavailable* at read time and
 heals by itself when it returns — curated links are not lost.
+
+Texts: the base columns (``name``, ``synopsis``) hold the default-locale original; the
+``*_texts`` tables hold translations, one row per (owner, locale). Reads fall back to the
+original for a language that has no translation.
 """
 
 from __future__ import annotations
@@ -19,12 +23,40 @@ title_genres = db.Table(
 )
 
 
+class GenreText(db.Model):
+    __tablename__ = "titles_genre_texts"
+
+    genre_id = db.Column(db.Integer, db.ForeignKey("titles_genres.id", ondelete="CASCADE"), primary_key=True)
+    locale = db.Column(db.String(8), primary_key=True)
+    name = db.Column(db.String(80), nullable=False)
+
+
 class Genre(db.Model):
     __tablename__ = "titles_genres"
 
     id = db.Column(db.Integer, primary_key=True)
     slug = db.Column(db.String(80), nullable=False, unique=True)
     name = db.Column(db.String(80), nullable=False)
+
+    texts: Mapped[list[GenreText]] = relationship(GenreText, cascade="all, delete-orphan", lazy="selectin")
+
+
+class TitleText(db.Model):
+    __tablename__ = "titles_title_texts"
+
+    title_id = db.Column(db.Integer, db.ForeignKey("titles_titles.id", ondelete="CASCADE"), primary_key=True)
+    locale = db.Column(db.String(8), primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    synopsis = db.Column(db.Text)
+
+
+class EpisodeText(db.Model):
+    __tablename__ = "titles_episode_texts"
+
+    episode_id = db.Column(db.Integer, db.ForeignKey("titles_episodes.id", ondelete="CASCADE"), primary_key=True)
+    locale = db.Column(db.String(8), primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    synopsis = db.Column(db.Text)
 
 
 class Title(db.Model):
@@ -52,6 +84,7 @@ class Title(db.Model):
     created_at = created_at_column()
     updated_at = updated_at_column()
 
+    texts: Mapped[list[TitleText]] = relationship(TitleText, cascade="all, delete-orphan", lazy="selectin")
     genres: Mapped[list[Genre]] = relationship(Genre, secondary=title_genres, lazy="selectin", order_by=Genre.name)
     seasons: Mapped[list[Season]] = relationship(
         "Season", back_populates="title", cascade="all, delete-orphan", order_by="Season.number", lazy="selectin"
@@ -87,3 +120,4 @@ class Episode(db.Model):
     play_ref = db.Column(db.String(64), index=True)  # NULL ⇔ announced, not playable yet
 
     season: Mapped[Season] = relationship(Season, back_populates="episodes")
+    texts: Mapped[list[EpisodeText]] = relationship(EpisodeText, cascade="all, delete-orphan", lazy="selectin")

@@ -11145,6 +11145,99 @@
         ]
       }
     },
+    "/api/v1/titles/admin/genres/{slug}": {
+      "put": {
+        "operationId": "titles_admin_genre_names",
+        "summary": "Set a genre's translated names (titles keep the original)",
+        "tags": [
+          "titles"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GenreNamesOut"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-permission": "titles:write",
+        "x-error-codes": [
+          "TITLE_NOT_FOUND",
+          "TITLE_INVALID"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "names": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "locale \u2192 translated name, e.g. {\"en\": \"Action\"}",
+                    "maxProperties": 4,
+                    "title": "Names",
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "names"
+                ],
+                "title": "GenreNamesIn",
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/titles/admin/titles": {
       "get": {
         "operationId": "titles_admin_list",
@@ -11481,6 +11574,14 @@
                           "title": "Seasons",
                           "type": "array"
                         },
+                        "translations": {
+                          "additionalProperties": {
+                            "$ref": "#/components/schemas/TextDoc"
+                          },
+                          "maxProperties": 4,
+                          "title": "Translations",
+                          "type": "object"
+                        },
                         "slug": {
                           "title": "Slug",
                           "type": "string"
@@ -11666,6 +11767,14 @@
                     "maxItems": 100,
                     "title": "Seasons",
                     "type": "array"
+                  },
+                  "translations": {
+                    "additionalProperties": {
+                      "$ref": "#/components/schemas/TextDoc"
+                    },
+                    "maxProperties": 4,
+                    "title": "Translations",
+                    "type": "object"
                   }
                 },
                 "required": [
@@ -12828,6 +12937,14 @@
             ],
             "default": null,
             "title": "Still Url"
+          },
+          "translations": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/TextDoc"
+            },
+            "maxProperties": 4,
+            "title": "Translations",
+            "type": "object"
           }
         },
         "required": [
@@ -13170,6 +13287,32 @@
           "name"
         ],
         "title": "GenreLinkOut",
+        "type": "object"
+      },
+      "GenreNamesOut": {
+        "properties": {
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "names": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Names",
+            "type": "object"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "names"
+        ],
+        "title": "GenreNamesOut",
         "type": "object"
       },
       "GenreOut": {
@@ -14660,6 +14803,36 @@
         "title": "TaskStatus",
         "type": "object"
       },
+      "TextDoc": {
+        "additionalProperties": false,
+        "description": "A translation: the original text is the document's own ``name`` / ``synopsis``.",
+        "properties": {
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "synopsis": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Synopsis"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "TextDoc",
+        "type": "object"
+      },
       "TitleAdminPageOut": {
         "properties": {
           "items": {
@@ -15038,6 +15211,14 @@
             "maxItems": 100,
             "title": "Seasons",
             "type": "array"
+          },
+          "translations": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/TextDoc"
+            },
+            "maxProperties": 4,
+            "title": "Translations",
+            "type": "object"
           },
           "slug": {
             "title": "Slug",

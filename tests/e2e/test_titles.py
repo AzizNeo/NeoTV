@@ -169,3 +169,69 @@ def test_kids_profile_sees_only_what_it_may_play(api: Api, admin: str, viewer: s
     assert api.get(f"{BROWSE}/night", token=viewer, headers=kids).code == "TITLE_NOT_FOUND"
     assert [h["card"]["slug"] for h in api.get(f"{BROWSE}/featured", token=viewer, headers=kids).data] == ["bunny"]
     assert "gerilim" not in {g["slug"] for g in api.get(f"{BROWSE}/genres", token=viewer, headers=kids).data}
+
+
+# ── languages ──────────────────────────────────────────────────────────────
+
+EN = {"Accept-Language": "en-US,en;q=0.9"}
+
+
+def test_titles_speak_the_viewer_language_with_fallback(api: Api, admin: str, viewer: str) -> None:
+    src = api.channel(admin, "Sintel src")
+    ep = api.channel(admin, "Ep src")
+    movie = _movie(
+        f"catalog:{src['id']}",
+        name="Ejderha Kız",
+        synopsis="Türkçe özet.",
+        genres=["Animasyon"],
+        translations={"en": {"name": "Dragon Girl", "synopsis": "English synopsis."}},
+    )
+    assert api.put(f"{ADMIN}/dragon", token=admin, json=movie).status == 201
+    series = {
+        "kind": "series", "name": "Kısalar", "genres": ["Animasyon"],
+        "seasons": [{"number": 1, "episodes": [
+            {"number": 1, "name": "Bir", "synopsis": "Birinci.", "play_ref": f"catalog:{ep['id']}",
+             "translations": {"en": {"name": "One"}}},  # no English synopsis → the original's
+        ]}],
+    }  # fmt: skip
+    assert api.put(f"{ADMIN}/shorts", token=admin, json=series).status == 201
+    assert api.get(f"{ADMIN}/dragon", token=admin).data["translations"] == {
+        "en": {"name": "Dragon Girl", "synopsis": "English synopsis."}
+    }  # lossless round trip
+    names = api.put("/api/v1/titles/admin/genres/animasyon", token=admin, json={"names": {"en": "Animation"}})
+    assert names.data == {"slug": "animasyon", "name": "Animasyon", "names": {"en": "Animation"}}
+
+    tr = api.get("/api/v1/titles/dragon", token=viewer, headers={"Accept-Language": "tr"})
+    en = api.get("/api/v1/titles/dragon", token=viewer, headers=EN)
+    assert (tr.data["card"]["name"], tr.data["synopsis"]) == ("Ejderha Kız", "Türkçe özet.")
+    assert (en.data["card"]["name"], en.data["synopsis"], en.data["card"]["genres"]) == (
+        "Dragon Girl",
+        "English synopsis.",
+        ["Animation"],
+    )
+    assert "Accept-Language" in en.headers.get("Vary", "")  # caches keep the languages apart
+    de = api.get("/api/v1/titles/dragon", token=viewer, headers={"Accept-Language": "de"})
+    assert de.data["card"]["name"] == "Ejderha Kız"  # a language we do not speak → the original
+
+    episode = api.get("/api/v1/titles/shorts", token=viewer, headers=EN).data["seasons"][0]["episodes"][0]
+    assert (episode["name"], episode["synopsis"]) == ("One", "Birinci.")
+
+    # Search finds a title by any of its names; A–Z sorts by the name the viewer sees.
+    found = api.get(
+        "/api/v1/titles", token=viewer, query_string={"search": "dragon"}, headers={"Accept-Language": "tr"}
+    )
+    assert [c["slug"] for c in found.data["items"]] == ["dragon"]
+    by_name = api.get("/api/v1/titles", token=viewer, query_string={"sort": "name"}, headers=EN).data["items"]
+    assert [c["name"] for c in by_name] == ["Dragon Girl", "Kısalar"]
+    genres = api.get("/api/v1/titles/genres", token=viewer, headers=EN).data
+    assert genres == [{"slug": "animasyon", "name": "Animation", "count": 2}]
+
+
+def test_translation_languages_are_checked(api: Api, admin: str) -> None:
+    src = api.channel(admin, "Src")
+    bad = _movie(f"catalog:{src['id']}", translations={"tr": {"name": "x"}, "de": {"name": "y"}})
+    problems = api.put(f"{ADMIN}/bad", token=admin, json=bad).body["error"]["details"]
+    assert any("'tr' is not a translation language" in p for p in problems)
+    assert any("'de' is not a translation language" in p for p in problems)
+    unknown = api.put("/api/v1/titles/admin/genres/nope", token=admin, json={"names": {"en": "Nope"}})
+    assert unknown.code == "TITLE_NOT_FOUND"

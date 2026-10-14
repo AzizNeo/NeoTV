@@ -16,6 +16,7 @@ admin API) — never through raw SQL.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import sys
 from dataclasses import dataclass, replace
 from datetime import timedelta
@@ -77,6 +78,8 @@ class DemoTitle:
     runtime_minutes: int | None = None
     featured_rank: int | None = None
     episodes: tuple[tuple[str, str], ...] = ()  # series, season 1: (DEMO_VOD title, episode synopsis)
+    en: tuple[str, str] | None = None  # English (name, synopsis)
+    episodes_en: tuple[str, ...] = ()  # English episode synopses, in order
 
 
 DEMO_TITLES = (
@@ -85,26 +88,41 @@ DEMO_TITLES = (
         "Gelecekteki Amsterdam'da bir grup bilim insanı, dünyayı makinelerden kurtarmak için geçmişteki tek "
         "bir anı yeniden yaşamaya çalışır.",
         play="Tears of Steel", runtime_minutes=12, featured_rank=1,
+        en=("Tears of Steel", "In a future Amsterdam, a group of scientists tries to save the world from machines "
+            "by reliving a single moment from the past."),
     ),
     DemoTitle(
         "sintel", "Sintel", 2010, "teen", ("Animasyon", "Fantastik"),
         "Yalnız bir savaşçı kız, büyüttüğü yavru ejderhayı bulmak için karlı dağları ve tehlikeli şehirleri "
         "aşan uzun bir yolculuğa çıkar.",
         play="Sintel", runtime_minutes=15, featured_rank=2,
+        en=("Sintel", "A lone young warrior crosses snowy mountains and dangerous cities on a long journey to find "
+            "the baby dragon she raised."),
     ),
     DemoTitle(
         "big-buck-bunny", "Big Buck Bunny", 2008, "general", ("Animasyon", "Komedi"),
         "İri ve iyi kalpli bir tavşan, ormandaki üç yaramaz kemirgenin şakalarına kendi yöntemleriyle "
         "karşılık verir.",
         play="Big Buck Bunny", runtime_minutes=10, featured_rank=3,
+        en=("Big Buck Bunny", "A big, good-hearted rabbit answers the pranks of three mischievous forest rodents "
+            "in his own way."),
     ),
     DemoTitle(
         "test-streams", "Test Yayınları", 2016, "general", ("Teknik",),
         "Oynatıcı geliştiricileri için yayımlanan HLS test akışları: farklı çözünürlükler, codec'ler ve "
         "paketleme biçimleri.",
         episodes=(("BipBop", "Temel HLS akışı."), ("BipBop Advanced", "fMP4, çoklu ses ve altyazı.")),
+        en=("Test Streams", "HLS test streams published for player developers: different resolutions, codecs and "
+            "packaging formats."),
+        episodes_en=("A basic HLS stream.", "fMP4, multiple audio tracks and subtitles."),
     ),
 )  # fmt: skip
+
+#: English names of the demo genres (the Turkish ones are the originals).
+GENRES_EN = {
+    "animasyon": "Animation", "aksiyon": "Action", "bilim-kurgu": "Science Fiction",
+    "fantastik": "Fantasy", "komedi": "Comedy", "teknik": "Technical",
+}  # fmt: skip
 
 #: Looping guide used for every demo live channel (title, minutes).
 GUIDE = (("Test Card", 30), ("Network Loop", 60), ("Encoder Check", 30), ("Night Shift", 90), ("Signal Report", 30))
@@ -201,6 +219,7 @@ def _seed_titles(catalog: CatalogAdminService) -> int:
     from app.kernel.container import resolve
     from app.modules.titles.domain import (
         EpisodeDraft,
+        LocalizedText,
         RatingConflictError,
         SeasonDraft,
         TitleDraft,
@@ -217,7 +236,13 @@ def _seed_titles(catalog: CatalogAdminService) -> int:
         season = SeasonDraft(
             number=1,
             episodes=tuple(
-                EpisodeDraft(number=n, name=name, synopsis=about, play_ref=ref[name])
+                EpisodeDraft(
+                    number=n,
+                    name=name,
+                    synopsis=about,
+                    play_ref=ref[name],
+                    translations={"en": LocalizedText(name, t.episodes_en[n - 1])} if t.episodes_en else {},
+                )
                 for n, (name, about) in enumerate(t.episodes, start=1)
             ),
         )
@@ -235,6 +260,7 @@ def _seed_titles(catalog: CatalogAdminService) -> int:
             genres=t.genres,
             featured_rank=t.featured_rank,
             seasons=(season,) if t.episodes else (),
+            translations={"en": LocalizedText(*t.en)} if t.en else {},
         )
         try:
             try:
@@ -252,6 +278,9 @@ def _seed_titles(catalog: CatalogAdminService) -> int:
                 print(f"           - {line}")
             continue
         print(f"titles   {'+' if created else '='} {t.name}")
+    for slug, name in GENRES_EN.items():
+        with contextlib.suppress(TitlesError):  # genre unused if its titles failed above
+            service.set_genre_names(slug, {"en": name})
     return failures
 
 

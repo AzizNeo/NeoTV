@@ -1029,6 +1029,17 @@ export const OPERATIONS = Object.freeze({
       "TITLE_NOT_FOUND"
     ]
   },
+  "titles_admin_genre_names": {
+    "method": "PUT",
+    "path": "/api/v1/titles/admin/genres/{slug}",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": [
+      "TITLE_NOT_FOUND",
+      "TITLE_INVALID"
+    ]
+  },
   "titles_admin_get": {
     "method": "GET",
     "path": "/api/v1/titles/admin/titles/{slug}",
