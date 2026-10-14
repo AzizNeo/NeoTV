@@ -22,6 +22,7 @@ class User(db.Model):
     last_login_at = db.Column(UTCDateTime())
     last_login_ip = db.Column(db.String(45))
     email_verified_at = db.Column(UTCDateTime())
+    locale = db.Column(db.String(8))  # interface + e-mail language; NULL → negotiated / default
 
     # ── Principal protocol ────────────────────────────────────────────────
     @property

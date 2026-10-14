@@ -176,3 +176,37 @@ def test_queue_deliver_and_redact(monkeypatch: pytest.MonkeyPatch) -> None:
         stored = db.session.get(EmailMessage, message_id)
         assert stored is not None and stored.status == "sent" and stored.context_json is None and stored.sent_at
     assert [m.subject for m in outbox] == ["Merhaba Ali", "Merhaba Ali"]
+
+
+# ── languages ──────────────────────────────────────────────────────────────
+
+
+def test_negotiate_picks_the_best_supported_language() -> None:
+    from app.shared_kernel.locale import negotiate
+
+    assert negotiate("de-DE,en;q=0.8,tr;q=0.9") == "tr"
+    assert negotiate("en-US") == "en"
+    assert negotiate("fr, de;q=0.5") is None
+    assert negotiate("en;q=0, tr;q=bad, tr-TR;q=0.3") == "tr"  # q=0 means "not this"; junk is skipped
+    assert negotiate(None) is None
+
+
+def test_templates_render_in_the_recipient_language_with_fallback() -> None:
+    english = EmailTemplate(key="test.greeting", locale="en", subject="Hello {name}", text="Hi {name}: {link}")
+    catalog = _catalog([GREETING, english])
+    context = {"name": "Ali", "link": "https://x"}
+    assert catalog.render("test.greeting", context, "en-GB")[0] == "Hello Ali"
+    assert catalog.render("test.greeting", context, "tr")[0] == "Merhaba Ali"
+    assert catalog.render("test.greeting", context, None)[0] == "Merhaba Ali"  # unknown → default language
+    assert catalog.render("test.greeting", context, "de")[0] == "Merhaba Ali"
+
+
+def test_translation_contract_errors_are_named() -> None:
+    from app.modules.notifications.domain import TemplateLocaleError
+
+    orphan = EmailTemplate(key="test.orphan", locale="en", subject="x", text="y")
+    drifted = EmailTemplate(key="test.greeting", locale="en", subject="Hello", text="Hi {name}")  # lost {link}
+    german = EmailTemplate(key="test.greeting", locale="de", subject="Hallo {name}", text="{link}")
+    for broken in ([orphan], [GREETING, drifted], [GREETING, german]):
+        with pytest.raises(TemplateLocaleError):
+            _catalog(broken).keys()

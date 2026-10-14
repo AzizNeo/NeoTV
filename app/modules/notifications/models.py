@@ -18,6 +18,7 @@ class EmailMessage(db.Model):
     template = db.Column(db.String(100), nullable=False)
     context_json = db.Column(db.Text)
     dedupe_key = db.Column(db.String(200), unique=True)
+    locale = db.Column(db.String(8))  # recipient's language at queue time; NULL → default
     status = db.Column(db.String(10), nullable=False, default="queued", index=True)
     attempts = db.Column(db.Integer, nullable=False, default=0)
     last_error = db.Column(db.String(500))

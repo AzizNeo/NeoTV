@@ -32,6 +32,15 @@ function detect() {
   return DEFAULT_LOCALE;
 }
 
+/** Has the viewer picked a language on this device (as opposed to us guessing from the browser)? */
+export function hasChosenLocale() {
+  try {
+    return localStorage.getItem(STORAGE_KEY) in LOCALES;
+  } catch {
+    return false;
+  }
+}
+
 let current = detect();
 const listeners = new Set();
 

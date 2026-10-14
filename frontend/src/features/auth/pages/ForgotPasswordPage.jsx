@@ -8,8 +8,11 @@ import { Button } from '@/shared/components/Button/Button';
 import { Spinner } from '@/shared/components/Spinner/Spinner';
 import { forgotPasswordSchema } from '../schema';
 import styles from './AuthLayout.module.css';
+import { useT } from '../i18n';
+import { LanguageSwitch } from '@/core/i18n';
 
 export default function ForgotPasswordPage() {
+  const t = useT();
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const { register, handleSubmit, formState } = useForm({ resolver: zodResolver(forgotPasswordSchema) });
@@ -20,39 +23,39 @@ export default function ForgotPasswordPage() {
       await api.call('identity_forgot_password', { body: { email } });
       setSent(true);
     } catch (err) {
-      setError(err.userMessage ?? 'İstek gönderilemedi.');
+      setError(err.userMessage ?? t('forgot.failed'));
     }
   };
 
   return (
     <main className={styles.screen}>
       <Link to="/login" className={styles.brand}>NeoTV</Link>
+      <LanguageSwitch className={styles.lang} />
       <section className={styles.panel}>
-        <h1>Şifremi unuttum</h1>
+        <h1>{t('forgot.title')}</h1>
         {sent ? (
           <div role="status">
-            <p className={styles.ok}><MailCheck size={18} aria-hidden="true" /> İsteğiniz alındı.</p>
+            <p className={styles.ok}><MailCheck size={18} aria-hidden="true" /> {t('forgot.sent')}</p>
             <p className={styles.lead}>
-              Bu adres bir hesaba kayıtlıysa birkaç dakika içinde şifre sıfırlama bağlantısı gelecek. Bağlantı 30 dakika
-              geçerlidir. Gelen kutunuzda yoksa istenmeyen klasörüne bakın.
+              {t('forgot.sentBody')}
             </p>
           </div>
         ) : (
           <>
-            <p className={styles.lead}>Hesabınıza kayıtlı e-posta adresini girin; size yeni şifre bağlantısı gönderelim.</p>
+            <p className={styles.lead}>{t('forgot.lead')}</p>
             {error && <div className={styles.alert} role="alert">{error}</div>}
             <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
-              <label className="visually-hidden" htmlFor="forgot-email">E-posta</label>
-              <input id="forgot-email" type="email" className="input-field" placeholder="E-posta" autoComplete="email" autoFocus {...register('email')} />
-              {formState.errors.email && <span className="field-error">{formState.errors.email.message}</span>}
+              <label className="visually-hidden" htmlFor="forgot-email">{t('field.email')}</label>
+              <input id="forgot-email" type="email" className="input-field" placeholder={t('field.email')} autoComplete="email" autoFocus {...register('email')} />
+              {formState.errors.email && <span className="field-error">{t(formState.errors.email.message)}</span>}
               <Button type="submit" size="lg" fullWidth disabled={formState.isSubmitting} style={{ marginTop: '1.25rem' }}>
-                {formState.isSubmitting ? <Spinner size="sm" color="white" /> : 'Bağlantı gönder'}
+                {formState.isSubmitting ? <Spinner size="sm" color="white" /> : t('forgot.submit')}
               </Button>
             </form>
           </>
         )}
         <div className={styles.footer}>
-          Şifrenizi hatırladınız mı?<Link to="/login">Oturum açın</Link>.
+          {t('forgot.remembered')}<Link to="/login">{t('register.signIn')}</Link>.
         </div>
       </section>
     </main>

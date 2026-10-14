@@ -9,9 +9,12 @@ import { Spinner } from '@/shared/components/Spinner/Spinner';
 import { registerSchema } from '../schema';
 import { PasswordInput } from './PasswordInput';
 import styles from './AuthLayout.module.css';
+import { useT } from '../i18n';
+import { LanguageSwitch } from '@/core/i18n';
 
 /** Collects exactly what the backend stores (FE-06): username, optional e-mail, password. */
 export default function RegisterPage() {
+  const t = useT();
   const { register: signUp } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
@@ -45,41 +48,42 @@ export default function RegisterPage() {
       await signUp(values);
       navigate('/', { replace: true });
     } catch (err) {
-      setError(err.userMessage ?? 'Kayıt başarısız.');
+      setError(err.userMessage ?? t('register.failed'));
     }
   };
 
   return (
     <main className={styles.screen}>
       <Link to="/login" className={styles.brand}>NeoTV</Link>
+      <LanguageSwitch className={styles.lang} />
       <section className={styles.panel}>
-        <h1>Hesap Oluştur</h1>
+        <h1>{t('register.title')}</h1>
         {error && <div className={styles.alert} role="alert">{error}</div>}
         <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
-          <input className="input-field" placeholder="Kullanıcı adı" autoComplete="username" aria-label="Kullanıcı adı" {...register('username')} />
+          <input className="input-field" placeholder={t('field.username')} autoComplete="username" aria-label={t('field.username')} {...register('username')} />
           {formState.errors.username ? (
-            <span className="field-error">{formState.errors.username.message}</span>
+            <span className="field-error">{t(formState.errors.username.message)}</span>
           ) : availability === false ? (
-            <span className="field-error">Bu kullanıcı adı alınmış.</span>
+            <span className="field-error">{t('register.taken')}</span>
           ) : availability === true ? (
-            <span className={styles.ok}>Kullanıcı adı uygun.</span>
+            <span className={styles.ok}>{t('register.available')}</span>
           ) : null}
-          <input className="input-field" placeholder="E-posta (isteğe bağlı)" type="email" autoComplete="email" aria-label="E-posta" {...register('email')} />
-          {formState.errors.email && <span className="field-error">{formState.errors.email.message}</span>}
-          <PasswordInput placeholder="Şifre" autoComplete="new-password" aria-label="Şifre" {...register('password')} />
+          <input className="input-field" placeholder={t('field.emailOptional')} type="email" autoComplete="email" aria-label={t('field.email')} {...register('email')} />
+          {formState.errors.email && <span className="field-error">{t(formState.errors.email.message)}</span>}
+          <PasswordInput placeholder={t('field.password')} autoComplete="new-password" aria-label={t('field.password')} {...register('password')} />
           {formState.errors.password ? (
-            <span className="field-error">{formState.errors.password.message}</span>
+            <span className="field-error">{t(formState.errors.password.message)}</span>
           ) : (
-            <p className={styles.hint}>En az 10 karakter; harf, rakam veya simgeden en az ikisi.</p>
+            <p className={styles.hint}>{t('register.hint')}</p>
           )}
-          <PasswordInput placeholder="Şifre (tekrar)" autoComplete="new-password" aria-label="Şifre tekrar" {...register('confirm')} />
-          {formState.errors.confirm && <span className="field-error">{formState.errors.confirm.message}</span>}
+          <PasswordInput placeholder={t('field.passwordAgain')} autoComplete="new-password" aria-label={t('field.passwordAgain')} {...register('confirm')} />
+          {formState.errors.confirm && <span className="field-error">{t(formState.errors.confirm.message)}</span>}
           <Button type="submit" size="lg" fullWidth disabled={formState.isSubmitting || availability === false} style={{ marginTop: '1.25rem' }}>
-            {formState.isSubmitting ? <Spinner size="sm" color="white" /> : 'Kaydol'}
+            {formState.isSubmitting ? <Spinner size="sm" color="white" /> : t('register.submit')}
           </Button>
         </form>
         <div className={styles.footer}>
-          Zaten hesabınız var mı?<Link to="/login">Oturum açın</Link>.
+          {t('register.haveAccount')}<Link to="/login">{t('register.signIn')}</Link>.
         </div>
       </section>
     </main>

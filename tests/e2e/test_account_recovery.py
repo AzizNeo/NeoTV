@@ -217,3 +217,36 @@ def test_sign_in_from_a_new_device_alerts_the_owner_once(api: Api, mailbox: list
 
     api.login("nina", headers=PHONE)  # known device now
     assert len(_mails_to(mailbox, "nina@example.com", "yeni bir cihaz")) == 1
+
+
+# ── language ───────────────────────────────────────────────────────────────
+
+
+def test_mails_speak_the_account_language(api: Api, mailbox: list[RenderedEmail]) -> None:
+    english = {"Accept-Language": "en-GB,en;q=0.9,tr;q=0.5"}
+    signup = api.post(
+        "/api/v1/auth/register",
+        json={"username": "emma", "password": PASSWORD, "email": "emma@example.com"},
+        headers=english,
+    )
+    assert signup.status == 201
+    [mail] = _mails_to(mailbox, "emma@example.com", "verify your e-mail")  # signed up in English
+    assert "/verify-email#token=" in mail.text and "Hi emma" in mail.text
+
+    token = api.login("emma").data["access_token"]
+    assert api.get("/api/v1/auth/me", token=token).data["locale"] == "en"
+    # The account language is one choice for every device: switching to Turkish switches the mails.
+    assert api.put("/api/v1/auth/me/locale", json={"locale": "tr"}, token=token).data["locale"] == "tr"
+    api.post("/api/v1/auth/password/forgot", json={"email": "emma@example.com"})
+    assert len(_mails_to(mailbox, "emma@example.com", "şifre sıfırlama")) == 1
+    assert api.put("/api/v1/auth/me/locale", json={"locale": "de"}, token=token).code == "VALIDATION_FAILED"
+
+
+def test_older_accounts_adopt_the_browser_language_once(api: Api) -> None:
+    api.register("oldtimer")  # no Accept-Language → no language recorded
+    token = api.login("oldtimer").data["access_token"]
+    assert api.get("/api/v1/auth/me", token=token).data["locale"] is None
+    api.login("oldtimer", headers={"Accept-Language": "en-US"})
+    assert api.get("/api/v1/auth/me", token=token).data["locale"] == "en"
+    api.login("oldtimer", headers={"Accept-Language": "tr"})  # a later browser never overrides a choice
+    assert api.get("/api/v1/auth/me", token=token).data["locale"] == "en"

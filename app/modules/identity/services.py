@@ -28,6 +28,7 @@ from app.modules.identity.domain import (
     RefreshTokenInvalidError,
     RefreshTokenReuseError,
     Role,
+    UnsupportedLocaleError,
     UsernameTakenError,
     UserNotFoundError,
     validate_password,
@@ -36,6 +37,7 @@ from app.modules.identity.guard import CaptchaVerifier, LoginAttemptGuard
 from app.modules.identity.models import RefreshToken, User
 from app.modules.identity.repository import RefreshTokenRepository, UserRepository
 from app.shared_kernel.events import PasswordChanged, UserLoggedIn, UserRegistered, UserStatusChanged
+from app.shared_kernel.locale import supported
 
 PASSWORD_METHOD = "scrypt"  # noqa: S105 - hash algorithm name
 _DUMMY_HASH = generate_password_hash("timing-equaliser-not-a-password", method=PASSWORD_METHOD)
@@ -66,6 +68,7 @@ class ClientInfo:
     ip: str
     user_agent: str
     client_device_id: str | None
+    language: str | None = None  # negotiated from Accept-Language (supported locales only)
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,7 +101,7 @@ class AuthService:
         self._refresh_ttl = refresh_ttl_s
 
     # ── Registration ───────────────────────────────────────────────────────
-    def register(self, *, username: str, email: str | None, password: str) -> User:
+    def register(self, *, username: str, email: str | None, password: str, locale: str | None = None) -> User:
         username = username.strip()
         if not USERNAME_PATTERN.fullmatch(username):
             raise InvalidUsernameError("Username must be 3-64 characters: letters, digits, '_', '.', '-'")
@@ -118,6 +121,7 @@ class AuthService:
                     is_active=True,
                     token_version=1,
                     created_at=self._clock.now(),
+                    locale=supported(locale),
                 )
             )
             uow.outbox.add(
@@ -135,6 +139,18 @@ class AuthService:
             return USERNAME_PATTERN.fullmatch(username.strip()) is not None and not UserRepository(
                 uow.session
             ).username_exists(username)
+
+    def set_locale(self, *, user_id: int, locale: str) -> User:
+        """The language the account's e-mails and interface use (shared by every device)."""
+        value = supported(locale)
+        if value is None:
+            raise UnsupportedLocaleError(f"Unsupported language '{locale}'")
+        with self._uow() as uow:
+            user = UserRepository(uow.session).get(user_id)
+            if user is None:
+                raise UserNotFoundError("User not found")
+            user.locale = value
+            return user
 
     # ── Login ──────────────────────────────────────────────────────────────
     def login(self, *, username: str, password: str, captcha_token: str | None, client: ClientInfo) -> IssuedSession:
@@ -158,6 +174,8 @@ class AuthService:
                 user.password_hash = hash_password(password)  # transparent re-hash of legacy pbkdf2 hashes
             user.last_login_at = self._clock.now()
             user.last_login_ip = client.ip[:45]
+            if user.locale is None and client.language:
+                user.locale = client.language  # accounts from before languages: adopt the browser's once
             session = self._issue(uow.session, user, client, family_id=str(uuid.uuid4()))
             uow.outbox.add(
                 UserLoggedIn(

@@ -7,8 +7,10 @@ import { Spinner } from '@/shared/components/Spinner/Spinner';
 import { Avatar } from '../components/Avatar';
 import { useProfile } from '../components/ProfileProvider';
 import styles from './Profiles.module.css';
+import { useT } from '../i18n';
 
 export default function ProfileSelectPage() {
+  const t = useT();
   const { profiles, isLoading, select } = useProfile();
   const navigate = useNavigate();
   const [pinFor, setPinFor] = useState(null);
@@ -30,7 +32,7 @@ export default function ProfileSelectPage() {
 
   return (
     <main className={styles.screen}>
-      <h1>Kim izliyor?</h1>
+      <h1>{t('whoIsWatching')}</h1>
       {error && <p className="field-error" role="alert">{error}</p>}
       <ul className={styles.grid}>
         {profiles.map((p) => (
@@ -38,15 +40,15 @@ export default function ProfileSelectPage() {
             <button className={styles.tile} onClick={() => (p.has_pin ? setPinFor(p) : choose(p))}>
               <Avatar avatar={p.avatar} locked={p.has_pin} />
               <span>{p.name}</span>
-              {p.is_kids && <span className={styles.kids}>Çocuk</span>}
+              {p.is_kids && <span className={styles.kids}>{t('kids')}</span>}
             </button>
           </li>
         ))}
       </ul>
       <Link className={styles.manage} to="/profiles/manage">
-        <Settings2 size={16} /> Profilleri yönet
+        <Settings2 size={16} /> {t('manage')}
       </Link>
-      <Modal isOpen={Boolean(pinFor)} onClose={() => { setPinFor(null); setPin(''); }} title={`${pinFor?.name ?? ''} — PIN`}>
+      <Modal isOpen={Boolean(pinFor)} onClose={() => { setPinFor(null); setPin(''); }} title={t('pinTitle', { name: pinFor?.name ?? '' })}>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -54,9 +56,9 @@ export default function ProfileSelectPage() {
           }}
           style={{ display: 'grid', gap: '0.75rem' }}
         >
-          <input className="input-field" inputMode="numeric" autoComplete="off" maxLength={8} autoFocus aria-label="PIN" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} />
+          <input className="input-field" inputMode="numeric" autoComplete="off" maxLength={8} autoFocus aria-label={t('pin')} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} />
           {error && <span className="field-error">{error}</span>}
-          <Button type="submit" disabled={pin.length < 4}>Devam</Button>
+          <Button type="submit" disabled={pin.length < 4}>{t('continue')}</Button>
         </form>
       </Modal>
     </main>

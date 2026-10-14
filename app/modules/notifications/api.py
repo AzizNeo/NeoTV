@@ -13,6 +13,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from app.shared_kernel.locale import DEFAULT_LOCALE
+
 POINT_TEMPLATES = "notifications.templates"
 POINT_EMAIL_SENDERS = "notifications.email_senders"
 
@@ -20,12 +22,17 @@ POINT_EMAIL_SENDERS = "notifications.email_senders"
 @dataclass(frozen=True, slots=True)
 class EmailTemplate:
     """``subject``/``text``/``html`` use ``{placeholder}`` fields (str.format).
-    Values are HTML-escaped for ``html``; every placeholder is required."""
+    Values are HTML-escaped for ``html``; every placeholder is required.
+
+    One template per (key, locale). The default-locale variant is mandatory; other languages are
+    optional and must use exactly the same placeholders (checked when the catalogue is built).
+    """
 
     key: str  # namespaced by the contributing module: "identity.password_reset"
     subject: str
     text: str
     html: str | None = None
+    locale: str = DEFAULT_LOCALE
 
     @property
     def fields(self) -> frozenset[str]:
@@ -52,8 +59,19 @@ class EmailSender(Protocol):
 
 
 class EmailOutbox(Protocol):
-    def queue(self, *, to: str, template: str, context: Mapping[str, str], dedupe_key: str | None = None) -> str:
-        """Validate and persist the message; delivery happens after commit. Returns the message id."""
+    def queue(
+        self,
+        *,
+        to: str,
+        template: str,
+        context: Mapping[str, str],
+        dedupe_key: str | None = None,
+        locale: str | None = None,
+    ) -> str:
+        """Validate and persist the message; delivery happens after commit. Returns the message id.
+
+        ``locale``: the recipient's language; a template without that variant falls back to the default.
+        """
 
 
 __all__ = ["POINT_EMAIL_SENDERS", "POINT_TEMPLATES", "EmailOutbox", "EmailSender", "EmailTemplate", "RenderedEmail"]

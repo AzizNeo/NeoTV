@@ -6,10 +6,12 @@ import { Badge, DataTable } from '../components/DataTable';
 import { when } from '../format';
 import { useAdminMutation } from '../hooks/useAdminMutation';
 import styles from '../components/Admin.module.css';
+import { useT } from '../i18n';
 
 const KEY = ['admin', 'users'];
 
 export default function UsersSection() {
+  const t = useT();
   const [cursors, setCursors] = useState([null]); // keyset pagination: stack of cursors
   const cursor = cursors.at(-1);
   const users = useQuery({
@@ -18,16 +20,16 @@ export default function UsersSection() {
   });
   const toggle = useAdminMutation(
     (u) => api.call(u.is_active ? 'admin_suspend' : 'admin_activate', { params: { user_id: u.id } }),
-    { invalidate: [KEY], success: (u) => (u.is_active ? `${u.username} etkinleştirildi.` : `${u.username} askıya alındı.`) },
+    { invalidate: [KEY], success: (u) => t(u.is_active ? 'users.activated' : 'users.wasSuspended', { name: u.username }) },
   );
   const columns = [
-    { key: 'username', label: 'Kullanıcı' },
-    { key: 'email', label: 'E-posta' },
-    { key: 'role', label: 'Rol' },
-    { key: 'plan', label: 'Plan' },
-    { key: 'active_sessions', label: 'Açık yayın' },
-    { key: 'is_active', label: 'Durum', render: (u) => <Badge ok={u.is_active}>{u.is_active ? 'Aktif' : 'Askıda'}</Badge> },
-    { key: 'last_login_at', label: 'Son giriş', render: (u) => when(u.last_login_at) },
+    { key: 'username', label: t('col.user') },
+    { key: 'email', label: t('col.email') },
+    { key: 'role', label: t('col.role') },
+    { key: 'plan', label: t('col.plan') },
+    { key: 'active_sessions', label: t('col.openStreams') },
+    { key: 'is_active', label: t('col.status'), render: (u) => <Badge ok={u.is_active}>{t(u.is_active ? 'users.active' : 'users.suspended')}</Badge> },
+    { key: 'last_login_at', label: t('col.lastLogin'), render: (u) => when(u.last_login_at) },
   ];
   return (
     <>
@@ -37,13 +39,13 @@ export default function UsersSection() {
         loading={users.isLoading}
         actions={(u) => (
           <Button size="sm" variant={u.is_active ? 'danger' : 'secondary'} disabled={toggle.isPending} onClick={() => toggle.mutate(u)}>
-            {u.is_active ? 'Askıya al' : 'Etkinleştir'}
+            {t(u.is_active ? 'users.suspend' : 'users.activate')}
           </Button>
         )}
       />
       <div className={styles.pager}>
-        <Button variant="ghost" size="sm" disabled={cursors.length <= 1} onClick={() => setCursors((c) => c.slice(0, -1))}>‹ Önceki</Button>
-        <Button variant="ghost" size="sm" disabled={!users.data?.next_cursor} onClick={() => setCursors((c) => [...c, users.data.next_cursor])}>Sonraki ›</Button>
+        <Button variant="ghost" size="sm" disabled={cursors.length <= 1} onClick={() => setCursors((c) => c.slice(0, -1))}>{t('table.prev')}</Button>
+        <Button variant="ghost" size="sm" disabled={!users.data?.next_cursor} onClick={() => setCursors((c) => [...c, users.data.next_cursor])}>{t('table.next')}</Button>
       </div>
     </>
   );

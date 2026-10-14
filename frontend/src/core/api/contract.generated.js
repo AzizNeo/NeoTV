@@ -616,6 +616,16 @@ export const OPERATIONS = Object.freeze({
       "EMAIL_DELIVERY_UNAVAILABLE"
     ]
   },
+  "identity_set_locale": {
+    "method": "PUT",
+    "path": "/api/v1/auth/me/locale",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": [
+      "UNSUPPORTED_LOCALE"
+    ]
+  },
   "identity_verify_email": {
     "method": "POST",
     "path": "/api/v1/auth/email/verify",

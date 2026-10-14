@@ -4,9 +4,11 @@ import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, Clock } from 'lucide-react';
 import { EmptyState } from '@/shared/components/EmptyState/EmptyState';
 import { billingKeys, getSubscription } from '../api';
+import { useT } from '../i18n';
 
 /** Landing page after the hosted checkout: waits (briefly) for the webhook to activate the plan. */
 export default function CheckoutReturnPage() {
+  const t = useT();
   const [deadline] = useState(() => Date.now() + 30_000);
   const { data } = useQuery({
     queryKey: billingKeys.subscription,
@@ -21,14 +23,14 @@ export default function CheckoutReturnPage() {
 
   if (data?.status === 'active' && data.plan !== 'free') {
     return (
-      <EmptyState icon={CheckCircle2} title="Ödemeniz alındı" action={<Link to="/">İzlemeye başla</Link>}>
-        <span style={{ textTransform: 'capitalize' }}>{data.plan}</span> planınız aktif.
+      <EmptyState icon={CheckCircle2} title={t('checkout.paid')} action={<Link to="/">{t('checkout.start')}</Link>}>
+        {t('checkout.planActive', { plan: data.plan.charAt(0).toLocaleUpperCase(t.locale) + data.plan.slice(1) })}
       </EmptyState>
     );
   }
   return (
-    <EmptyState icon={Clock} title={timedOut ? 'Ödeme henüz onaylanmadı' : 'Ödemeniz onaylanıyor…'} action={<Link to="/plans">Planlara dön</Link>}>
-      {timedOut ? 'Onay birkaç dakika sürebilir; planınız aktif olduğunda e-posta ile bilgilendirileceksiniz.' : 'Bu işlem genellikle birkaç saniye sürer.'}
+    <EmptyState icon={Clock} title={t(timedOut ? 'checkout.late' : 'checkout.pending')} action={<Link to="/plans">{t('checkout.back')}</Link>}>
+      {t(timedOut ? 'checkout.lateBody' : 'checkout.pendingBody')}
     </EmptyState>
   );
 }

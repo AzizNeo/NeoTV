@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { SharedTextProvider } from '@/shared/components/SharedText/SharedTextProvider';
 import { ToastProvider } from '@/shared/components/Toast/Toast';
 import { useT } from './i18n';
+import { LocaleSync } from './LocaleSync';
 
 /** The words shared components say, in the current language (shared/ itself stays i18n-free). */
 function SharedText({ children }) {
@@ -24,7 +25,10 @@ export function AppProviders({ children }) {
       <SharedText>
         <QueryClientProvider client={queryClient}>
           <ToastProvider>
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider>
+              <LocaleSync />
+              {children}
+            </AuthProvider>
           </ToastProvider>
         </QueryClientProvider>
       </SharedText>

@@ -107,3 +107,32 @@
   align-items: center;
   gap: 0.4rem;
 }
+
+/* Language picker, top-right of every signed-out screen. */
+.lang {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--gutter);
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+}
+.lang button {
+  min-height: 32px;
+  padding: 0 0.8rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  cursor: pointer;
+}
+.lang button[aria-pressed='true'] {
+  background: var(--surface-1);
+  color: var(--text-1);
+  box-shadow: var(--shadow-1);
+}

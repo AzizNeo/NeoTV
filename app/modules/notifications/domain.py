@@ -21,6 +21,10 @@ class DuplicateTemplateError(NotificationError):
     """Two contributions declare the same template key."""
 
 
+class TemplateLocaleError(NotificationError):
+    """A translated template is unusable: unknown language, no default variant, or placeholders differ."""
+
+
 class InvalidRecipientError(NotificationError):
     pass
 

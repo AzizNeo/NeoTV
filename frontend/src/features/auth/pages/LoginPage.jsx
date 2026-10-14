@@ -8,8 +8,11 @@ import { Spinner } from '@/shared/components/Spinner/Spinner';
 import { loginSchema } from '../schema';
 import { PasswordInput } from './PasswordInput';
 import styles from './AuthLayout.module.css';
+import { useT } from '../i18n';
+import { LanguageSwitch } from '@/core/i18n';
 
 export default function LoginPage() {
+  const t = useT();
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -22,30 +25,31 @@ export default function LoginPage() {
       await login(username, password);
       navigate(location.state?.from?.pathname ?? '/', { replace: true });
     } catch (err) {
-      setError(err.userMessage ?? 'Giriş başarısız.');
+      setError(err.userMessage ?? t('login.failed'));
     }
   };
 
   return (
     <main className={styles.screen}>
       <Link to="/login" className={styles.brand}>NeoTV</Link>
+      <LanguageSwitch className={styles.lang} />
       <section className={styles.panel}>
-        <h1>Oturum Aç</h1>
+        <h1>{t('login.title')}</h1>
         {error && <div className={styles.alert} role="alert">{error}</div>}
         <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
-          <label className="visually-hidden" htmlFor="login-username">Kullanıcı adı</label>
-          <input id="login-username" className="input-field" placeholder="Kullanıcı adı" autoComplete="username" autoFocus {...register('username')} />
-          {formState.errors.username && <span className="field-error">{formState.errors.username.message}</span>}
-          <label className="visually-hidden" htmlFor="login-password">Şifre</label>
-          <PasswordInput id="login-password" placeholder="Şifre" autoComplete="current-password" {...register('password')} />
-          {formState.errors.password && <span className="field-error">{formState.errors.password.message}</span>}
-          <Link to="/forgot-password" className={styles.forgot}>Şifremi unuttum</Link>
+          <label className="visually-hidden" htmlFor="login-username">{t('field.username')}</label>
+          <input id="login-username" className="input-field" placeholder={t('field.username')} autoComplete="username" autoFocus {...register('username')} />
+          {formState.errors.username && <span className="field-error">{t(formState.errors.username.message)}</span>}
+          <label className="visually-hidden" htmlFor="login-password">{t('field.password')}</label>
+          <PasswordInput id="login-password" placeholder={t('field.password')} autoComplete="current-password" {...register('password')} />
+          {formState.errors.password && <span className="field-error">{t(formState.errors.password.message)}</span>}
+          <Link to="/forgot-password" className={styles.forgot}>{t('login.forgot')}</Link>
           <Button type="submit" size="lg" fullWidth disabled={formState.isSubmitting} style={{ marginTop: '1.25rem' }}>
-            {formState.isSubmitting ? <Spinner size="sm" color="white" /> : 'Oturum Aç'}
+            {formState.isSubmitting ? <Spinner size="sm" color="white" /> : t('login.submit')}
           </Button>
         </form>
         <div className={styles.footer}>
-          NeoTV&apos;de yeni misiniz?<Link to="/register">Hemen kaydolun</Link>.
+          {t('login.newHere')}<Link to="/register">{t('login.signUp')}</Link>.
         </div>
       </section>
     </main>

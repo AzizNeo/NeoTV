@@ -174,5 +174,9 @@ class EmailAlreadyVerifiedError(IdentityError):
     pass
 
 
+class UnsupportedLocaleError(IdentityError):
+    """A language the platform does not speak (see shared_kernel.locale)."""
+
+
 class EmailUnchangedError(IdentityError):
     """The requested address is already the account's address."""

@@ -28,7 +28,7 @@ class SecurityNotices:
         )
 
     def new_device(self, uow: UnitOfWork, event: NewDeviceSignedIn) -> None:
-        when = datetime.fromisoformat(event.occurred_at).strftime("%d.%m.%Y %H:%M UTC")
+        when = datetime.fromisoformat(event.occurred_at).strftime("%Y-%m-%d %H:%M UTC")  # unambiguous in every language
         self._send(
             uow,
             event.user_id,
@@ -43,5 +43,9 @@ class SecurityNotices:
         if mailer is None or user is None or not user.email or not user.is_active:
             return
         mailer.queue(
-            to=user.email, template=template, context={"username": user.username, **context}, dedupe_key=dedupe_key
+            to=user.email,
+            template=template,
+            context={"username": user.username, **context},
+            dedupe_key=dedupe_key,
+            locale=user.locale,
         )

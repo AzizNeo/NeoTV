@@ -3,18 +3,20 @@ import { Button } from '@/shared/components/Button/Button';
 import { EmptyState } from '@/shared/components/EmptyState/EmptyState';
 import { Spinner } from '@/shared/components/Spinner/Spinner';
 import styles from './Admin.module.css';
+import { useT } from '../i18n';
 
 /** Column = { key, label, render?(row) }. `actions(row)` renders the trailing cell. */
-export function DataTable({ columns, rows, rowKey = 'id', loading, empty = 'Kayıt yok', actions }) {
+export function DataTable({ columns, rows, rowKey = 'id', loading, empty, actions }) {
+  const t = useT();
   if (loading) return <Spinner />;
-  if (!rows?.length) return <EmptyState title={empty} />;
+  if (!rows?.length) return <EmptyState title={empty ?? t('table.empty')} />;
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
         <thead>
           <tr>
             {columns.map((c) => <th key={c.key} scope="col">{c.label}</th>)}
-            {actions && <th scope="col"><span className="visually-hidden">İşlemler</span></th>}
+            {actions && <th scope="col"><span className="visually-hidden">{t('table.actions')}</span></th>}
           </tr>
         </thead>
         <tbody>
@@ -45,12 +47,13 @@ export function Badge({ ok, children }) {
 Badge.propTypes = { ok: PropTypes.bool, children: PropTypes.node };
 
 export function Pager({ page, perPage, total, onPage }) {
+  const t = useT();
   const pages = Math.max(1, Math.ceil(total / perPage));
   return (
     <div className={styles.pager}>
-      <Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => onPage(page - 1)}>‹ Önceki</Button>
-      <span>{page} / {pages} · {total} kayıt</span>
-      <Button variant="ghost" size="sm" disabled={page >= pages} onClick={() => onPage(page + 1)}>Sonraki ›</Button>
+      <Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => onPage(page - 1)}>{t('table.prev')}</Button>
+      <span>{t('table.page', { page, pages, total })}</span>
+      <Button variant="ghost" size="sm" disabled={page >= pages} onClick={() => onPage(page + 1)}>{t('table.next')}</Button>
     </div>
   );
 }

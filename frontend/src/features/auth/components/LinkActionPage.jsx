@@ -6,6 +6,8 @@ import { useAuth } from '@/core/auth/AuthProvider';
 import { Spinner } from '@/shared/components/Spinner/Spinner';
 import { useLinkToken } from '../hooks/useLinkToken';
 import styles from '../pages/AuthLayout.module.css';
+import { useT } from '../i18n';
+import { LanguageSwitch } from '@/core/i18n';
 
 /**
  * Page opened from a one-time e-mail link: redeems `#token=…` with `operationId` exactly once.
@@ -14,6 +16,7 @@ import styles from '../pages/AuthLayout.module.css';
  * `errorHint` are the only per-link copy.
  */
 export function LinkActionPage({ operationId, title, successText, errorHint, onDone }) {
+  const t = useT();
   const token = useLinkToken();
   const auth = useAuth();
   const [result, setResult] = useState(() => (token ? { status: 'pending' } : { status: 'error', message: null }));
@@ -36,6 +39,7 @@ export function LinkActionPage({ operationId, title, successText, errorHint, onD
   return (
     <main className={styles.screen}>
       <Link to="/" className={styles.brand}>NeoTV</Link>
+      <LanguageSwitch className={styles.lang} />
       <section className={styles.panel} aria-live="polite">
         <h1>{title}</h1>
         {result.status === 'pending' && <Spinner />}
@@ -44,11 +48,11 @@ export function LinkActionPage({ operationId, title, successText, errorHint, onD
         )}
         {result.status === 'error' && (
           <div className={styles.alert} role="alert">
-            <XCircle size={16} aria-hidden="true" /> {result.message ?? 'Bağlantı eksik ya da bozuk.'} {errorHint}
+            <XCircle size={16} aria-hidden="true" /> {result.message ?? t('link.broken')} {errorHint}
           </div>
         )}
         <div className={styles.footer}>
-          <Link to={signedIn ? '/account' : '/login'}>{signedIn ? 'Hesabıma dön' : 'Oturum aç'}</Link>
+          <Link to={signedIn ? '/account' : '/login'}>{t(signedIn ? 'link.backToAccount' : 'link.signIn')}</Link>
         </div>
       </section>
     </main>

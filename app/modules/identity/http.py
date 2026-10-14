@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from flask import Blueprint, Response, request
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -17,6 +17,7 @@ from app.kernel.settings import Settings
 from app.modules.identity.domain import ROLE_PERMISSIONS, CsrfHeaderMissingError
 from app.modules.identity.recovery import AccountRecoveryService
 from app.modules.identity.services import AuthService, ClientInfo, IssuedSession
+from app.shared_kernel.locale import negotiate
 
 blueprint = Blueprint("identity", __name__)
 
@@ -44,6 +45,10 @@ class LoginRequest(_Strict):
 
 class UsernameCheckRequest(_Strict):
     username: str = Field(min_length=1, max_length=64)
+
+
+class LocaleRequest(_Strict):
+    locale: Literal["tr", "en"]
 
 
 class ChangeEmailRequest(_Strict):
@@ -81,6 +86,7 @@ class MeResponse(BaseModel):
     role: str
     permissions: list[str]
     created_at: datetime
+    locale: str | None = None  # account language (e-mails, every device); None → not chosen yet
 
 
 class SessionResponse(BaseModel):
@@ -105,6 +111,7 @@ def _client() -> ClientInfo:
         ip=client_ip(),
         user_agent=request.headers.get("User-Agent", "")[:512],
         client_device_id=request.headers.get("X-Device-ID"),
+        language=negotiate(request.headers.get("Accept-Language")),
     )
 
 
@@ -117,6 +124,7 @@ def _me(user: Any) -> MeResponse:
         role=user.role,
         permissions=sorted(ROLE_PERMISSIONS.get(user.role, frozenset())),
         created_at=user.created_at,
+        locale=user.locale,
     )
 
 
@@ -164,7 +172,12 @@ def _clear_cookie(response: Response) -> Response:
     errors=("USERNAME_TAKEN", "EMAIL_TAKEN", "WEAK_PASSWORD", "INVALID_USERNAME"),
 )
 def register(body: RegisterRequest) -> RegisteredResponse:
-    user = resolve(AuthService).register(username=body.username, email=body.email, password=body.password)
+    user = resolve(AuthService).register(
+        username=body.username,
+        email=body.email,
+        password=body.password,
+        locale=negotiate(request.headers.get("Accept-Language")),  # mails speak the sign-up language
+    )
     return RegisteredResponse(id=user.id, username=user.username)
 
 
@@ -230,6 +243,18 @@ def logout_all() -> Response:
 @endpoint(summary="Current user", response=MeResponse)
 def me() -> MeResponse:
     return _me(current_user)
+
+
+@blueprint.put("/me/locale")
+@endpoint(
+    summary="Set the account language (e-mails and every signed-in device)",
+    rate=Rate("auth.locale", rps=1, burst=10),
+    body=LocaleRequest,
+    response=MeResponse,
+    errors=("UNSUPPORTED_LOCALE",),
+)
+def set_locale(body: LocaleRequest) -> MeResponse:
+    return _me(resolve(AuthService).set_locale(user_id=current_user.id, locale=body.locale))
 
 
 @blueprint.post("/change-password")

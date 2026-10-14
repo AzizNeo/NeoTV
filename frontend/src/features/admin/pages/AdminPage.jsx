@@ -6,16 +6,21 @@ import { Page } from '@/shared/components/Page/Page';
 import { Spinner } from '@/shared/components/Spinner/Spinner';
 import { ADMIN_SECTIONS } from '../sections/registry';
 import styles from '../components/Admin.module.css';
+import { labelOf } from '@/core/i18n';
+import { useT } from '../i18n';
 
 export default function AdminPage() {
+  const t = useT();
   const { backendModules } = useRegistry();
+  // One broken section never takes the whole panel down (and says so in the viewer's language).
+  const errorLabels = { title: t('boundary.title'), unknown: t('boundary.unknown'), reload: t('boundary.reload') };
   const sections = ADMIN_SECTIONS.filter((s) => !backendModules || backendModules.has(s.module));
   return (
-    <Page title="Yönetim" subtitle="Platform durumu, kullanıcılar, içerik ve koruma.">
-      <nav className={styles.tabs} aria-label="Yönetim bölümleri">
+    <Page title={t('title')} subtitle={t('subtitle')}>
+      <nav className={styles.tabs} aria-label={t('sectionsNav')}>
         {sections.map(({ id, label, icon: Icon }) => (
           <NavLink key={id} to={id} className={({ isActive }) => `${styles.tab} ${isActive ? styles.active : ''}`}>
-            <Icon size={16} aria-hidden="true" /> {label}
+            <Icon size={16} aria-hidden="true" /> {labelOf(label, t.locale)}
           </NavLink>
         ))}
       </nav>
@@ -23,7 +28,7 @@ export default function AdminPage() {
         <Routes>
           <Route index element={<Navigate to={sections[0]?.id ?? 'overview'} replace />} />
           {sections.map(({ id, component: Section }) => (
-            <Route key={id} path={id} element={<ErrorBoundary resetKey={id}><Section /></ErrorBoundary>} />
+            <Route key={id} path={id} element={<ErrorBoundary resetKey={id} labels={errorLabels}><Section /></ErrorBoundary>} />
           ))}
           <Route path="*" element={<Navigate to="." replace />} />
         </Routes>

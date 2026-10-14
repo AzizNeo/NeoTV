@@ -2,13 +2,109 @@ import { defineMessages, useTranslation } from '@/core/i18n';
 
 export const messages = defineMessages('admin', {
   tr: {
-    nav: {
-      admin: 'Yönetim',
+    nav: { admin: 'Yönetim' },
+    title: 'Yönetim',
+    subtitle: 'Platform durumu, kullanıcılar, içerik ve koruma.',
+    sectionsNav: 'Yönetim bölümleri',
+    boundary: { title: 'Bu bölüm açılamadı.', unknown: 'Beklenmeyen bir arayüz hatası oluştu.', reload: 'Sayfayı yenile' },
+    sections: { overview: 'Özet', users: 'Kullanıcılar', sessions: 'Oturumlar', abuse: 'Kötüye kullanım', catalog: 'Katalog', live: 'Canlı yayın', drm: 'DRM' },
+    groups: { users: 'Kullanıcılar', sessions: 'Oturumlar', plans: 'Planlar', catalog: 'Katalog', live: 'Canlı yayın', devices: 'Cihazlar', drm: 'DRM' },
+    updated: 'Güncellendi: {when}',
+    table: { empty: 'Kayıt yok', actions: 'İşlemler', prev: '‹ Önceki', next: 'Sonraki ›', page: '{page} / {pages} · {total} kayıt' },
+    task: {
+      started: 'Görev başlatıldı…',
+      states: { PENDING: 'Sırada', STARTED: 'Başladı', PROGRESS: 'İşleniyor', SUCCESS: 'Tamamlandı', FAILURE: 'Başarısız', REVOKED: 'İptal' },
+    },
+    col: {
+      user: 'Kullanıcı', email: 'E-posta', role: 'Rol', plan: 'Plan', openStreams: 'Açık yayın', status: 'Durum', lastLogin: 'Son giriş',
+      profile: 'Profil', content: 'İçerik', ip: 'IP', started: 'Başlangıç', heartbeat: 'Son sinyal',
+      rule: 'Kural', score: 'Skor', details: 'Ayrıntı', first: 'İlk', last: 'Son',
+      name: 'Ad', channels: 'Kanal', lastSync: 'Son eşitleme', error: 'Hata', group: 'Grup', kind: 'Tür', delivery: 'İletim',
+      source: 'Kaynak', key: 'Anahtar', broadcast: 'Yayın',
+      systems: 'Sistemler', policy: 'Politika', activeLicenses: 'Aktif lisans', keyRotated: 'Anahtar yenileme',
+      maxResolution: 'Azami çözünürlük', licenseDuration: 'Lisans süresi (sn)', offline: 'Çevrimdışı', devices: 'Cihazlar',
+      system: 'Sistem', renewals: 'Yenileme', expires: 'Bitiş', time: 'Zaman', event: 'Olay', errorCode: 'Hata kodu',
+    },
+    users: {
+      active: 'Aktif', suspended: 'Askıda', suspend: 'Askıya al', activate: 'Etkinleştir',
+      activated: '{name} etkinleştirildi.', wasSuspended: '{name} askıya alındı.',
+    },
+    sessions: { terminated: 'Yayın oturumu sonlandırıldı.', empty: 'Açık yayın oturumu yok', terminate: 'Sonlandır' },
+    abuse: {
+      filter: 'Durum filtresi', open: 'Açık', actioned: 'İşlem yapıldı', dismissed: 'Yok sayıldı',
+      resolved: 'İşaret kapatıldı.', markActioned: 'İşlem yapıldı', dismiss: 'Yok say',
+    },
+    catalog: {
+      playlists: 'Oynatma listeleri', import: 'M3U içe aktar', channels: 'Kanallar', search: 'Kanal ara…', searchLabel: 'Kanal ara',
+      sync: 'Eşitle', delete: 'Sil', remove: 'Kaldır', onAir: 'Yayında', hidden: 'Gizli',
+      playlistDeleted: 'Liste silindi.', channelRemoved: 'Kanal katalogdan kaldırıldı.', updated: 'Katalog güncellendi.', taskFailed: 'Görev başarısız oldu.',
+      url: 'https://… (M3U adresi)', urlLabel: 'M3U adresi', paste: '…ya da M3U içeriğini yapıştırın', pasteLabel: 'M3U içeriği', run: 'İçe aktar',
+    },
+    live: {
+      add: 'Kanal ekle', addTitle: 'Canlı kanal ekle', created: 'Kanal oluşturuldu.', deleted: 'Kanal silindi.',
+      live: 'Canlı', offAir: 'Kapalı', active: 'Aktif', inactive: 'Pasif', deactivate: 'Pasifleştir', activate: 'Etkinleştir',
+      rotate: 'Anahtarı yenile', delete: 'Sil', name: 'Kanal adı', sourceType: 'Kaynak türü',
+      external: 'Harici kaynak (HLS URL)', ingest: 'RTMP yayın (OBS vb.)', sourceUrl: 'Kaynak URL', delivery: 'İletim',
+      proxy: 'Proxy (imzalı)', direct: 'Doğrudan', rating: 'Yaş sınırı', create: 'Oluştur',
+      keyTitle: 'Yayın anahtarı', keyOnce: 'Bu anahtar yalnızca bir kez gösterilir. OBS\'de "Stream Key" alanına girin.', copy: 'Kopyala ve kapat',
+    },
+    drm: {
+      rotated: 'İçerik anahtarı yenilendi; açık lisanslar iptal edildi.', unprotected: 'Koruma kaldırıldı.', revoked: 'Lisans iptal edildi.',
+      defaultPolicy: 'Varsayılan', protected: 'Korumalı içerikler', rotate: 'Anahtarı yenile', unprotect: 'Korumayı kaldır',
+      policies: 'Politikalar', hours: '{h} sa', no: 'Hayır', licenses: 'Aktif lisanslar', revoke: 'İptal et', events: 'Son olaylar',
     },
   },
   en: {
-    nav: {
-      admin: 'Admin',
+    nav: { admin: 'Admin' },
+    title: 'Admin',
+    subtitle: 'Platform health, users, content and protection.',
+    sectionsNav: 'Admin sections',
+    boundary: { title: "This section couldn't open.", unknown: 'An unexpected interface error occurred.', reload: 'Reload page' },
+    sections: { overview: 'Overview', users: 'Users', sessions: 'Sessions', abuse: 'Abuse', catalog: 'Catalogue', live: 'Live', drm: 'DRM' },
+    groups: { users: 'Users', sessions: 'Sessions', plans: 'Plans', catalog: 'Catalogue', live: 'Live', devices: 'Devices', drm: 'DRM' },
+    updated: 'Updated: {when}',
+    table: { empty: 'No records', actions: 'Actions', prev: '‹ Previous', next: 'Next ›', page: '{page} / {pages} · {total} records' },
+    task: {
+      started: 'Task started…',
+      states: { PENDING: 'Queued', STARTED: 'Started', PROGRESS: 'Processing', SUCCESS: 'Done', FAILURE: 'Failed', REVOKED: 'Cancelled' },
+    },
+    col: {
+      user: 'User', email: 'Email', role: 'Role', plan: 'Plan', openStreams: 'Open streams', status: 'Status', lastLogin: 'Last sign-in',
+      profile: 'Profile', content: 'Content', ip: 'IP', started: 'Started', heartbeat: 'Last heartbeat',
+      rule: 'Rule', score: 'Score', details: 'Details', first: 'First', last: 'Last',
+      name: 'Name', channels: 'Channels', lastSync: 'Last sync', error: 'Error', group: 'Group', kind: 'Type', delivery: 'Delivery',
+      source: 'Source', key: 'Key', broadcast: 'On air',
+      systems: 'Systems', policy: 'Policy', activeLicenses: 'Active licences', keyRotated: 'Key rotated',
+      maxResolution: 'Max resolution', licenseDuration: 'Licence duration (s)', offline: 'Offline', devices: 'Devices',
+      system: 'System', renewals: 'Renewals', expires: 'Expires', time: 'Time', event: 'Event', errorCode: 'Error code',
+    },
+    users: {
+      active: 'Active', suspended: 'Suspended', suspend: 'Suspend', activate: 'Activate',
+      activated: '{name} activated.', wasSuspended: '{name} suspended.',
+    },
+    sessions: { terminated: 'Playback session ended.', empty: 'No open playback sessions', terminate: 'End' },
+    abuse: {
+      filter: 'Status filter', open: 'Open', actioned: 'Actioned', dismissed: 'Dismissed',
+      resolved: 'Flag closed.', markActioned: 'Actioned', dismiss: 'Dismiss',
+    },
+    catalog: {
+      playlists: 'Playlists', import: 'Import M3U', channels: 'Channels', search: 'Search channels…', searchLabel: 'Search channels',
+      sync: 'Sync', delete: 'Delete', remove: 'Remove', onAir: 'Published', hidden: 'Hidden',
+      playlistDeleted: 'Playlist deleted.', channelRemoved: 'Channel removed from the catalogue.', updated: 'Catalogue updated.', taskFailed: 'The task failed.',
+      url: 'https://… (M3U address)', urlLabel: 'M3U address', paste: '…or paste the M3U content', pasteLabel: 'M3U content', run: 'Import',
+    },
+    live: {
+      add: 'Add channel', addTitle: 'Add live channel', created: 'Channel created.', deleted: 'Channel deleted.',
+      live: 'Live', offAir: 'Off air', active: 'Active', inactive: 'Inactive', deactivate: 'Deactivate', activate: 'Activate',
+      rotate: 'Rotate key', delete: 'Delete', name: 'Channel name', sourceType: 'Source type',
+      external: 'External source (HLS URL)', ingest: 'RTMP broadcast (OBS etc.)', sourceUrl: 'Source URL', delivery: 'Delivery',
+      proxy: 'Proxy (signed)', direct: 'Direct', rating: 'Age rating', create: 'Create',
+      keyTitle: 'Stream key', keyOnce: 'This key is shown only once. Enter it in OBS as the "Stream Key".', copy: 'Copy and close',
+    },
+    drm: {
+      rotated: 'Content key rotated; open licences were revoked.', unprotected: 'Protection removed.', revoked: 'Licence revoked.',
+      defaultPolicy: 'Default', protected: 'Protected content', rotate: 'Rotate key', unprotect: 'Remove protection',
+      policies: 'Policies', hours: '{h} h', no: 'No', licenses: 'Active licences', revoke: 'Revoke', events: 'Recent events',
     },
   },
 });

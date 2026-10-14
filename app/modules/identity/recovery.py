@@ -60,7 +60,15 @@ LINK_PATHS = {
 class Mailer(Protocol):
     """Consumer-owned port for the optional ``notifications.email`` capability."""
 
-    def queue(self, *, to: str, template: str, context: dict[str, str], dedupe_key: str | None = None) -> str: ...
+    def queue(
+        self,
+        *,
+        to: str,
+        template: str,
+        context: dict[str, str],
+        dedupe_key: str | None = None,
+        locale: str | None = None,
+    ) -> str: ...
 
 
 def _digest(raw: str) -> str:
@@ -158,6 +166,7 @@ class AccountRecoveryService:
                     to=user.email,
                     template=EMAIL_CHANGE_REQUESTED,
                     context={"username": user.username, "new_email": mask_email(address)},
+                    locale=user.locale,
                 )
 
     def confirm_email_change(self, *, raw_token: str) -> User:
@@ -269,7 +278,7 @@ class AccountRecoveryService:
             context["days"] = str(ttl.days)
         else:
             context["hours"] = str(int(ttl.total_seconds() // 3600))
-        mailer.queue(to=address, template=template, context=context)
+        mailer.queue(to=address, template=template, context=context, locale=user.locale)
         return True
 
     def _redeem(self, uow: UnitOfWork, raw_token: str, purpose: TokenPurpose) -> tuple[ActionToken, User]:

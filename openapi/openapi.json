@@ -1600,6 +1600,18 @@
                           "format": "date-time",
                           "title": "Created At",
                           "type": "string"
+                        },
+                        "locale": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "default": null,
+                          "title": "Locale"
                         }
                       },
                       "required": [
@@ -1639,6 +1651,150 @@
             "bearer": []
           }
         ]
+      }
+    },
+    "/api/v1/auth/me/locale": {
+      "put": {
+        "operationId": "identity_set_locale",
+        "summary": "Set the account language (e-mails and every signed-in device)",
+        "tags": [
+          "identity"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "properties": {
+                        "id": {
+                          "title": "Id",
+                          "type": "integer"
+                        },
+                        "username": {
+                          "title": "Username",
+                          "type": "string"
+                        },
+                        "email": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Email"
+                        },
+                        "email_verified": {
+                          "title": "Email Verified",
+                          "type": "boolean"
+                        },
+                        "role": {
+                          "title": "Role",
+                          "type": "string"
+                        },
+                        "permissions": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "title": "Permissions",
+                          "type": "array"
+                        },
+                        "created_at": {
+                          "format": "date-time",
+                          "title": "Created At",
+                          "type": "string"
+                        },
+                        "locale": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "default": null,
+                          "title": "Locale"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "username",
+                        "email",
+                        "email_verified",
+                        "role",
+                        "permissions",
+                        "created_at"
+                      ],
+                      "title": "MeResponse",
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-error-codes": [
+          "UNSUPPORTED_LOCALE"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "locale": {
+                    "enum": [
+                      "tr",
+                      "en"
+                    ],
+                    "title": "Locale",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "locale"
+                ],
+                "title": "LocaleRequest",
+                "type": "object"
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/auth/password/forgot": {
@@ -13511,6 +13667,18 @@
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Locale"
           }
         },
         "required": [

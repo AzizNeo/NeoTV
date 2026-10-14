@@ -4,16 +4,17 @@
  * backend would answer 404 anyway; hiding avoids a dead tab).
  */
 import { lazy } from 'react';
+import { messages } from '../i18n';
 import { Activity, Ban, Film, KeyRound, LayoutDashboard, Radio, Users } from 'lucide-react';
 
 export const ADMIN_SECTIONS = Object.freeze([
-  { id: 'overview', label: 'Özet', icon: LayoutDashboard, module: 'admin', component: lazy(() => import('./OverviewSection')) },
-  { id: 'users', label: 'Kullanıcılar', icon: Users, module: 'admin', component: lazy(() => import('./UsersSection')) },
-  { id: 'sessions', label: 'Oturumlar', icon: Activity, module: 'admin', component: lazy(() => import('./SessionsSection')) },
-  { id: 'abuse', label: 'Kötüye kullanım', icon: Ban, module: 'admin', component: lazy(() => import('./AbuseSection')) },
-  { id: 'catalog', label: 'Katalog', icon: Film, module: 'catalog', component: lazy(() => import('./CatalogSection')) },
-  { id: 'live', label: 'Canlı yayın', icon: Radio, module: 'live', component: lazy(() => import('./LiveSection')) },
-  { id: 'drm', label: 'DRM', icon: KeyRound, module: 'drm', component: lazy(() => import('./DrmSection')) },
+  { id: 'overview', label: messages.ref('sections.overview'), icon: LayoutDashboard, module: 'admin', component: lazy(() => import('./OverviewSection')) },
+  { id: 'users', label: messages.ref('sections.users'), icon: Users, module: 'admin', component: lazy(() => import('./UsersSection')) },
+  { id: 'sessions', label: messages.ref('sections.sessions'), icon: Activity, module: 'admin', component: lazy(() => import('./SessionsSection')) },
+  { id: 'abuse', label: messages.ref('sections.abuse'), icon: Ban, module: 'admin', component: lazy(() => import('./AbuseSection')) },
+  { id: 'catalog', label: messages.ref('sections.catalog'), icon: Film, module: 'catalog', component: lazy(() => import('./CatalogSection')) },
+  { id: 'live', label: messages.ref('sections.live'), icon: Radio, module: 'live', component: lazy(() => import('./LiveSection')) },
+  { id: 'drm', label: messages.ref('sections.drm'), icon: KeyRound, module: 'drm', component: lazy(() => import('./DrmSection')) },
 ]);
 
 const ids = new Set();
