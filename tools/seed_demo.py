@@ -2,6 +2,8 @@
 
     python -m tools.seed_demo            # VOD + live test channels (+ today's guide)
     python -m tools.seed_demo --ingest   # also an RTMP ingest channel; prints its one-time key
+    python -m tools.seed_demo --tmdb     # also import the open movies' metadata + artwork from TMDB
+                                         # (needs TMDB_READ_TOKEN in .env)
 
 Content is limited to material published for exactly this purpose: Blender
 Foundation open movies (CC BY) and public player test streams. Artwork comes
@@ -135,6 +137,7 @@ def _art(slug: str) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--ingest", action="store_true", help="also create an RTMP ingest test channel")
+    parser.add_argument("--tmdb", action="store_true", help="import the open movies' metadata from TMDB")
     args = parser.parse_args(argv)
 
     from app.kernel.container import resolve
@@ -190,6 +193,8 @@ def main(argv: list[str] | None = None) -> int:
         _seed_guide(resolve(EpgService), resolve(Clock), [existing[name] for name, _, _ in DEMO_LIVE])
 
         failures = _seed_titles(catalog) if "titles" in app.extensions["modules"] else 0  # optional module
+        if args.tmdb:
+            failures += _link_tmdb() if "tmdb" in app.extensions["modules"] else _missing("tmdb")
 
         if args.ingest and "Test Ingest" not in existing:
             _, key = live.create(
@@ -282,6 +287,37 @@ def _seed_titles(catalog: CatalogAdminService) -> int:
         with contextlib.suppress(TitlesError):  # genre unused if its titles failed above
             service.set_genre_names(slug, {"en": name})
     return failures
+
+
+#: Demo title → its TMDB movie id (Blender open movies).
+TMDB_IDS = {"tears-of-steel": 133701, "sintel": 45745, "big-buck-bunny": 10378}
+
+
+def _link_tmdb() -> int:
+    """Import names, synopses (TR + EN), artwork and genres from TMDB; editorial fields stay."""
+    from app.kernel.container import resolve
+    from app.modules.titles.api import TitleKind
+    from app.modules.tmdb.domain import TmdbError
+    from app.modules.tmdb.services import TmdbService
+
+    service = resolve(TmdbService)
+    if not service.configured:
+        print("tmdb     ! TMDB_READ_TOKEN is not set in .env — skipped")
+        return 1
+    failures = 0
+    for slug, tmdb_id in TMDB_IDS.items():
+        try:
+            service.link(slug, tmdb_id, TitleKind.MOVIE)
+            print(f"tmdb     + {slug} <- TMDB {tmdb_id}")
+        except TmdbError as err:
+            failures += 1
+            print(f"tmdb     ! {slug}: {type(err).__name__}: {err}")
+    return failures
+
+
+def _missing(module: str) -> int:
+    print(f"{module:<8} ! module is disabled (DISABLED_MODULES) — skipped")
+    return 1
 
 
 def _seed_guide(epg: object, clock: object, channel_ids: list[int]) -> None:

@@ -12081,6 +12081,532 @@
           }
         ]
       }
+    },
+    "/api/v1/tmdb/links": {
+      "get": {
+        "operationId": "tmdb_links",
+        "summary": "Titles linked to TMDB",
+        "tags": [
+          "tmdb"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/LinkOut"
+                      },
+                      "type": "array"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-permission": "titles:write",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tmdb/links/{slug}": {
+      "put": {
+        "operationId": "tmdb_link",
+        "summary": "Import TMDB metadata into a title (created as a draft when new) and keep the link",
+        "tags": [
+          "tmdb"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "properties": {
+                        "slug": {
+                          "title": "Slug",
+                          "type": "string"
+                        },
+                        "tmdb_id": {
+                          "title": "Tmdb Id",
+                          "type": "integer"
+                        },
+                        "kind": {
+                          "title": "Kind",
+                          "type": "string"
+                        },
+                        "synced_at": {
+                          "format": "date-time",
+                          "title": "Synced At",
+                          "type": "string"
+                        },
+                        "created": {
+                          "default": false,
+                          "title": "Created",
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "slug",
+                        "tmdb_id",
+                        "kind",
+                        "synced_at"
+                      ],
+                      "title": "LinkOut",
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-permission": "titles:write",
+        "x-error-codes": [
+          "METADATA_PROVIDER_NOT_CONFIGURED",
+          "METADATA_PROVIDER_UNAVAILABLE",
+          "METADATA_NOT_FOUND",
+          "METADATA_KIND_MISMATCH",
+          "TITLE_INVALID",
+          "PLAY_SOURCE_NOT_FOUND",
+          "TITLE_RATING_CONFLICT"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "tmdb_id": {
+                    "minimum": 1,
+                    "title": "Tmdb Id",
+                    "type": "integer"
+                  },
+                  "kind": {
+                    "enum": [
+                      "movie",
+                      "series"
+                    ],
+                    "title": "Kind",
+                    "type": "string"
+                  },
+                  "play_ref": {
+                    "anyOf": [
+                      {
+                        "maxLength": 64,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "description": "New movies only: what plays",
+                    "title": "Play Ref"
+                  }
+                },
+                "required": [
+                  "tmdb_id",
+                  "kind"
+                ],
+                "title": "LinkIn",
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "tmdb_unlink",
+        "summary": "Forget the TMDB link (the title keeps its metadata)",
+        "tags": [
+          "tmdb"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {},
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-permission": "titles:write",
+        "x-error-codes": [
+          "METADATA_LINK_NOT_FOUND"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tmdb/links/{slug}/refresh": {
+      "post": {
+        "operationId": "tmdb_refresh",
+        "summary": "Re-import a linked title from TMDB",
+        "tags": [
+          "tmdb"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "properties": {
+                        "slug": {
+                          "title": "Slug",
+                          "type": "string"
+                        },
+                        "tmdb_id": {
+                          "title": "Tmdb Id",
+                          "type": "integer"
+                        },
+                        "kind": {
+                          "title": "Kind",
+                          "type": "string"
+                        },
+                        "synced_at": {
+                          "format": "date-time",
+                          "title": "Synced At",
+                          "type": "string"
+                        },
+                        "created": {
+                          "default": false,
+                          "title": "Created",
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "slug",
+                        "tmdb_id",
+                        "kind",
+                        "synced_at"
+                      ],
+                      "title": "LinkOut",
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-permission": "titles:write",
+        "x-error-codes": [
+          "METADATA_LINK_NOT_FOUND",
+          "METADATA_PROVIDER_NOT_CONFIGURED",
+          "METADATA_PROVIDER_UNAVAILABLE"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tmdb/search": {
+      "get": {
+        "operationId": "tmdb_search",
+        "summary": "Search TMDB (in the admin's language)",
+        "tags": [
+          "tmdb"
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 1,
+              "title": "Query",
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "movie",
+              "enum": [
+                "movie",
+                "series"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 2100,
+                  "minimum": 1888,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Year"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/HitOut"
+                      },
+                      "type": "array"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-permission": "titles:write",
+        "x-error-codes": [
+          "METADATA_PROVIDER_NOT_CONFIGURED",
+          "METADATA_PROVIDER_UNAVAILABLE"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tmdb/status": {
+      "get": {
+        "operationId": "tmdb_status",
+        "summary": "Is the TMDB importer configured? (+ the attribution TMDB requires)",
+        "tags": [
+          "tmdb"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StatusOut"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-permission": "titles:write",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -13384,6 +13910,70 @@
         "title": "HistoryOut",
         "type": "object"
       },
+      "HitOut": {
+        "properties": {
+          "tmdb_id": {
+            "title": "Tmdb Id",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "original_name": {
+            "title": "Original Name",
+            "type": "string"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "overview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overview"
+          },
+          "poster_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poster Url"
+          }
+        },
+        "required": [
+          "tmdb_id",
+          "kind",
+          "name",
+          "original_name",
+          "year",
+          "overview",
+          "poster_url"
+        ],
+        "title": "HitOut",
+        "type": "object"
+      },
       "IngestKeyOut": {
         "properties": {
           "channel_id": {
@@ -13487,6 +14077,40 @@
           "active_streams"
         ],
         "title": "LimitsResponse",
+        "type": "object"
+      },
+      "LinkOut": {
+        "properties": {
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "tmdb_id": {
+            "title": "Tmdb Id",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "synced_at": {
+            "format": "date-time",
+            "title": "Synced At",
+            "type": "string"
+          },
+          "created": {
+            "default": false,
+            "title": "Created",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "slug",
+          "tmdb_id",
+          "kind",
+          "synced_at"
+        ],
+        "title": "LinkOut",
         "type": "object"
       },
       "LiveChannelAdminOut": {
@@ -14630,6 +15254,24 @@
           "keys_delivered_24h"
         ],
         "title": "StatsOut",
+        "type": "object"
+      },
+      "StatusOut": {
+        "properties": {
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "attribution": {
+            "default": "This product uses the TMDB API but is not endorsed or certified by TMDB.",
+            "title": "Attribution",
+            "type": "string"
+          }
+        },
+        "required": [
+          "configured"
+        ],
+        "title": "StatusOut",
         "type": "object"
       },
       "StatusResponse": {

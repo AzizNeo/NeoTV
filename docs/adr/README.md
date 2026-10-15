@@ -9,3 +9,4 @@ One file per decision, numbered in the order they were written. A superseded rec
 | [0001](0001-player-track-model-and-post-play.md) | Player: one track model for every engine; time-based post-play | Accepted |
 | [0002](0002-i18n-feature-owned-catalogs.md) | Internationalisation: feature-owned catalogs, account language, codes over sentences | Accepted |
 | [0003](0003-coverage-per-module-ratchet.md) | Coverage measured per module, with floors that only go up | Accepted |
+| [0004](0004-tmdb-as-a-metadata-source.md) | TMDB is a metadata source, never the owner of a title | Accepted |

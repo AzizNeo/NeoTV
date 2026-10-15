@@ -128,6 +128,11 @@ class Settings(BaseSettings):
     smtp_security: Literal["starttls", "ssl", "none"] = "starttls"
     smtp_timeout_s: int = Field(default=15, ge=1, le=120)
 
+    # ── Metadata (tmdb module) ─────────────────────────────────────────────
+    # TMDB "API Read Access Token" (v4, a JWT): themoviedb.org → Settings → API. Optional — without it
+    # the importer answers METADATA_PROVIDER_NOT_CONFIGURED and nothing else changes.
+    tmdb_read_token: SecretStr | None = None
+
     # ── Observability ──────────────────────────────────────────────────────
     otel_endpoint: str | None = None
     metrics_token: SecretStr | None = None

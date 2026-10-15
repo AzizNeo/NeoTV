@@ -1111,5 +1111,70 @@ export const OPERATIONS = Object.freeze({
     "profile": false,
     "idempotent": false,
     "errors": []
+  },
+  "tmdb_link": {
+    "method": "PUT",
+    "path": "/api/v1/tmdb/links/{slug}",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": [
+      "METADATA_PROVIDER_NOT_CONFIGURED",
+      "METADATA_PROVIDER_UNAVAILABLE",
+      "METADATA_NOT_FOUND",
+      "METADATA_KIND_MISMATCH",
+      "TITLE_INVALID",
+      "PLAY_SOURCE_NOT_FOUND",
+      "TITLE_RATING_CONFLICT"
+    ]
+  },
+  "tmdb_links": {
+    "method": "GET",
+    "path": "/api/v1/tmdb/links",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
+  },
+  "tmdb_refresh": {
+    "method": "POST",
+    "path": "/api/v1/tmdb/links/{slug}/refresh",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": [
+      "METADATA_LINK_NOT_FOUND",
+      "METADATA_PROVIDER_NOT_CONFIGURED",
+      "METADATA_PROVIDER_UNAVAILABLE"
+    ]
+  },
+  "tmdb_search": {
+    "method": "GET",
+    "path": "/api/v1/tmdb/search",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": [
+      "METADATA_PROVIDER_NOT_CONFIGURED",
+      "METADATA_PROVIDER_UNAVAILABLE"
+    ]
+  },
+  "tmdb_status": {
+    "method": "GET",
+    "path": "/api/v1/tmdb/status",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
+  },
+  "tmdb_unlink": {
+    "method": "DELETE",
+    "path": "/api/v1/tmdb/links/{slug}",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": [
+      "METADATA_LINK_NOT_FOUND"
+    ]
   }
 });

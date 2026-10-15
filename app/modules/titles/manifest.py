@@ -6,6 +6,7 @@ from app.kernel.capabilities import CapabilityIndex
 from app.kernel.manifest import ModuleManifest, RouteSpec
 from app.kernel.time import Clock
 from app.kernel.uow import UnitOfWorkFactory
+from app.modules.titles.api import TitleCatalogAdmin
 from app.modules.titles.domain import (
     InvalidTitleError,
     PlaySourceNotFoundError,
@@ -31,12 +32,14 @@ def _services(c: Any) -> None:
             c.resolve(UnitOfWorkFactory), c.resolve(Clock), c.resolve(CapabilityIndex).required("playback.content")
         ),
     )
+    c.register(TitleCatalogAdmin, lambda c: c.resolve(TitleAdminService))
 
 
 manifest = ModuleManifest(
     name="titles",
     version="0.1.0",
     description="Storefront metadata over playable content: movies, series → seasons → episodes, genres, artwork.",
+    provides={"titles.admin": TitleCatalogAdmin},
     requires=frozenset({"identity.authentication", "profile.context", "playback.content"}),
     models=("app.modules.titles.models",),
     services=_services,

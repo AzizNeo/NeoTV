@@ -118,12 +118,21 @@ def test_every_api_route_goes_through_endpoint(full_app: Flask) -> None:
     assert not bare, f"routes bypassing @endpoint (no auth/validation/contract): {bare}"
 
 
+#: optional module → the optional modules that need it (switched off together, as an operator would)
+_DEPENDANTS = {"titles": ["tmdb"]}
+
+
 @pytest.mark.parametrize(
-    "module", ["recommendations", "library", "drm", "admin", "billing", "devices", "live", "titles"]
+    "module", ["recommendations", "library", "drm", "admin", "billing", "devices", "live", "titles", "tmdb"]
 )
 def test_optional_modules_can_be_switched_off(module: str) -> None:
-    app = make_app(schema="none", disabled_modules=[module])
+    app = make_app(schema="none", disabled_modules=[module, *_DEPENDANTS.get(module, [])])
     assert module not in app.extensions["modules"]
+
+
+def test_switching_off_a_module_others_need_is_refused_by_name() -> None:
+    with pytest.raises(DisabledDependencyError, match="tmdb"):
+        make_app(schema="none", disabled_modules=["titles"])
 
 
 @pytest.mark.parametrize(
