@@ -5,7 +5,7 @@
  */
 import { lazy } from 'react';
 import { messages } from '../i18n';
-import { Activity, Ban, Film, KeyRound, LayoutDashboard, Radio, Users } from 'lucide-react';
+import { Activity, Ban, Clapperboard, Film, KeyRound, LayoutDashboard, Radio, Users } from 'lucide-react';
 
 export const ADMIN_SECTIONS = Object.freeze([
   { id: 'overview', label: messages.ref('sections.overview'), icon: LayoutDashboard, module: 'admin', component: lazy(() => import('./OverviewSection')) },
@@ -15,6 +15,7 @@ export const ADMIN_SECTIONS = Object.freeze([
   { id: 'catalog', label: messages.ref('sections.catalog'), icon: Film, module: 'catalog', component: lazy(() => import('./CatalogSection')) },
   { id: 'live', label: messages.ref('sections.live'), icon: Radio, module: 'live', component: lazy(() => import('./LiveSection')) },
   { id: 'drm', label: messages.ref('sections.drm'), icon: KeyRound, module: 'drm', component: lazy(() => import('./DrmSection')) },
+  { id: 'tmdb', label: messages.ref('sections.tmdb'), icon: Clapperboard, module: 'tmdb', component: lazy(() => import('./TmdbSection')) },
 ]);
 
 const ids = new Set();

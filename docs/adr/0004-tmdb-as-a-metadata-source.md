@@ -31,7 +31,11 @@ featured and whether it is published are decisions of the operator, not of a thi
 
 - Another provider (OMDb, a studio feed) is another module building the same document.
 - Artwork is hot-linked from TMDB's image CDN, which TMDB permits; the attribution TMDB requires
-  is exposed by `GET /api/v1/tmdb/status` and shown in the UI. A future CSP must allow
-  `image.tmdb.org`.
+  is exposed by `GET /api/v1/tmdb/status` and shown (localised) under Admin → TMDB. The CSP
+  planned in roadmap step 5 must carry `img-src https://image.tmdb.org` — the storefront's
+  posters and the admin's search results both load from it.
+- Admin → TMDB is the only UI: search (in the admin's language), import into a new or an
+  existing slug (the dialog says which editorial fields stay untouched), refresh, unlink. The tab
+  appears only when the `tmdb` module is enabled.
 - Ratings are not imported: certification systems differ per country and the kids rule must stay
   an editorial decision.
