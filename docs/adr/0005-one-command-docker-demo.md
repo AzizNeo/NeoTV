@@ -38,6 +38,8 @@ secrets, SMTP, a payment provider and DRM keys, and it publishes RTMP.
 - Fixed in passing: the production worker healthcheck pinged `celery@$HOSTNAME` in exec form —
   the variable never expanded and the node names are `default@`/`playlist@`/`transcode@`, so
   workers would always have been reported unhealthy. It now uses shell form and the real names.
+- Every long-running demo service has a real healthcheck (`up --wait` treats a disabled one as a
+  failure); beat's is "schedule file written in the last 5 minutes".
 - The image gains `/var/lib/neotv/state` (writable by the app user) for small single-host state.
 - The Postgres password inside the demo network is a fixed `neotv-demo`: Postgres has no
   published port, so it is reachable only from the demo's own containers.

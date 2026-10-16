@@ -108,7 +108,14 @@ services:
     <<: *backend
     command: ["python", "-m", "tools.demo_env", "exec", "--", "celery", "-A", "app.wsgi:celery", "beat",
               "--loglevel", "INFO", "--schedule", "/var/lib/neotv/state/celerybeat-schedule"]
-    healthcheck: { disable: true }
+    # Alive = the schedule file was written recently (beat syncs it every 3 minutes, and at start).
+    # `--wait` needs a real check here: a disabled healthcheck counts as a failure for it.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import glob,os,sys,time; f=glob.glob('/var/lib/neotv/state/celerybeat-schedule*'); sys.exit(0 if f and time.time()-max(map(os.path.getmtime,f)) < 300 else 1)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
     restart: unless-stopped
 
   web:
