@@ -172,7 +172,15 @@ jobs:
           python3 tools/demo_smoke.py http://localhost:8080
       - name: Logs on failure
         if: failure()
-        run: docker compose -f compose.demo.yml logs --tail 200
+        run: |
+          docker compose -f compose.demo.yml ps -a
+          docker compose -f compose.demo.yml logs --tail 200
+          # The failing services' last lines as annotations: visible on the run page without logs.
+          for svc in $(docker compose -f compose.demo.yml ps -a --format '{{.Service}} {{.State}} {{.Health}} {{.ExitCode}}' \
+                       | awk '($2 != "running" && $4 != "0") || $3 == "unhealthy" || $3 == "starting" {print $1}'); do
+            msg=$(docker compose -f compose.demo.yml logs --no-log-prefix --tail 25 "$svc" 2>&1 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
+            echo "::error title=demo service $svc::$msg"
+          done
 
   # Publishes the coverage badges (shields.io endpoint JSON) to the `badges` branch on every push
   # to main. The branch holds nothing else, so badge updates never touch the code history.
