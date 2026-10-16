@@ -175,10 +175,16 @@ jobs:
       - run: npm run build
         working-directory: frontend
       - name: Browser tests
-        run: npm run e2e
         working-directory: frontend
         env:
           E2E_PYTHON: python
+        run: |
+          set -o pipefail
+          npm run e2e 2>&1 | tee "$RUNNER_TEMP/e2e.log" || {
+            # Failures before the first test (a server that did not start) have no test annotation.
+            echo "::error title=e2e output::$(grep -vE '^\s+at |dbus|^\s*$' "$RUNNER_TEMP/e2e.log" | tail -40 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')"
+            exit 1
+          }
       - name: Report and traces on failure
         if: failure()
         uses: actions/upload-artifact@v4
