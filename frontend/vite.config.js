@@ -45,6 +45,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    include: ['src/**/*.test.{js,jsx}'], // e2e/*.spec.js belong to Playwright (npm run e2e)
     setupFiles: ['./src/test/setup.js'],
     css: { modules: { classNameStrategy: 'non-scoped' } },
     // `npm run coverage` (CI). Floors are a ratchet: raise them as tests grow, never lower them.

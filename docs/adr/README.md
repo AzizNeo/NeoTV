@@ -12,3 +12,4 @@ One file per decision, numbered in the order they were written. A superseded rec
 | [0004](0004-tmdb-as-a-metadata-source.md) | TMDB is a metadata source, never the owner of a title | Accepted |
 | [0005](0005-one-command-docker-demo.md) | A one-command Docker demo with generated secrets, separate from production | Accepted |
 | [0006](0006-security-headers-csp-hsts.md) | Security headers: one CSP source for nginx and the browser tests; HSTS only over HTTPS | Accepted |
+| [0007](0007-browser-tests-under-production-csp.md) | Browser tests run the production build under the production CSP and fail on any violation | Accepted |

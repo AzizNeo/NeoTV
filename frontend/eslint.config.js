@@ -17,7 +17,7 @@ const featureInternals = {
 };
 
 export default defineConfig([
-  globalIgnores(['dist', 'coverage', 'src/core/api/contract.generated.js']),
+  globalIgnores(['dist', 'coverage', 'test-results', 'playwright-report', 'src/core/api/contract.generated.js']),
   {
     files: ['**/*.{js,jsx,mjs}'],
     extends: [js.configs.recommended, reactHooks.configs.flat.recommended, reactRefresh.configs.vite],
@@ -55,6 +55,11 @@ export default defineConfig([
     rules: {
       'no-restricted-imports': ['error', { patterns: [{ group: ['@/features/*', '@/app/*', '@/core/*'], message: 'shared is presentational only' }] }],
     },
+  },
+  {
+    // Playwright: `use` in fixtures is Playwright's, not React's; no components here.
+    files: ['e2e/**/*.js', 'playwright.config.js'],
+    rules: { 'react-hooks/rules-of-hooks': 'off', 'react-refresh/only-export-components': 'off' },
   },
   {
     files: ['**/*.test.{js,jsx}', 'src/test/**'],

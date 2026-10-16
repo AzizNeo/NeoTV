@@ -201,11 +201,19 @@ TEST_DATABASE_URL=postgresql://… TEST_REDIS_URL=redis://… pytest tests/integ
 pytest --cov --cov-report=json && python -m tools.coverage_report coverage.json   # coverage per module vs. floors
 ruff check . && ruff format --check . && mypy && lint-imports
 (cd frontend && npm run lint && npm run coverage && npm run build)
+(cd frontend && npx playwright install chromium && npm run e2e)   # browser tests (E2E_OFFLINE=1: no internet)
 python -m tools.smoke_boot                                   # fresh install → API → login → password reset by e-mail
 ```
 
 CI runs all of the above on every push — backend on PostgreSQL + Redis, the smoke test on Windows (Python 3.12
-and 3.14) and Linux — plus a pinned, checksum-verified secret scan and Docker image builds.
+and 3.14) and Linux — plus a pinned, checksum-verified secret scan, Docker image builds, the one-command demo started and
+smoke-tested end to end, and the Playwright browser suite.
+
+**Browser tests run the production build under the production CSP** (`vite preview` serves the same header file
+as nginx) against a fresh, seeded backend. Besides its own assertions, every test fails on any CSP violation or
+uncaught page error, so a feature that only works with a loosened policy cannot land. They cover sign-in/out,
+browse, the title page, live TV, switching language, the admin panel, real HLS playback, and that a proxied
+stream's origin URL never reaches the browser.
 
 **Coverage is measured per module**, the unit this codebase is built from. Each backend module has a floor in
 `pyproject.toml` (`[tool.neotv.coverage]`); dropping below it fails CI *by module name*, a new module without a
@@ -213,7 +221,7 @@ floor is refused, and a module that stays well above its floor is flagged so the
 never lowered to make a build pass. The per-module tables land on each CI run's summary page and the HTML reports
 are kept as artifacts. Today: backend ≈ 83% (statements + branches, lowest: `live` — ffmpeg process supervision —
 and `catalog` — remote playlist fetching), frontend ≈ 25% (unit tests cover logic — player, i18n, routing
-contracts; user flows get end-to-end tests next).
+contracts; user flows are covered by the browser tests).
 
 ## Project layout
 
