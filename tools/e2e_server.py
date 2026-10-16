@@ -39,8 +39,6 @@ def environment() -> dict[str, str]:
             # The browser reaches the API through `vite preview` (same origin), as behind nginx.
             "ALLOWED_ORIGINS": "http://127.0.0.1:4173,http://localhost:4173",
             "FRONTEND_BASE_URL": "http://127.0.0.1:4173",
-            # Several tests start playback; a fresh session each time is the realistic path.
-            "DEFAULT_MAX_STREAMS": env.get("DEFAULT_MAX_STREAMS", "3"),
             "NEOTV_ADMIN_PASSWORD": PASSWORD,
             "TMDB_READ_TOKEN": "",
             "HOST": "127.0.0.1",
