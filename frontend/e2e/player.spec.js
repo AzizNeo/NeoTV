@@ -1,23 +1,24 @@
-import { expect, leavePlayer, offline, playerProblem, signIn, test } from './fixtures';
+import { expect, offline, playerProblem, signIn, test } from './fixtures';
 
+// Each test plays as its own fresh account: plans allow one simultaneous stream, and a session left
+// open by one test must never decide whether the next one can play.
 // Hosts of the seeded demo sources: with proxy delivery the browser must never contact them.
 const ORIGINS = ['test-streams.mux.dev', 'cloudfront.net', 'unified-streaming.com', 'devstreaming-cdn.apple.com'];
 
-test('proxy delivery: the stream URL of the origin never reaches the browser', async ({ page }) => {
-  await signIn(page);
+test('proxy delivery: the stream URL of the origin never reaches the browser', async ({ page, viewer }) => {
+  await signIn(page, viewer);
   const requests = [];
   page.on('request', (request) => requests.push(request.url()));
   await page.goto('/title/big-buck-bunny');
   await page.locator('main').getByRole('button', { name: 'Oynat' }).click();
   await expect.poll(() => requests.some((url) => url.includes('/api/v1/playback/proxy')), { timeout: 15_000 }).toBe(true);
   expect(requests.filter((url) => ORIGINS.some((host) => url.includes(host)))).toEqual([]);
-  await leavePlayer(page);
 });
 
-test('a video actually plays (hls.js in its blob worker, under the CSP)', async ({ page }) => {
+test('a video actually plays (hls.js in its blob worker, under the CSP)', async ({ page, viewer }) => {
   test.skip(offline, 'needs the internet: the demo streams are public test streams');
   test.slow();
-  await signIn(page);
+  await signIn(page, viewer);
   await page.goto('/title/big-buck-bunny');
   await page.locator('main').getByRole('button', { name: 'Oynat' }).click();
   const video = page.locator('video');
@@ -29,5 +30,4 @@ test('a video actually plays (hls.js in its blob worker, under the CSP)', async 
   await expect.poll(readyOrProblem, { timeout: 30_000, message: 'video ready (HAVE_FUTURE_DATA) — a text is the error card' }).toBeGreaterThanOrEqual(3);
   const start = await video.evaluate((v) => v.currentTime);
   await expect.poll(() => video.evaluate((v) => v.currentTime), { timeout: 15_000 }).toBeGreaterThan(start + 1);
-  await leavePlayer(page);
 });

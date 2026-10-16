@@ -15,7 +15,10 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
   workers: 1, // one shared backend; tests sign in independently but share its data
+  // A retry gives a useful second trace, but a test that only passes on retry still fails CI:
+  // flakiness is a bug to fix, not noise to hide.
   retries: CI ? 1 : 0,
+  failOnFlakyTests: CI,
   forbidOnly: CI,
   timeout: 45_000,
   expect: { timeout: 10_000 },

@@ -3,13 +3,26 @@
  *  - no Content-Security-Policy violation happened (the production policy is served by preview);
  *  - no uncaught exception was thrown in the page.
  * A feature that works but needs the policy loosened — or throws in the background — fails here.
+ *
+ * Isolation: a test that changes per-account state (stream slots, language preference, sign-out)
+ * uses `viewer` — a fresh account registered through the public API for that test alone. Only
+ * read-only admin checks share the seeded `ADMIN`. No test waits for another one to clean up.
  */
+import { randomBytes } from 'node:crypto';
 import { test as base, expect } from '@playwright/test';
 
 export const ADMIN = { username: 'e2e-admin', password: process.env.E2E_ADMIN_PASSWORD ?? 'Playwright-Only-Secret-2026!' };
 export const offline = Boolean(process.env.E2E_OFFLINE);
 
 export const test = base.extend({
+  /** A fresh account of this test only (registered like a real visitor; nothing shared). */
+  viewer: async ({ request }, use, testInfo) => {
+    const username = `e2e-${testInfo.testId.slice(0, 8)}-${randomBytes(3).toString('hex')}`;
+    const password = `Pw-${randomBytes(9).toString('base64url')}-7q!`;
+    const response = await request.post('/api/v1/auth/register', { data: { username, password } });
+    expect(response.status(), `register ${username}: ${await response.text()}`).toBe(201);
+    await use({ username, password });
+  },
   /** Opt-out for tests that provoke a violation on purpose (they assert on `cspViolations`). */
   allowCspViolations: [false, { option: true }],
   cspViolations: async ({}, use) => use([]), // eslint-disable-line no-empty-pattern -- Playwright's fixture signature
@@ -42,21 +55,6 @@ export async function signIn(page, { username = ADMIN.username, password = ADMIN
     await page.locator('main button').first().click();
     await page.waitForURL((url) => !url.pathname.startsWith('/profiles'));
   }
-}
-
-/**
- * Leaves the player the way a viewer does (navigating away unmounts it, which releases the
- * session with sendBeacon) and waits until the server agrees: the admin "Sessions" page shows no
- * open stream. Plans allow a limited number of simultaneous streams, so a test that leaves a
- * session open would make the next playback test hit STREAM_LIMIT_EXCEEDED. (Beacons are not
- * reliably visible to Playwright, so we check the server's state, not the request.)
- */
-export async function leavePlayer(page) {
-  await page.goto('/admin/sessions');
-  await expect(async () => {
-    await page.reload();
-    await expect(page.getByText('Açık yayın oturumu yok')).toBeVisible({ timeout: 2_000 });
-  }).toPass({ timeout: 20_000 });
 }
 
 /** The player's error card (instead of a video): its message, or null while there is none. */

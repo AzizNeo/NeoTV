@@ -31,5 +31,11 @@ enforces. A CSP that nobody tests either breaks production or gets loosened "tem
   catalog/…`). Links are now absolute from one constant (`features/admin/paths.js`).
 - CI time grows by a few minutes (browser download + build); failures upload the HTML report and
   traces, and the `github` reporter annotates them on the run page.
-- One worker: tests share one backend. They sign in independently and only read shared data,
-  so order does not matter; a future test that mutates shared data must create its own.
+- **Isolation over cleanup.** A test that changes per-account state (stream slots, the saved
+  language, sign-out) gets `viewer`: a fresh account registered through the public API for that
+  test alone. The first version shared one admin; a session left open by one playback test made
+  the next hit the plan's one-stream limit whenever the release beacon was late — flaky in CI,
+  green on retry. Waiting for cleanup treated the symptom; giving each test its own state
+  removed the dependency. Read-only admin checks still share the seeded admin.
+- **Flaky is failing.** CI retries once (for a second trace) but `failOnFlakyTests` turns a
+  pass-on-retry into a failure, so flakiness cannot hide behind a green build.

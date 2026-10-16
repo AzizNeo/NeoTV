@@ -1,6 +1,7 @@
 import { expect, signIn, test } from './fixtures';
 
-test.beforeEach(async ({ page }) => signIn(page));
+// A fresh account per test: the language test changes the account's saved preference.
+test.beforeEach(async ({ page, viewer }) => signIn(page, viewer));
 
 test('home shows the seeded titles', async ({ page }) => {
   await expect(page.getByText('Sintel').first()).toBeVisible();
