@@ -45,14 +45,18 @@ export async function signIn(page, { username = ADMIN.username, password = ADMIN
 }
 
 /**
- * Leaves the player the way a viewer does (navigating away unmounts it) and waits until the
- * session is released — plans allow a limited number of simultaneous streams, so a test that
- * leaves a session open would make the next playback test hit STREAM_LIMIT_EXCEEDED.
+ * Leaves the player the way a viewer does (navigating away unmounts it, which releases the
+ * session with sendBeacon) and waits until the server agrees: the admin "Sessions" page shows no
+ * open stream. Plans allow a limited number of simultaneous streams, so a test that leaves a
+ * session open would make the next playback test hit STREAM_LIMIT_EXCEEDED. (Beacons are not
+ * reliably visible to Playwright, so we check the server's state, not the request.)
  */
 export async function leavePlayer(page) {
-  const released = page.waitForRequest((request) => request.url().includes('/api/v1/playback/sessions/release'), { timeout: 10_000 });
-  await page.goto('/');
-  await released;
+  await page.goto('/admin/sessions');
+  await expect(async () => {
+    await page.reload();
+    await expect(page.getByText('Açık yayın oturumu yok')).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
 }
 
 /** The player's error card (instead of a video): its message, or null while there is none. */
