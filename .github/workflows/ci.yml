@@ -147,6 +147,33 @@ jobs:
       - run: docker build -t neotv/backend:ci .
       - run: docker build -f deploy/nginx/Dockerfile -t neotv/web:ci .
 
+  # The one-command demo, end to end: build, start, sign in with the generated admin, check content.
+  demo:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start the demo (as a user would)
+        run: docker compose -f compose.demo.yml up --build --wait --wait-timeout 900
+      - name: Sign-in box is printed
+        run: docker compose -f compose.demo.yml logs --no-log-prefix setup | tee /dev/stderr | grep -q "NeoTV demo is ready"
+      - name: Smoke test through nginx
+        run: |
+          export DEMO_PASSWORD="$(docker compose -f compose.demo.yml exec -T api python -c "from tools.demo_env import read; print(read()['NEOTV_ADMIN_PASSWORD'])")"
+          echo "::add-mask::$DEMO_PASSWORD"
+          python3 tools/demo_smoke.py http://localhost:8080
+      - name: Restart keeps data and secrets (idempotent setup)
+        run: |
+          docker compose -f compose.demo.yml down
+          docker compose -f compose.demo.yml up --wait --wait-timeout 300
+          docker compose -f compose.demo.yml logs --no-log-prefix setup | grep -q "already exists - skipped"
+          export DEMO_PASSWORD="$(docker compose -f compose.demo.yml exec -T api python -c "from tools.demo_env import read; print(read()['NEOTV_ADMIN_PASSWORD'])")"
+          echo "::add-mask::$DEMO_PASSWORD"
+          python3 tools/demo_smoke.py http://localhost:8080
+      - name: Logs on failure
+        if: failure()
+        run: docker compose -f compose.demo.yml logs --tail 200
+
   # Publishes the coverage badges (shields.io endpoint JSON) to the `badges` branch on every push
   # to main. The branch holds nothing else, so badge updates never touch the code history.
   badges:

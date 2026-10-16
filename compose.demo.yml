@@ -1,0 +1,128 @@
+# One-command local demo — nothing to configure, no .env needed:
+#
+#   docker compose -f compose.demo.yml up --build --wait     (Windows: double-click Demo.bat)
+#   docker compose -f compose.demo.yml logs --no-log-prefix setup   # show the sign-in again
+#   docker compose -f compose.demo.yml down                  # stop (data kept)
+#   docker compose -f compose.demo.yml down -v               # stop and wipe everything
+#
+# Then open http://localhost:8080. Content is legal test material (Blender open movies, public
+# test streams); payments are fake and e-mails are not sent. Secrets (SECRET_KEY, the admin
+# password) are generated on first start into the demo's own volume — never in this file or git.
+# Optional: TMDB_READ_TOKEN in .env next to this file imports TMDB artwork/synopses on setup.
+#
+# This is NOT the production stack (docker-compose.yml): it runs ENV=staging over plain HTTP,
+# listens on 127.0.0.1 only, and leaves out RTMP ingest / live transcoding.
+name: neotv-demo
+
+x-backend: &backend
+  build: .
+  image: neotv/backend:demo
+  environment: &env
+    ENV: staging
+    LOG_JSON: "false"
+    DATABASE_URL: postgresql://neotv:neotv-demo@postgres:5432/neotv  # postgres has no published port
+    REDIS_URL: redis://redis:6379/1
+    CELERY_BROKER_URL: redis://redis:6379/0
+    CELERY_RESULT_BACKEND: redis://redis:6379/2
+    TRUSTED_PROXY_COUNT: "1"
+    COOKIE_SECURE: "false"  # plain http://localhost
+    FRONTEND_BASE_URL: http://localhost:${DEMO_PORT:-8080}
+    ALLOWED_ORIGINS: http://localhost:${DEMO_PORT:-8080},http://127.0.0.1:${DEMO_PORT:-8080}
+    MAIL_DIR: /var/lib/neotv/state/mail
+    DEMO_ADMIN_USERNAME: ${DEMO_ADMIN_USERNAME:-demo}
+    TMDB_READ_TOKEN: ${TMDB_READ_TOKEN:-}
+  volumes: [state:/var/lib/neotv/state]
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+    secrets: { condition: service_completed_successfully }
+    migrate: { condition: service_completed_successfully }
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment: { POSTGRES_DB: neotv, POSTGRES_USER: neotv, POSTGRES_PASSWORD: neotv-demo }
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neotv -d neotv"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # One-shot: generates the demo's secrets once (kept across restarts).
+  secrets:
+    <<: *backend
+    command: ["python", "-m", "tools.demo_env", "init"]
+    depends_on: {}
+    healthcheck: { disable: true }
+    restart: "no"
+
+  migrate:
+    <<: *backend
+    command: ["python", "-m", "tools.demo_env", "exec", "--", "flask", "--app", "app.wsgi", "db", "upgrade"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      secrets: { condition: service_completed_successfully }
+    healthcheck: { disable: true }
+    restart: "no"
+
+  # One-shot: admin account + demo content (idempotent), then prints the sign-in box.
+  setup:
+    <<: *backend
+    command: ["python", "-m", "tools.demo_env", "exec", "--", "python", "-m", "tools.demo_env", "setup"]
+    healthcheck: { disable: true }
+    restart: "no"
+
+  api:
+    <<: *backend
+    command: ["python", "-m", "tools.demo_env", "exec", "--",
+              "gunicorn", "app.wsgi:app", "--worker-class", "gthread", "--workers", "2", "--threads", "8",
+              "--bind", "0.0.0.0:8000", "--forwarded-allow-ips", "*", "--access-logfile", "-"]
+    restart: unless-stopped
+
+  worker:
+    <<: *backend
+    command: ["python", "-m", "tools.demo_env", "exec", "--",
+              "celery", "-A", "app.wsgi:celery", "worker", "-Q", "default,outbox,playlist,epg", "-P", "threads",
+              "-c", "8", "--loglevel", "INFO", "--without-gossip", "--without-mingle", "-n", "demo@%h"]
+    healthcheck:
+      # Shell form: $HOSTNAME must expand (exec form would pass the literal text to celery).
+      test: ["CMD-SHELL", "python -m tools.demo_env exec -- celery -A app.wsgi:celery inspect ping -d demo@$$HOSTNAME --timeout 5"]
+      interval: 30s
+      timeout: 15s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+
+  beat:
+    <<: *backend
+    command: ["python", "-m", "tools.demo_env", "exec", "--", "celery", "-A", "app.wsgi:celery", "beat",
+              "--loglevel", "INFO", "--schedule", "/var/lib/neotv/state/celerybeat-schedule"]
+    healthcheck: { disable: true }
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/nginx/Dockerfile
+    image: neotv/web:demo
+    ports: ["127.0.0.1:${DEMO_PORT:-8080}:80"]  # this machine only
+    depends_on:
+      api: { condition: service_healthy }
+      setup: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  state:

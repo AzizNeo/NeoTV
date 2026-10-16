@@ -31,7 +31,8 @@ COPY --chown=neotv:neotv app ./app
 COPY --chown=neotv:neotv migrations ./migrations
 COPY --chown=neotv:neotv tools ./tools
 COPY --chown=neotv:neotv run.py celery_worker.py ./
-RUN mkdir -p /var/lib/neotv/hls instance && chown -R neotv:neotv /var/lib/neotv instance
+# state/: small writable data of single-host setups (the demo's generated secrets, console mail).
+RUN mkdir -p /var/lib/neotv/hls /var/lib/neotv/state instance && chown -R neotv:neotv /var/lib/neotv instance
 USER neotv
 EXPOSE 8000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \

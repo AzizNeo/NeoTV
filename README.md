@@ -155,6 +155,24 @@ More detail (in Turkish): [architecture audit](docs/MIMARI_DENETIM_RAPORU.md) ·
 
 ## Getting started
 
+### Try it in one command (Docker)
+
+Only [Docker](https://www.docker.com/products/docker-desktop/) is needed — no Python, Node or `.env`:
+
+```bash
+docker compose -f compose.demo.yml up --build --wait     # Windows: double-click Demo.bat
+docker compose -f compose.demo.yml logs --no-log-prefix setup   # the sign-in box
+```
+
+Open <http://localhost:8080> and sign in as `demo` with the password from the box. The admin
+password and `SECRET_KEY` are generated on first start and kept in the demo's own volume (never
+in the repo); `docker compose -f compose.demo.yml down -v` wipes everything. With
+`TMDB_READ_TOKEN` in a `.env` next to the file, setup also imports TMDB artwork and synopses.
+The demo listens on `127.0.0.1` only and is not the production stack (`docker-compose.yml`) —
+see [ADR-0005](docs/adr/0005-one-command-docker-demo.md).
+
+### Develop locally
+
 Requirements: Python 3.12+ and Node.js 20+. Redis and PostgreSQL are **not** needed for local development
 (SQLite, an in-process Redis and eager Celery are used).
 

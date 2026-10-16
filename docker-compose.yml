@@ -28,7 +28,9 @@ x-backend: &backend
 x-worker: &worker
   <<: *backend
   healthcheck:
-    test: ["CMD", "celery", "-A", "app.wsgi:celery", "inspect", "ping", "-d", "celery@$$HOSTNAME", "--timeout", "5"]
+    # Shell form so $HOSTNAME expands; the node names match each worker's `-n …@%h` (only this
+    # container's own node can answer, so the check is per container).
+    test: ["CMD-SHELL", "celery -A app.wsgi:celery inspect ping --timeout 5 -d default@$$HOSTNAME,playlist@$$HOSTNAME,transcode@$$HOSTNAME"]
     interval: 30s
     timeout: 10s
     retries: 3
