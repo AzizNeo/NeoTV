@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
+import { readSecurityHeaders } from './scripts/security-headers.mjs';
 
 const API_TARGET = process.env.VITE_DEV_API_TARGET ?? 'http://127.0.0.1:5000';
 
@@ -16,8 +17,18 @@ export default defineConfig({
       '/api': { target: API_TARGET, changeOrigin: false, secure: false },
     },
   },
+  // `npm run preview` = the production build under the production headers (CSP included). The dev
+  // server stays without CSP: Vite's hot reload injects inline scripts the policy rightly forbids.
+  preview: {
+    headers: readSecurityHeaders(),
+    proxy: {
+      '/api': { target: API_TARGET, changeOrigin: false, secure: false },
+    },
+  },
   build: {
     sourcemap: true,
+    // Fonts stay files: inlined as data: URIs they would need `font-src data:` in the CSP.
+    assetsInlineLimit: (file) => (/\.(woff2?|ttf|otf)$/i.test(file) ? false : undefined),
     // The only chunks above Vite's 500 kB default are the player engines (hls.js,
     // and shaka which is lazy-loaded for EME DRM only). App code stays far below.
     chunkSizeWarningLimit: 800,

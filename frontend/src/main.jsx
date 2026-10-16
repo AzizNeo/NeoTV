@@ -1,3 +1,4 @@
+import '@/core/config/zodSetup'; // first: before any schema parses (CSP: no eval)
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@/shared/styles/global.css';

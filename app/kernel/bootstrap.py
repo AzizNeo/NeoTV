@@ -117,7 +117,10 @@ def install_kernel(app: Flask, container: Container, settings: Settings) -> None
     configure_logging(level=settings.log_level, json_output=settings.json_logs)
     install_tracing(endpoint=settings.otel_endpoint)
     request_context.install(
-        app, allowed_origins=list(settings.allowed_origins), trusted_proxy_count=settings.trusted_proxy_count
+        app,
+        allowed_origins=list(settings.allowed_origins),
+        trusted_proxy_count=settings.trusted_proxy_count,
+        hsts_max_age_s=settings.hsts_max_age_s,
     )
     error_map = container.resolve(ErrorMap)
     register_kernel_error_mappings(error_map)

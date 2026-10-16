@@ -88,6 +88,9 @@ class Settings(BaseSettings):
     profile_token_ttl_s: int = Field(default=12 * 3600, ge=300)
     playback_grant_ttl_s: int = Field(default=6 * 3600, ge=60)
     cookie_secure: bool | None = None  # None → secure everywhere except dev/test
+    # Strict-Transport-Security on HTTPS responses (1 year). 0 disables it. No `preload`: joining the
+    # browsers' preload list is a separate, hard-to-undo decision for the operator.
+    hsts_max_age_s: int = Field(default=365 * 24 * 3600, ge=0)
     profile_context_mode: Literal["strict", "default_profile"] = "default_profile"
 
     # ── Modules ────────────────────────────────────────────────────────────
