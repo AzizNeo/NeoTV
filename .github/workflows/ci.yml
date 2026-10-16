@@ -154,9 +154,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Start the demo (as a user would)
-        run: docker compose -f compose.demo.yml up --build --wait --wait-timeout 900
+        run: |
+          docker compose version
+          set -o pipefail
+          docker compose -f compose.demo.yml up --build --wait --wait-timeout 900 2>&1 | tee "$RUNNER_TEMP/up.log"
       - name: Sign-in box is printed
-        run: docker compose -f compose.demo.yml logs --no-log-prefix setup | tee /dev/stderr | grep -q "NeoTV demo is ready"
+        run: docker compose -f compose.demo.yml logs --no-log-prefix setup | grep -q "NeoTV demo is ready"
       - name: Smoke test through nginx
         run: |
           export DEMO_PASSWORD="$(docker compose -f compose.demo.yml exec -T api python -c "from tools.demo_env import read; print(read()['NEOTV_ADMIN_PASSWORD'])")"
@@ -175,11 +178,13 @@ jobs:
         run: |
           docker compose -f compose.demo.yml ps -a
           docker compose -f compose.demo.yml logs --tail 200
-          # The failing services' last lines as annotations: visible on the run page without logs.
-          for svc in $(docker compose -f compose.demo.yml ps -a --format '{{.Service}} {{.State}} {{.Health}} {{.ExitCode}}' \
-                       | awk '($2 != "running" && $4 != "0") || $3 == "unhealthy" || $3 == "starting" {print $1}'); do
-            msg=$(docker compose -f compose.demo.yml logs --no-log-prefix --tail 25 "$svc" 2>&1 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
-            echo "::error title=demo service $svc::$msg"
+          # Last lines as annotations (visible without downloading logs); passwords never printed.
+          note() { sed '/Password/d' | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g'; }
+          echo "::error title=compose up::$(grep -v '^#' "$RUNNER_TEMP/up.log" 2>/dev/null | grep -vE 'Built|Pull|Download|Extract|Waiting|Verifying|exporting|naming|writing' | tail -30 | note)"
+          echo "::error title=compose ps::$(docker compose -f compose.demo.yml ps -a --format '{{.Service}}|{{.State}}|{{.Health}}|{{.ExitCode}}' | note)"
+          for svc in $(docker compose -f compose.demo.yml ps -a --format '{{.Service}}|{{.State}}|{{.Health}}|{{.ExitCode}}' \
+                       | awk -F'|' '($2 != "running" && $4 != "0") || $3 == "unhealthy" || $3 == "starting" {print $1}'); do
+            echo "::error title=demo service $svc::$(docker compose -f compose.demo.yml logs --no-log-prefix --tail 25 "$svc" 2>&1 | note)"
           done
 
   # Publishes the coverage badges (shields.io endpoint JSON) to the `badges` branch on every push
