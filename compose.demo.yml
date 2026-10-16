@@ -106,15 +106,14 @@ services:
 
   beat:
     <<: *backend
-    command: ["python", "-m", "tools.demo_env", "exec", "--", "celery", "-A", "app.wsgi:celery", "beat",
-              "--loglevel", "INFO", "--schedule", "/var/lib/neotv/state/celerybeat-schedule"]
-    # Alive = the schedule file was written recently (beat syncs it every 3 minutes, and at start).
+    command: ["python", "-m", "tools.demo_env", "exec", "--", "celery", "-A", "app.wsgi:celery", "beat", "--loglevel", "INFO"]
+    # RedBeat keeps the schedule in Redis and holds a lock it refreshes while alive (90 s TTL).
     # `--wait` needs a real check here: a disabled healthcheck counts as a failure for it.
     healthcheck:
-      test: ["CMD", "python", "-c", "import glob,os,sys,time; f=glob.glob('/var/lib/neotv/state/celerybeat-schedule*'); sys.exit(0 if f and time.time()-max(map(os.path.getmtime,f)) < 300 else 1)"]
+      test: ["CMD", "python", "-c", "import os,sys,redis; sys.exit(0 if redis.Redis.from_url(os.environ['CELERY_BROKER_URL']).ttl('redbeat::lock') > 0 else 1)"]
       interval: 30s
       timeout: 5s
-      start_period: 30s
+      start_period: 20s
       retries: 3
     restart: unless-stopped
 
