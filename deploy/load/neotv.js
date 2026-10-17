@@ -53,6 +53,10 @@ const PROFILES = {
 if (!PROFILES[PROFILE]) throw new Error(`PROFILE must be one of ${Object.keys(PROFILES).join(', ')}`);
 const PEAK = PROFILE === 'smoke' ? 2 : VIEWERS;
 const ACCOUNTS = Number(__ENV.ACCOUNTS || PEAK);
+const ENDPOINTS = [
+  'auth.login', 'titles.rails', 'titles.browse', 'titles.detail', 'catalog.list',
+  'playback.open', 'playback.heartbeat', 'playback.qoe', 'playback.release',
+];
 
 export const options = {
   scenarios: {
@@ -68,8 +72,10 @@ export const options = {
     // A 429 means the pacing is wrong; an unexpected answer means a flow is broken.
     rate_limited: ['count==0'],
     checks: ['rate>0.99'],
+    // Always true: they only make k6 report each endpoint on its own (tools/k6_summary.py).
+    ...Object.fromEntries(ENDPOINTS.map((n) => [`http_req_duration{name:${n}}`, ['max>=0']])),
   },
-  summaryTrendStats: ['avg', 'med', 'p(95)', 'p(99)', 'max'],
+  summaryTrendStats: ['avg', 'med', 'p(95)', 'p(99)', 'max', 'count'],
 };
 
 const rateLimited = new Counter('rate_limited');
@@ -84,6 +90,7 @@ function headers(token, device) {
 
 // Every request goes through here: one name per endpoint (not per URL), the SLO tag, 429 counting.
 function call(method, path, { name, body = null, token, device, expect = [200] } = {}) {
+  if (!ENDPOINTS.includes(name)) throw new Error(`unknown endpoint name "${name}": add it to ENDPOINTS`);
   const res = http.request(method, `${BASE}${path}`, body === null ? null : JSON.stringify(body), {
     headers: headers(token, device),
     tags: { name, slo: 'api' },

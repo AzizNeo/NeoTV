@@ -1,0 +1,73 @@
+# Capacity run (k6 `load` profile) against the Docker demo stack — started by hand.
+#
+# Not on every push: it takes minutes, and a shared runner (4 vCPU, other jobs' neighbours)
+# gives numbers to compare run to run, not production capacity. CI's `demo` job runs the
+# short `smoke` profile on every push as a regression gate.
+name: Load test
+
+on:
+  workflow_dispatch:
+    inputs:
+      viewers:
+        description: "Peak concurrent viewers (each with its own account)"
+        default: "50"
+        required: true
+      watch_s:
+        description: "Seconds each viewer watches before releasing the stream"
+        default: "40"
+        required: true
+
+concurrency:
+  group: load-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      VIEWERS: ${{ inputs.viewers }}
+      WATCH_S: ${{ inputs.watch_s }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate inputs
+        run: |
+          [[ "$VIEWERS" =~ ^[0-9]+$ ]] && (( VIEWERS >= 1 && VIEWERS <= 300 )) || { echo "::error::viewers must be 1-300"; exit 1; }
+          [[ "$WATCH_S" =~ ^[0-9]+$ ]] && (( WATCH_S >= 10 && WATCH_S <= 600 )) || { echo "::error::watch_s must be 10-600"; exit 1; }
+          # All viewers share the runner's IP; playback.release allows 5/s per IP. One release per
+          # viewer session (~watch_s + 10 s) must stay under 4/s, or the test measures its own 429s.
+          (( VIEWERS <= 4 * (WATCH_S + 10) )) || { echo "::error::$VIEWERS viewers need watch_s >= $(( (VIEWERS + 3) / 4 - 10 )) (per-IP release limit)"; exit 1; }
+      - name: Start the demo stack
+        run: docker compose -f compose.demo.yml up --build --wait --wait-timeout 900
+      - name: Install k6 (pinned, checksum verified)
+        env:
+          K6_VERSION: v1.3.0
+          K6_SHA256: 84d26fc1f7bc03e02f2e016b3b1b20c032e05dfe461fca82de4e3a6ebe72ddbd
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/k6.tgz" "https://github.com/grafana/k6/releases/download/$K6_VERSION/k6-$K6_VERSION-linux-amd64.tar.gz"
+          echo "$K6_SHA256  $RUNNER_TEMP/k6.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/k6.tgz" -C "$RUNNER_TEMP" --strip-components 1 "k6-$K6_VERSION-linux-amd64/k6"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: Load test (k6)
+        run: |
+          LOAD_PASSWORD="Load-$(openssl rand -hex 16)-1!"
+          echo "::add-mask::$LOAD_PASSWORD"
+          export LOAD_PASSWORD
+          docker compose -f compose.demo.yml exec -T -e LOAD_PASSWORD api python -m tools.load_seed --count "$VIEWERS"
+          # The export holds the accounts' tokens (setup_data): it stays on the runner, never uploaded.
+          k6 run --quiet --summary-export "$RUNNER_TEMP/k6.json" \
+            -e BASE=http://localhost:8080 -e PROFILE=load -e VIEWERS="$VIEWERS" -e WATCH_S="$WATCH_S" deploy/load/neotv.js
+      - name: Report
+        if: always()
+        run: |
+          test -f "$RUNNER_TEMP/k6.json" || exit 0
+          { python3 tools/k6_summary.py "$RUNNER_TEMP/k6.json"
+            echo; echo "Peak $VIEWERS viewers, $WATCH_S s per view, runner $(nproc) vCPU."
+            echo; echo '```'; docker stats --no-stream --format '{{.Name}}  cpu {{.CPUPerc}}  mem {{.MemUsage}}'; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Logs on failure
+        if: failure()
+        run: docker compose -f compose.demo.yml logs --tail 100 api web
