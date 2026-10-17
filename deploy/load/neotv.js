@@ -1,7 +1,8 @@
 // NeoTV load test (k6): viewers browsing and watching, plus a steady stream of sign-ins.
 //
 //   LOAD_PASSWORD=… python -m tools.load_seed --count 50          # accounts first
-//   k6 run -e BASE=http://localhost:8080 -e LOAD_PASSWORD=… -e PROFILE=smoke deploy/load/neotv.js
+//   k6 run --no-usage-report -e BASE=http://localhost:8080 -e LOAD_PASSWORD=… -e PROFILE=smoke deploy/load/neotv.js
+//   (--no-usage-report: k6 otherwise sends anonymous usage data to Grafana Labs on every run)
 //
 // Pass/fail comes from the production SLOs (deploy/prometheus/generate_rules.py), not from
 // numbers picked for the test: API availability 99.5 %, API latency p99 ≤ 1 s.
@@ -72,8 +73,10 @@ export const options = {
     // A 429 means the pacing is wrong; an unexpected answer means a flow is broken.
     rate_limited: ['count==0'],
     checks: ['rate>0.99'],
-    // Always true: they only make k6 report each endpoint on its own (tools/k6_summary.py).
+    // Always true: they only make k6 report each endpoint's latency and 429s on its own
+    // (tools/k6_summary.py).
     ...Object.fromEntries(ENDPOINTS.map((n) => [`http_req_duration{name:${n}}`, ['max>=0']])),
+    ...Object.fromEntries(ENDPOINTS.map((n) => [`rate_limited{name:${n}}`, ['count>=0']])),
   },
   summaryTrendStats: ['avg', 'med', 'p(95)', 'p(99)', 'max', 'count'],
 };
@@ -134,6 +137,10 @@ export function setup() {
 // One viewer = one account and one device (a reopened stream replaces its own slot).
 export function viewer({ tokens, refs }) {
   const vu = exec.vu.idInTest;
+  // Real viewers do not start in step. A random offset on each VU's first iteration spreads
+  // heartbeats and releases over the heartbeat period instead of clustering them (the 200-viewer
+  // run's 429s on the per-IP release limit).
+  if (exec.vu.iterationInScenario === 0) sleep(Math.random() * HEARTBEAT_S);
   const token = tokens[(vu - 1) % tokens.length];
   const device = `k6-viewer-${vu}`;
   const opts = { token, device };

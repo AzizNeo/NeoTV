@@ -62,7 +62,7 @@ jobs:
           # Containers' CPU and memory sampled every 10 s while the load runs (peaks in the report).
           ( while sleep 10; do docker stats --no-stream --format '{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}'; done ) > "$RUNNER_TEMP/stats.log" &
           # The export holds the accounts' tokens (setup_data): it stays on the runner, never uploaded.
-          k6 run --quiet --summary-export "$RUNNER_TEMP/k6.json" \
+          k6 run --quiet --no-usage-report --summary-export "$RUNNER_TEMP/k6.json" \
             -e BASE=http://localhost:8080 -e PROFILE=load -e VIEWERS="$VIEWERS" -e WATCH_S="$WATCH_S" deploy/load/neotv.js
       - name: Report
         if: always()

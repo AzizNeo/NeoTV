@@ -16,10 +16,17 @@ import sys
 from pathlib import Path
 
 _ENDPOINT = re.compile(r"^http_req_duration\{name:(?P<name>[\w.]+)\}$")
+#: Per-endpoint reporting submetrics (always-true thresholds): not shown as thresholds.
+_REPORTING = {"max>=0", "count>=0"}
 
 
 def _ms(value: float | None) -> str:
     return "–" if value is None else f"{value:,.0f} ms" if value >= 10 else f"{value:.1f} ms"
+
+
+def _rate_limited(metrics: dict[str, dict], endpoint: str) -> str:
+    count = metrics.get(f"rate_limited{{name:{endpoint}}}", {}).get("count", 0)
+    return f"**{count}**" if count else "0"
 
 
 def report(summary: dict) -> str:
@@ -29,7 +36,7 @@ def report(summary: dict) -> str:
     lines += ["| Threshold | Value | Result |", "| --- | --- | --- |"]
     for name, metric in sorted(metrics.items()):
         for expression, crossed in metric.get("thresholds", {}).items():
-            if expression == "max>=0":  # the per-endpoint reporting trick, not a real threshold
+            if expression in _REPORTING:
                 continue
             value = metric.get("value", metric.get("count"))
             if expression.startswith("p("):
@@ -38,11 +45,16 @@ def report(summary: dict) -> str:
                 value = f"{float(value or 0):.2%}"
             lines.append(f"| `{name}` `{expression}` | {value} | {'❌ failed' if crossed else '✅'} |")
 
-    lines += ["", "| Endpoint | Requests | median | p95 | p99 | max |", "| --- | ---: | ---: | ---: | ---: | ---: |"]
+    lines += [
+        "",
+        "| Endpoint | Requests | 429 | median | p95 | p99 | max |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+    ]
     for name, metric in sorted(metrics.items()):
         if match := _ENDPOINT.match(name):
             lines.append(
-                f"| `{match['name']}` | {metric.get('count', 0):,} | {_ms(metric.get('med'))} | "
+                f"| `{match['name']}` | {metric.get('count', 0):,} | {_rate_limited(metrics, match['name'])} | "
+                f"{_ms(metric.get('med'))} | "
                 f"{_ms(metric.get('p(95)'))} | {_ms(metric.get('p(99)'))} | {_ms(metric.get('max'))} |"
             )
 
