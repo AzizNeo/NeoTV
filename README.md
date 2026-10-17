@@ -207,13 +207,20 @@ python -m tools.smoke_boot                                   # fresh install →
 
 CI runs all of the above on every push — backend on PostgreSQL + Redis, the smoke test on Windows (Python 3.12
 and 3.14) and Linux — plus a pinned, checksum-verified secret scan, Docker image builds, the one-command demo started and
-smoke-tested end to end, the Playwright browser suite, and the alerting rules' behaviour tests (`promtool`).
+smoke-tested end to end, the Playwright browser suite, a k6 load smoke against that demo, and the alerting rules' behaviour tests (`promtool`).
 
 **Browser tests run the production build under the production CSP** (`vite preview` serves the same header file
 as nginx) against a fresh, seeded backend. Besides its own assertions, every test fails on any CSP violation or
 uncaught page error, so a feature that only works with a loosened policy cannot land. They cover sign-in/out,
 browse, the title page, live TV, switching language, the admin panel, real HLS playback, and that a proxied
 stream's origin URL never reaches the browser.
+
+**Load tests are judged by the production SLOs** ([`deploy/load/neotv.js`](deploy/load/neotv.js), k6). Virtual
+viewers browse, open a stream, send heartbeats, report QoE and release it, while sign-ins run alongside; the run
+fails if server errors exceed 0.5 %, p99 latency exceeds 1 s, or a single request is rate limited — the limits stay
+on, and a 429 means the test's pacing, not the system, is wrong. CI runs a short smoke on every push through the
+demo stack; the *Load test* workflow (Actions → Run workflow) measures capacity with a chosen number of viewers.
+Accounts come from `python -m tools.load_seed` (never in production). Findings: [ADR-0009](docs/adr/0009-load-testing.md).
 
 **Coverage is measured per module**, the unit this codebase is built from. Each backend module has a floor in
 `pyproject.toml` (`[tool.neotv.coverage]`); dropping below it fails CI *by module name*, a new module without a

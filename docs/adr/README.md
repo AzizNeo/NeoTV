@@ -14,3 +14,4 @@ One file per decision, numbered in the order they were written. A superseded rec
 | [0006](0006-security-headers-csp-hsts.md) | Security headers: one CSP source for nginx and the browser tests; HSTS only over HTTPS | Accepted |
 | [0007](0007-browser-tests-under-production-csp.md) | Browser tests run the production build under the production CSP and fail on any violation | Accepted |
 | [0008](0008-observability.md) | Observability: correct metrics, one trace per request, SLOs and alerts as tested code | Accepted |
+| [0009](0009-load-testing.md) | Load testing: real client pacing, SLO thresholds, limits left on | Accepted |
