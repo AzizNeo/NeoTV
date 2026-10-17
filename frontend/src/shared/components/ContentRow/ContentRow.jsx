@@ -33,18 +33,21 @@ export function ContentRow({ title, subtitle, items, onSelect, actions, variant 
 export function ContentCard({ item, onSelect, actions, variant = 'landscape' }) {
   const text = useSharedText();
   const label = item.reason ? `${item.title} — ${item.reason}` : item.title;
+  // The button's name says everything its picture shows (title, live); the picture's own texts are
+  // hidden from assistive technology so the name never differs from what is visible (WCAG 2.5.3).
+  const name = item.live ? `${text.playItem(item.title)}, ${text.live}` : text.playItem(item.title);
   return (
     <article className={`${styles.card} ${styles[variant]}`}>
-      <button type="button" className={styles.hit} onClick={() => onSelect?.(item)} aria-label={text.playItem(item.title)} title={label}>
+      <button type="button" className={styles.hit} onClick={() => onSelect?.(item)} aria-label={name} title={label}>
         <div className={styles.art}>
           {item.image ? (
             <img src={item.image} alt="" loading="lazy" referrerPolicy="no-referrer" className={styles.img} />
           ) : (
-            <span className={styles.placeholder}>{item.title}</span>
+            <span className={styles.placeholder} aria-hidden="true">{item.title}</span>
           )}
           {item.live && (
-            <span className={styles.liveBadge}>
-              <Radio size={12} aria-hidden="true" /> {text.live}
+            <span className={styles.liveBadge} aria-hidden="true">
+              <Radio size={12} /> {text.live}
             </span>
           )}
           {item.locked && (

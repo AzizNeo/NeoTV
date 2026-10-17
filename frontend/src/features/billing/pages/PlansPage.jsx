@@ -12,7 +12,15 @@ import { billingKeys, date, getPlans, getSubscription, money, perks, statusText 
 import styles from './PlansPage.module.css';
 import { useT } from '../i18n';
 
-const ACCENT = { free: '#999', personal: '#3498db', duo: '#9b59b6', family: 'var(--color-primary)' };
+// Each plan's colour marks its card (top stripe, outline, check marks) — decoration only. Text and
+// controls stay in the theme's colours, which meet WCAG AA in both themes; a plan colour used as
+// text or as a button fill did not. Named --plan-accent: --accent is the theme's own token.
+const PLAN_ACCENT = { free: '#8a94aa', personal: '#3498db', duo: '#9b59b6', family: 'var(--accent)' };
+
+/** The plan's display name ("Personal"), not its id ("personal"); the id if the catalogue lacks it. */
+function planName(plans, id) {
+  return plans?.find((plan) => plan.id === id)?.display_name ?? id;
+}
 
 export default function PlansPage() {
   const t = useT();
@@ -57,7 +65,7 @@ export default function PlansPage() {
       <div className={styles.status}>
         <Crown size={18} aria-hidden="true" />
         <span>
-          {t('plans.currentLine')} <strong>{current.effective_plan}</strong> — {statusText(current.status, t)}
+          {t('plans.currentLine')} <strong>{planName(plans.data, current.effective_plan)}</strong> — {statusText(current.status, t)}
           {until ? ` · ${date(until, t)}` : ''}
         </span>
         {current.trial_available && (
@@ -70,24 +78,33 @@ export default function PlansPage() {
       <div className={styles.grid}>
         {plans.data.map((plan) => {
           const isCurrent = current.plan === plan.id && current.status !== 'expired';
-          const accent = ACCENT[plan.id] ?? '#aaa';
           return (
-            <article key={plan.id} className={`${styles.card} ${isCurrent ? styles.current : ''}`} style={{ '--accent': accent }}>
-              {isCurrent && <span className={styles.badge}><Check size={14} /> {t('plans.current')}</span>}
-              <h2 style={{ color: accent }}>{plan.display_name}</h2>
+            <article
+              key={plan.id}
+              className={`${styles.card} ${isCurrent ? styles.current : ''}`}
+              style={{ '--plan-accent': PLAN_ACCENT[plan.id] ?? 'var(--border-strong)' }}
+            >
+              {isCurrent && <span className={styles.badge}><Check size={14} aria-hidden="true" /> {t('plans.current')}</span>}
+              <h2>{plan.display_name}</h2>
               <div className={styles.price}>
                 {money(plan.price_minor, plan.currency, t)}
                 {plan.price_minor > 0 && <small>{t('perMonth')}</small>}
               </div>
               <ul>
                 {perks(plan.entitlements, t).map((f) => (
-                  <li key={f}><Check size={18} color={accent} aria-hidden="true" /> {f}</li>
+                  <li key={f}><Check size={18} className={styles.check} aria-hidden="true" /> {f}</li>
                 ))}
               </ul>
               {plan.price_minor > 0 && (
-                <button className={styles.choose} disabled={isCurrent || checkout.isPending} onClick={() => checkout.mutate(plan.id)}>
+                <Button
+                  fullWidth
+                  size="lg"
+                  variant={isCurrent ? 'secondary' : 'primary'}
+                  disabled={isCurrent || checkout.isPending}
+                  onClick={() => checkout.mutate(plan.id)}
+                >
                   {isCurrent ? t('plans.active') : t('plans.choose', { plan: plan.display_name })}
-                </button>
+                </Button>
               )}
             </article>
           );

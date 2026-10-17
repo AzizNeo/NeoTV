@@ -85,3 +85,7 @@
   background: color-mix(in srgb, var(--accent) 18%, var(--surface-2));
   border-left: 3px solid var(--color-primary);
 }
+/* The tinted cell lowers the muted text below 4.5:1 in the dark theme; the airing time matters. */
+.airing small {
+  color: var(--color-text-secondary);
+}

@@ -53,9 +53,10 @@ describe('HeroBillboard', () => {
 describe('TitleCard', () => {
   it('links to the detail page and marks unplayable titles', () => {
     ui(<TitleCard card={card('tears', { available: false, kind: 'series', season_count: 2 })} />);
-    const link = screen.getByRole('link', { name: 'TEARS (şu an izlenemiyor)' });
+    // The accessible name is the visible text, name first and the status last (WCAG 2.5.3).
+    const link = screen.getByRole('link', { name: /^TEARS\s*2010 · 2 sezon\s*,\s*Şu an izlenemiyor$/ });
     expect(link).toHaveAttribute('href', '/title/tears');
-    expect(link).toHaveTextContent('2010 · 2 sezon');
+    expect(link).not.toHaveAttribute('aria-label');
   });
 });
 

@@ -39,3 +39,5 @@ enforces. A CSP that nobody tests either breaks production or gets loosened "tem
   removed the dependency. Read-only admin checks still share the seeded admin.
 - **Flaky is failing.** CI retries once (for a second trace) but `failOnFlakyTests` turns a
   pass-on-retry into a failure, so flakiness cannot hide behind a green build.
+- Accessibility (2026-10): `e2e/accessibility.spec.js` runs axe (WCAG 2.2 AA) on every page in the light
+  and the dark theme; any violation fails CI. Contrast differs per theme, so both are checked.

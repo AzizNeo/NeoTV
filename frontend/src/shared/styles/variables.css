@@ -76,7 +76,7 @@
   --border-strong: #42507a;
   --text-1: #e9edf5;
   --text-2: #b0b9cc;
-  --text-3: #8a94aa;
+  --text-3: #98a2b7; /* ≥ 4.5:1 on --surface-1/2/3 (WCAG AA, small text) */
   --accent: #ffb547; /* the on-air lamp: fills, focus, active nav */
   --accent-hover: #ffc56e;
   --accent-ink: #ffc56e; /* accent used as text on surfaces */
@@ -100,7 +100,7 @@
   --border-strong: #b4bdd0;
   --text-1: #141a26;
   --text-2: #444e66;
-  --text-3: #5f6a83;
+  --text-3: #576179; /* ≥ 4.5:1 on --surface-1/2/3 (WCAG AA, small text) */
   --accent: #f2a12e;
   --accent-hover: #e8921a;
   --accent-ink: #9a5800; /* AA on white */

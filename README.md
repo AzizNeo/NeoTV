@@ -211,7 +211,8 @@ smoke-tested end to end, the Playwright browser suite, a k6 load smoke against t
 
 **Browser tests run the production build under the production CSP** (`vite preview` serves the same header file
 as nginx) against a fresh, seeded backend. Besides its own assertions, every test fails on any CSP violation or
-uncaught page error, so a feature that only works with a loosened policy cannot land. They cover sign-in/out,
+uncaught page error, so a feature that only works with a loosened policy cannot land, and every page is checked with axe
+against WCAG 2.2 AA in both the light and the dark theme. They cover sign-in/out,
 browse, the title page, live TV, switching language, the admin panel, real HLS playback, and that a proxied
 stream's origin URL never reaches the browser.
 

@@ -41,8 +41,9 @@
   border-radius: 10px;
 }
 .badge {
-  background: color-mix(in srgb, var(--success) 20%, transparent);
-  color: var(--color-success);
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--success) 60%, transparent);
+  color: var(--text-1);
 }
 .trusted {
   background: color-mix(in srgb, var(--accent) 18%, transparent);

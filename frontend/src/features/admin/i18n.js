@@ -9,6 +9,18 @@ export const messages = defineMessages('admin', {
     boundary: { title: 'Bu bölüm açılamadı.', unknown: 'Beklenmeyen bir arayüz hatası oluştu.', reload: 'Sayfayı yenile' },
     sections: { overview: 'Özet', users: 'Kullanıcılar', sessions: 'Oturumlar', abuse: 'Kötüye kullanım', catalog: 'Katalog', live: 'Canlı yayın', drm: 'DRM', tmdb: 'TMDB' },
     groups: { users: 'Kullanıcılar', sessions: 'Oturumlar', plans: 'Planlar', catalog: 'Katalog', live: 'Canlı yayın', devices: 'Cihazlar', drm: 'DRM' },
+    // One label per figure the dashboard returns (admin_stats); plan rows are labelled by the plan catalogue.
+    stats: {
+      users: { total: 'Toplam', active: 'Aktif', new_last_24h: 'Son 24 saatte yeni' },
+      sessions: { active_now: 'Şu an açık yayın' },
+      catalog: { channels: 'Kanal', live: 'Canlı', vod: 'İsteğe bağlı', playlists: 'Oynatma listesi' },
+      live: { channels: 'Kanal', on_air: 'Yayında', transcoding: 'Dönüştürülüyor' },
+      devices: { active: 'Aktif cihaz' },
+      drm: {
+        protected_contents: 'Korunan içerik', active_licenses: 'Geçerli lisans', issued_24h: 'Verilen lisans (24 sa)',
+        denied_24h: 'Reddedilen lisans (24 sa)', keys_delivered_24h: 'Teslim edilen anahtar (24 sa)',
+      },
+    },
     updated: 'Güncellendi: {when}',
     table: { empty: 'Kayıt yok', actions: 'İşlemler', prev: '‹ Önceki', next: 'Sonraki ›', page: '{page} / {pages} · {total} kayıt' },
     task: {
@@ -77,6 +89,17 @@ export const messages = defineMessages('admin', {
     boundary: { title: "This section couldn't open.", unknown: 'An unexpected interface error occurred.', reload: 'Reload page' },
     sections: { overview: 'Overview', users: 'Users', sessions: 'Sessions', abuse: 'Abuse', catalog: 'Catalogue', live: 'Live', drm: 'DRM', tmdb: 'TMDB' },
     groups: { users: 'Users', sessions: 'Sessions', plans: 'Plans', catalog: 'Catalogue', live: 'Live', devices: 'Devices', drm: 'DRM' },
+    stats: {
+      users: { total: 'Total', active: 'Active', new_last_24h: 'New in the last 24 h' },
+      sessions: { active_now: 'Streams open now' },
+      catalog: { channels: 'Channels', live: 'Live', vod: 'On demand', playlists: 'Playlists' },
+      live: { channels: 'Channels', on_air: 'On air', transcoding: 'Transcoding' },
+      devices: { active: 'Active devices' },
+      drm: {
+        protected_contents: 'Protected titles', active_licenses: 'Active licences', issued_24h: 'Licences issued (24 h)',
+        denied_24h: 'Licences denied (24 h)', keys_delivered_24h: 'Keys delivered (24 h)',
+      },
+    },
     updated: 'Updated: {when}',
     table: { empty: 'No records', actions: 'Actions', prev: '‹ Previous', next: 'Next ›', page: '{page} / {pages} · {total} records' },
     task: {
