@@ -54,6 +54,31 @@ class Metrics:
             registry=self.registry,
             multiprocess_mode="livemostrecent",
         )
+        # Viewer experience, from the player's one QoE report per session (trusted reports only; see
+        # PlaybackSessionService.record_qoe). `device` is a closed set: tv, tablet, mobile, desktop, other.
+        self.playback_startup = Histogram(
+            "neotv_playback_startup_seconds",
+            "Time from opening a stream to the first frame",
+            ["device"],
+            registry=self.registry,
+            buckets=(0.25, 0.5, 1, 1.5, 2, 3, 5, 8, 13, 20, 30),
+        )
+        self.playback_watch = Counter(
+            "neotv_playback_watch_seconds_total", "Seconds of video actually played", ["device"], registry=self.registry
+        )
+        self.playback_rebuffer = Counter(
+            "neotv_playback_rebuffer_seconds_total",
+            "Seconds spent stalled after start",
+            ["device"],
+            registry=self.registry,
+        )
+        self.playback_rebuffer_events = Counter(
+            "neotv_playback_rebuffer_events_total", "Stalls after start", ["device"], registry=self.registry
+        )
+        # Origin failures behind the media proxy, by cause (closed set — never the URL or the host).
+        self.proxy_errors = Counter(
+            "neotv_playback_proxy_errors_total", "Media proxy upstream failures", ["reason"], registry=self.registry
+        )
         self.active_streams = Gauge(
             "neotv_playback_active_streams",
             "Streams holding a concurrency slot right now (all accounts)",

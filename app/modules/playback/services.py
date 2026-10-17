@@ -28,6 +28,8 @@ from app.shared_kernel.events import PlaybackSessionEnded, PlaybackSessionStarte
 _log = logging.getLogger("playback")
 
 HEARTBEAT_INTERVAL_S = 10
+#: Device labels the player sends (useQoe.deviceType); anything else is "other" (bounded cardinality).
+_QOE_DEVICES = frozenset({"tv", "tablet", "mobile", "desktop"})
 EVENT_TYPES = frozenset({"play", "pause", "resume", "seek", "stop", "complete", "error"})
 
 
@@ -265,12 +267,37 @@ class PlaybackSessionService:
             )
 
     def record_qoe(self, *, user_id: int, data: dict[str, Any]) -> int:
+        """Stores every report (unchanged contract); feeds the experience metrics only from a trusted
+        one: the session is this user's and this is its first report. The client sends one report
+        per session on close, so a second one is a bug or an attempt to skew the dashboards."""
         ref = ContentRef.parse(data.pop("content_ref"))
+        token = data.get("session_token")
         with self._uow() as uow:
+            lifetime_s: float | None = None
+            if token:
+                session = uow.session.get(PlaybackSessionRecord, token)
+                first = uow.session.execute(
+                    select(QoeRecord.id).where(QoeRecord.session_token == token).limit(1)
+                ).first()
+                if session is not None and session.user_id == user_id and first is None:
+                    lifetime_s = (self._clock.now() - session.started_at).total_seconds()
             record = QoeRecord(user_id=user_id, content_ref=str(ref), created_at=self._clock.now(), **data)
             uow.session.add(record)
             uow.session.flush([record])
-            return record.id
+            record_id = int(record.id)
+        if lifetime_s is not None:  # after the commit: a rolled-back report is never counted
+            self._observe_qoe(data, lifetime_s)
+        return record_id
+
+    def _observe_qoe(self, data: dict[str, Any], lifetime_s: float) -> None:
+        device = data.get("device_type") if data.get("device_type") in _QOE_DEVICES else "other"
+        # A session cannot have played or stalled longer than it existed (+ a little clock slack).
+        ceiling = max(0.0, lifetime_s) + 5
+        if data.get("startup_time_ms") is not None:
+            self._metrics.playback_startup.labels(device).observe(min(data["startup_time_ms"] / 1000, ceiling))
+        self._metrics.playback_watch.labels(device).inc(min(float(data.get("watch_duration_s") or 0), ceiling))
+        self._metrics.playback_rebuffer.labels(device).inc(min((data.get("rebuffer_duration_ms") or 0) / 1000, ceiling))
+        self._metrics.playback_rebuffer_events.labels(device).inc(int(data.get("rebuffer_count") or 0))
 
     def active_count(self) -> int:
         return self._guard.total_active()

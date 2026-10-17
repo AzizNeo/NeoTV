@@ -70,7 +70,10 @@ def _services(c: Any) -> None:
     c.register(StreamConcurrencyGuard, lambda c: StreamConcurrencyGuard(c.resolve("kernel.redis")))
     c.register(StreamUrlFactory, lambda c: SignedStreamUrlFactory(c.resolve(UrlSigner)))
     c.register(GrantVerifier, lambda c: MediaGrantVerifier(c.resolve(UrlSigner), c.resolve(StreamConcurrencyGuard)))
-    c.register(HlsProxyService, lambda c: HlsProxyService(c.resolve(EgressGateway), c.resolve(StreamUrlFactory)))
+    c.register(
+        HlsProxyService,
+        lambda c: HlsProxyService(c.resolve(EgressGateway), c.resolve(StreamUrlFactory), c.resolve(Metrics)),
+    )
     c.register("playback.gate_provider", _gate_factory)
     c.register(ContentDirectory, lambda c: ContentDirectoryService(c.resolve("playback.gate_provider")))
     c.register(

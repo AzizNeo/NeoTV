@@ -16,6 +16,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from urllib.parse import urljoin
 
+from app.kernel.observability.metrics import Metrics
 from app.kernel.security.egress import EgressDeniedError, EgressGateway, EgressNetworkError
 from app.modules.playback.api import INTERNAL_URI_PREFIX, MediaGrant
 from app.modules.playback.grants import SignedStreamUrlFactory
@@ -62,10 +63,19 @@ def is_playlist(url: str, content_type: str) -> bool:
     return lowered.endswith((".m3u8", ".m3u")) or "mpegurl" in content_type.lower()
 
 
+#: Network causes the egress gateway reports; anything else is counted as "other".
+_NETWORK_REASONS = frozenset({"dns", "tls", "timeout", "connect", "blocked"})
+
+
 class HlsProxyService:
-    def __init__(self, egress: EgressGateway, urls: SignedStreamUrlFactory) -> None:
+    def __init__(self, egress: EgressGateway, urls: SignedStreamUrlFactory, metrics: Metrics | None = None) -> None:
         self._egress = egress
         self._urls = urls
+        self._metrics = metrics
+
+    def _failed(self, reason: str) -> None:
+        if self._metrics is not None:
+            self._metrics.proxy_errors.labels(reason).inc()
 
     def fetch(self, grant: MediaGrant, *, range_header: str | None = None) -> ProxyResponse:
         headers = {"Range": range_header} if range_header else None
@@ -73,13 +83,17 @@ class HlsProxyService:
             upstream = self._egress.get(grant.target, stream=True, headers=headers)
         except EgressNetworkError as exc:
             _log.warning("proxy upstream unreachable (%s): %s", exc.kind, exc)
+            self._failed(exc.kind if exc.kind in _NETWORK_REASONS else "other")
             raise UpstreamUnavailableError(exc.kind) from exc
         except EgressDeniedError as exc:
             _log.warning("proxy upstream denied (%s): %s", exc.reason, exc.url)
-            raise UpstreamUnavailableError("dns" if exc.reason == "dns" else "blocked") from exc
+            reason = "dns" if exc.reason == "dns" else "blocked"
+            self._failed(reason)
+            raise UpstreamUnavailableError(reason) from exc
         if upstream.status_code not in (200, 206):
             upstream.close()
             _log.warning("proxy upstream HTTP %s: %s", upstream.status_code, grant.target)
+            self._failed(f"http_{upstream.status_code // 100}xx")  # a class, not each status code
             raise UpstreamStatusError(upstream.status_code)
         content_type = upstream.headers.get("Content-Type", "")
         final_url = upstream.url or grant.target
@@ -99,6 +113,7 @@ class HlsProxyService:
 
     def rewrite(self, text: str, *, base_url: str, grant: MediaGrant) -> str:
         if not text.lstrip().startswith("#EXTM3U"):
+            self._failed("not_a_playlist")
             raise UpstreamStatusError(502)
         out: list[str] = []
         for line in text.splitlines():
