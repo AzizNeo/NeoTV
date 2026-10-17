@@ -69,7 +69,10 @@ jobs:
           { python3 tools/k6_summary.py "$RUNNER_TEMP/k6.json"
             echo; echo "Peak $VIEWERS viewers, $WATCH_S s per view, runner $(nproc) vCPU."
             echo; echo '```'; docker stats --no-stream --format '{{.Name}}  cpu {{.CPUPerc}}  mem {{.MemUsage}}'; echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          } > "$RUNNER_TEMP/report.md"
+          cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
+          # Also as an annotation: readable through the API, without the web UI. No tokens in it.
+          echo "::notice title=load report::$(sed 's/%/%25/g' "$RUNNER_TEMP/report.md" | sed ':a;N;$!ba;s/\n/%0A/g')"
       - name: Logs on failure
         if: failure()
         run: docker compose -f compose.demo.yml logs --tail 100 api web
