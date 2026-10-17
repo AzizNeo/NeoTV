@@ -207,7 +207,7 @@ python -m tools.smoke_boot                                   # fresh install →
 
 CI runs all of the above on every push — backend on PostgreSQL + Redis, the smoke test on Windows (Python 3.12
 and 3.14) and Linux — plus a pinned, checksum-verified secret scan, Docker image builds, the one-command demo started and
-smoke-tested end to end, and the Playwright browser suite.
+smoke-tested end to end, the Playwright browser suite, and the alerting rules' behaviour tests (`promtool`).
 
 **Browser tests run the production build under the production CSP** (`vite preview` serves the same header file
 as nginx) against a fresh, seeded backend. Besides its own assertions, every test fails on any CSP violation or
@@ -222,6 +222,23 @@ never lowered to make a build pass. The per-module tables land on each CI run's 
 are kept as artifacts. Today: backend ≈ 83% (statements + branches, lowest: `live` — ffmpeg process supervision —
 and `catalog` — remote playlist fetching), frontend ≈ 25% (unit tests cover logic — player, i18n, routing
 contracts; user flows are covered by the browser tests).
+
+## Observability
+
+Built to be trusted, not just present — the reasoning is in [ADR-0008](docs/adr/0008-observability.md).
+
+| | Where | What |
+| --- | --- | --- |
+| **Metrics** | `GET /api/v1/kernel/metrics` (Prometheus; `METRICS_TOKEN`) | HTTP traffic and latency, stream opens and active streams, time to first frame, rebuffering and stalls by device, origin failures by cause, outbox lag and dead letters, circuit breakers, Web Vitals and browser errors. Correct under several gunicorn workers (multiprocess mode). |
+| **Traces** | OpenTelemetry → `OTEL_ENDPOINT` (OTLP/HTTP) | One trace per request: browser call → Flask → SQL → outbound HTTP → Celery task. Off unless configured; `OTEL_SAMPLE_RATIO` decided by the server. |
+| **Logs** | stdout, JSON | Every line carries `request_id`, and `trace_id`/`span_id` when traced. Browser errors arrive as `client` log lines, scrubbed of tokens and query strings. |
+| **SLOs and alerts** | [`deploy/prometheus/`](deploy/prometheus) | API availability 99.5 %, latency 99 % ≤ 1 s, playback start 95 % ≤ 3 s; multi-window burn-rate alerts plus operational alerts — unit-tested with `promtool`. |
+| **Runbooks** | [`docs/runbooks.md`](docs/runbooks.md) | What to check and do for every alert (a test keeps alerts and runbooks in step). |
+| **Dashboard** | [`deploy/grafana/neotv-overview.json`](deploy/grafana/neotv-overview.json) | Import into Grafana and pick a Prometheus source: error budgets, API, playback, platform, browsers. |
+
+Rules and dashboard are generated from short sources (`generate_rules.py`, `generate_dashboard.py`);
+CI fails if a generated file is stale, a rule misbehaves, a dashboard query does not parse or names
+a series that does not exist, or an exported metric is on no panel.
 
 ## Project layout
 
