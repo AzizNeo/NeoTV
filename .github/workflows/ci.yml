@@ -261,10 +261,12 @@ jobs:
           LOAD_PASSWORD="Load-$(openssl rand -hex 16)-1!"
           echo "::add-mask::$LOAD_PASSWORD"
           export LOAD_PASSWORD
-          docker compose -f compose.demo.yml exec -T -e LOAD_PASSWORD api python -m tools.load_seed --count 2
-          # The export holds the accounts' tokens (setup_data): it stays on the runner, never uploaded.
           set -o pipefail
-          k6 run --quiet --summary-export "$RUNNER_TEMP/k6.json" -e BASE=http://localhost:8080 -e PROFILE=smoke deploy/load/neotv.js 2>&1 | tee "$RUNNER_TEMP/k6.log"
+          # Through demo_env like every demo service: it supplies the generated secrets (database, keys).
+          docker compose -f compose.demo.yml exec -T -e LOAD_PASSWORD api \
+            python -m tools.demo_env exec -- python -m tools.load_seed --count 2 2>&1 | tee "$RUNNER_TEMP/k6.log"
+          # The export holds the accounts' tokens (setup_data): it stays on the runner, never uploaded.
+          k6 run --quiet --summary-export "$RUNNER_TEMP/k6.json" -e BASE=http://localhost:8080 -e PROFILE=smoke deploy/load/neotv.js 2>&1 | tee -a "$RUNNER_TEMP/k6.log"
       - name: Load smoke report
         if: always()
         run: |

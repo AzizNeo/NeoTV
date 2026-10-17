@@ -56,7 +56,9 @@ jobs:
           LOAD_PASSWORD="Load-$(openssl rand -hex 16)-1!"
           echo "::add-mask::$LOAD_PASSWORD"
           export LOAD_PASSWORD
-          docker compose -f compose.demo.yml exec -T -e LOAD_PASSWORD api python -m tools.load_seed --count "$VIEWERS"
+          # Through demo_env like every demo service: it supplies the generated secrets (database, keys).
+          docker compose -f compose.demo.yml exec -T -e LOAD_PASSWORD api \
+            python -m tools.demo_env exec -- python -m tools.load_seed --count "$VIEWERS"
           # The export holds the accounts' tokens (setup_data): it stays on the runner, never uploaded.
           k6 run --quiet --summary-export "$RUNNER_TEMP/k6.json" \
             -e BASE=http://localhost:8080 -e PROFILE=load -e VIEWERS="$VIEWERS" -e WATCH_S="$WATCH_S" deploy/load/neotv.js
