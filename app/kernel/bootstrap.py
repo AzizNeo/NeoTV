@@ -116,7 +116,9 @@ def install_kernel(app: Flask, container: Container, settings: Settings) -> None
     from app.kernel.outbox import trigger
 
     configure_logging(level=settings.log_level, json_output=settings.json_logs)
-    install_tracing(endpoint=settings.otel_endpoint)
+    install_tracing(
+        app, endpoint=settings.otel_endpoint, sample_ratio=settings.otel_sample_ratio, environment=settings.env
+    )
     request_context.install(
         app,
         allowed_origins=list(settings.allowed_origins),

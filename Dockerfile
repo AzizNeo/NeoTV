@@ -11,7 +11,7 @@ FROM base AS deps
 RUN apt-get update \
  && apt-get install -y --no-install-recommends build-essential \
  && rm -rf /var/lib/apt/lists/*
-COPY requirements.lock requirements-otel.txt ./
+COPY requirements.lock ./
 # Hash-locked install: the image gets exactly the versions CI tested (tools/lock_deps).
 RUN python -m venv /opt/venv \
  && /opt/venv/bin/pip install --require-hashes --only-binary=:all: -r requirements.lock

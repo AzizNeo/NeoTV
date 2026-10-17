@@ -21,4 +21,13 @@ psycopg[binary]==3.2.10
 waitress==3.0.2
 gunicorn==23.0.0; sys_platform != "win32"
 prometheus_client==0.22.1
+# Tracing (OpenTelemetry). Installed always, active only when OTEL_ENDPOINT is set; OTLP over HTTP
+# (protobuf only — no grpcio: smaller image, passes ordinary HTTP proxies).
+opentelemetry-api==1.37.0
+opentelemetry-sdk==1.37.0
+opentelemetry-exporter-otlp-proto-http==1.37.0
+opentelemetry-instrumentation-flask==0.58b0
+opentelemetry-instrumentation-sqlalchemy==0.58b0
+opentelemetry-instrumentation-requests==0.58b0
+opentelemetry-instrumentation-celery==0.58b0
 python-dotenv==1.2.4

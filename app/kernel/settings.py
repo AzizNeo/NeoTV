@@ -137,7 +137,8 @@ class Settings(BaseSettings):
     tmdb_read_token: SecretStr | None = None
 
     # ── Observability ──────────────────────────────────────────────────────
-    otel_endpoint: str | None = None
+    otel_endpoint: str | None = None  # OTLP/HTTP collector base, e.g. http://otel-collector:4318
+    otel_sample_ratio: float = Field(default=1.0, ge=0.0, le=1.0)  # share of new traces kept
     metrics_token: SecretStr | None = None
 
     # ── Validators ─────────────────────────────────────────────────────────
