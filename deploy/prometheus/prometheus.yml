@@ -1,0 +1,28 @@
+# Prometheus for NeoTV — scrape the API, evaluate the SLO and operational rules.
+#   promtool check config deploy/prometheus/prometheus.yml   (CI)
+#
+# The API answers /api/v1/kernel/metrics to localhost only unless METRICS_TOKEN is set, so a
+# Prometheus in another container needs the token: put the same value in the API's METRICS_TOKEN
+# and in the file below (mounted read-only; never in this file or in git). The scrape goes to the
+# API directly (api:8000) — the public edge (nginx) refuses this path from outside.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 30s     # the SLI recording rules' group runs every 30 s as well
+
+rule_files:
+  - neotv.rules.yml
+
+# Alerts go to an Alertmanager (routing: severity=page → on-call, severity=ticket → queue).
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  - job_name: neotv-api       # the alert NeoTVApiDown and the runbooks refer to this name
+    metrics_path: /api/v1/kernel/metrics
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/secrets/metrics_token
+    static_configs:
+      - targets: ["api:8000"]

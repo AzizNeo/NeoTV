@@ -49,3 +49,4 @@ _to_delete/
 frontend/test-results/
 frontend/playwright-report/
 frontend/blob-report/
+deploy/prometheus/prometheus.ci.yml

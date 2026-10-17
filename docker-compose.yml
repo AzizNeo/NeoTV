@@ -27,6 +27,9 @@ x-backend: &backend
 
 x-worker: &worker
   <<: *backend
+  environment:
+    <<: *backend-env
+    OTEL_SERVICE_NAME: neotv-worker   # traces: the worker side of a request is its own service
   healthcheck:
     # Shell form so $HOSTNAME expands; the node names match each worker's `-n …@%h` (only this
     # container's own node can answer, so the check is per container).
@@ -92,6 +95,9 @@ services:
 
   beat:
     <<: *backend
+    environment:
+      <<: *backend-env
+      OTEL_SERVICE_NAME: neotv-beat
     command: ["celery", "-A", "app.wsgi:celery", "beat", "--loglevel", "INFO"]
     # Not the image's HTTP check (beat serves no HTTP): RedBeat refreshes its lock while alive.
     healthcheck:

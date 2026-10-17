@@ -169,6 +169,11 @@ jobs:
         run: ./promtool check rules deploy/prometheus/neotv.rules.yml
       - name: Rules behave as specified
         run: ./promtool test rules deploy/prometheus/neotv.rules.test.yml
+      - name: Prometheus configuration is valid (scrape job, rule files, Alertmanager)
+        run: |
+          mkdir -p /tmp/secrets && echo "ci-placeholder" > /tmp/secrets/metrics_token
+          sed 's#/etc/prometheus/secrets/#/tmp/secrets/#' deploy/prometheus/prometheus.yml > deploy/prometheus/prometheus.ci.yml
+          ./promtool check config deploy/prometheus/prometheus.ci.yml
 
   # Browser tests: the production build under the production CSP against a fresh, seeded backend.
   # Every test also fails on a CSP violation or an uncaught page error (frontend/e2e/fixtures.js).
