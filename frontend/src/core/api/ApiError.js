@@ -2,13 +2,15 @@ import { messageFor } from '@/core/i18n';
 
 /** Every failed API call surfaces as an ApiError with a stable machine `code`. */
 export class ApiError extends Error {
-  constructor({ status, code, message, details, requestId }) {
+  constructor({ status, code, message, details, requestId, traceId }) {
     super(message ?? code);
     this.name = 'ApiError';
     this.status = status;
     this.code = code ?? 'UNKNOWN';
     this.details = details ?? null;
     this.requestId = requestId ?? null;
+    /** W3C trace id this call was sent with: matches the API's trace and log lines (trace_id). */
+    this.traceId = traceId ?? null;
   }
 
   /** Human text for the UI (i18n by code — backend prose is never shown verbatim). */

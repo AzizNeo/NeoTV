@@ -1,7 +1,8 @@
 """Structured logging. JSON in staging/prod, readable text in dev.
 
 Every record carries ``request_id`` (and ``user_id`` when known) so a single
-request can be followed across API, outbox and Celery logs.
+request can be followed across API, outbox and Celery logs — and, when tracing is on and the
+request is sampled, ``trace_id``/``span_id``: from a log line straight to its trace.
 """
 
 from __future__ import annotations
@@ -26,7 +27,21 @@ class ContextFilter(logging.Filter):
         else:
             record.request_id = getattr(record, "request_id", "-")
             record.user_id = getattr(record, "user_id", None)
+        _add_trace(record)
         return True
+
+
+def _add_trace(record: logging.LogRecord) -> None:
+    from app.kernel.observability import tracing
+
+    if tracing._tracer is None:  # tracing off: nothing imported, nothing added
+        return
+    from opentelemetry import trace
+
+    context = trace.get_current_span().get_span_context()
+    if context.is_valid and context.trace_flags.sampled:  # only ids a trace backend will have
+        record.trace_id = format(context.trace_id, "032x")
+        record.span_id = format(context.span_id, "016x")
 
 
 class JsonFormatter(logging.Formatter):
@@ -38,6 +53,10 @@ class JsonFormatter(logging.Formatter):
             "msg": record.getMessage(),
             "request_id": getattr(record, "request_id", "-"),
         }
+        trace_id = getattr(record, "trace_id", None)
+        if trace_id:
+            payload["trace_id"] = trace_id
+            payload["span_id"] = getattr(record, "span_id", None)
         user_id = getattr(record, "user_id", None)
         if user_id is not None:
             payload["user_id"] = user_id

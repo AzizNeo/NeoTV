@@ -9,8 +9,11 @@ Off unless ``OTEL_ENDPOINT`` is set (then nothing is imported or wrapped — PER
 * ``@traced`` (used by ``endpoint()``) adds a span around each handler, under the request span.
 * **Export** — OTLP over HTTP (``<OTEL_ENDPOINT>/v1/traces``, port 4318 by convention): protobuf
   only, no grpcio, passes ordinary HTTP proxies.
-* **Sampling** — parent-based ratio (``OTEL_SAMPLE_RATIO``): a request is sampled whole or not at
-  all, and a caller's decision is respected.
+* **Sampling** — trace-id ratio (``OTEL_SAMPLE_RATIO``): a request is sampled whole or not at all.
+  A *remote* caller's trace id is continued (correlation) but its sampled flag is **not** obeyed:
+  any browser could otherwise force every request to be traced (cost, and a cheap way to flood
+  the tracing backend). The decision is a pure function of the trace id, so every service
+  reaches the same one.
 * Health and metrics endpoints are not traced (Prometheus would otherwise dominate the traces).
 
 The tracer provider is passed explicitly to every instrumentation rather than set globally:
@@ -76,7 +79,9 @@ def install_tracing(
             "deployment.environment": environment,
         }
     )
-    provider = TracerProvider(resource=resource, sampler=ParentBased(TraceIdRatioBased(sample_ratio)))
+    ratio = TraceIdRatioBased(sample_ratio)
+    sampler = ParentBased(root=ratio, remote_parent_sampled=ratio, remote_parent_not_sampled=ratio)
+    provider = TracerProvider(resource=resource, sampler=sampler)
     if span_exporter is not None:
         provider.add_span_processor(SimpleSpanProcessor(span_exporter))
     else:
@@ -84,14 +89,27 @@ def install_tracing(
         provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=traces_url(endpoint))))
 
     FlaskInstrumentor().instrument_app(app, tracer_provider=provider, excluded_urls=EXCLUDED_URLS)
+    # SQLAlchemy, requests and Celery instrumentors are once-per-process singletons: a second
+    # instrument() is silently ignored. Start from a clean state so this app's provider is used.
+    uninstall_tracing()
     with app.app_context():
         SQLAlchemyInstrumentor().instrument(engine=db.engine, tracer_provider=provider)
-    # requests and Celery are patched process-wide: re-instrument so this provider is the one used.
-    for instrumentor in (RequestsInstrumentor(), CeleryInstrumentor()):
+    RequestsInstrumentor().instrument(tracer_provider=provider)
+    CeleryInstrumentor().instrument(tracer_provider=provider)
+    _tracer = provider.get_tracer("neotv")
+
+
+def uninstall_tracing() -> None:
+    """Undo the process-wide patches (tests; a process normally traces until it exits)."""
+    global _tracer  # noqa: PLW0603 - see install_tracing
+    from opentelemetry.instrumentation.celery import CeleryInstrumentor
+    from opentelemetry.instrumentation.requests import RequestsInstrumentor
+    from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+
+    for instrumentor in (SQLAlchemyInstrumentor(), RequestsInstrumentor(), CeleryInstrumentor()):
         if instrumentor.is_instrumented_by_opentelemetry:
             instrumentor.uninstrument()
-        instrumentor.instrument(tracer_provider=provider)
-    _tracer = provider.get_tracer("neotv")
+    _tracer = None
 
 
 def traced(name: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:

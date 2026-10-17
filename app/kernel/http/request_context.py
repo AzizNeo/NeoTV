@@ -38,6 +38,8 @@ def install(app: Flask, *, allowed_origins: list[str], trusted_proxy_count: int,
             "X-Profile-Token",
             "X-Request-ID",
             "X-Requested-With",
+            "traceparent",  # W3C trace context (the SPA continues its trace into the API)
+            "tracestate",
         ],
     )
 

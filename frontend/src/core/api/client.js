@@ -14,6 +14,7 @@ import { tokenStore } from '@/core/auth/tokenStore';
 import { deviceId } from '@/core/device/deviceId';
 import { getLocale } from '@/core/i18n/locale';
 import { ApiError } from './ApiError';
+import { newTraceContext } from './traceContext';
 import { OPERATIONS } from './contract.generated';
 
 const CSRF = { 'X-Requested-With': 'XMLHttpRequest' };
@@ -81,6 +82,8 @@ async function call(id, { params, query, body, headers, signal, rawBody, content
   const profile = tokenStore.getProfile();
   if (profile && op.auth !== 'public') finalHeaders['X-Profile-Token'] = profile;
   if (op.idempotent && !finalHeaders['Idempotency-Key']) finalHeaders['Idempotency-Key'] = idempotencyKey();
+  const trace = newTraceContext(); // a retry after a token refresh is a new call, with a new trace
+  finalHeaders.traceparent = trace.header;
 
   let payload;
   if (rawBody !== undefined) {
@@ -102,12 +105,15 @@ async function call(id, { params, query, body, headers, signal, rawBody, content
     });
   } catch (cause) {
     if (cause?.name === 'AbortError') throw cause;
-    throw ApiError.network(cause);
+    const failure = ApiError.network(cause);
+    failure.traceId = trace.traceId;
+    throw failure;
   }
 
   if (response.ok) return unwrap(response);
 
   const error = await ApiError.fromResponse(response);
+  error.traceId = trace.traceId;
   if (error.status === 401 && error.code === 'TOKEN_EXPIRED' && retry && op.auth !== 'public') {
     try {
       await refreshAccess();
