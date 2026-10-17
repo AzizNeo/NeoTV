@@ -3,14 +3,20 @@
  * here; the UI never changes.
  *
  *   EME DRM (license URLs present)  → shaka (lazy chunk)
- *   HLS + MediaSource                → hls.js (AES-128 keys handled natively)
+ *   HLS + MediaSource                → hls.js (lazy chunk; AES-128 keys handled natively)
  *   HLS on Safari/iOS, MP4 …         → native <video>
+ *
+ * The player libraries are loaded when a stream opens, never with the app: this module is imported
+ * by the always-mounted PlayerProvider, so a static import here would ship hls.js (~600 kB) to every
+ * page, the sign-in page included. That is why `canPlay` may be async — hls.js answers "supported?"
+ * itself, after its chunk loads, instead of a copy of its checks drifting here.
  *
  * Every engine returns { id, load(url), stats(), tracks(), select(kind, id), destroy() } and reports
  * through the callbacks { onReady, onFatal, onTracks } — the track model lives in ./tracks.js.
  */
-import { createHlsJsEngine, hlsJsSupported } from './hlsJsEngine';
 import { createNativeEngine } from './nativeEngine';
+
+const hlsJs = () => import('./hlsJsEngine');
 
 export class UnsupportedPlaybackError extends Error {
   name = 'UnsupportedPlaybackError';
@@ -35,7 +41,7 @@ export function describeSource(session) {
 
 const ENGINES = [
   { id: 'shaka', canPlay: (s) => s.needsEme, load: () => import('./shakaEngine').then((m) => m.createShakaEngine) },
-  { id: 'hlsjs', canPlay: (s) => s.isHls && hlsJsSupported(), load: async () => createHlsJsEngine },
+  { id: 'hlsjs', canPlay: async (s) => s.isHls && (await hlsJs()).hlsJsSupported(), load: () => hlsJs().then((m) => m.createHlsJsEngine) },
   {
     id: 'native',
     canPlay: (s, video) => video.canPlayType(s.isHls ? 'application/vnd.apple.mpegurl' : 'video/mp4') !== '',
@@ -43,8 +49,16 @@ const ENGINES = [
   },
 ];
 
+/** The first engine that can play the source, in order (some answer only after their chunk loads). */
+async function pickEngine(source, video) {
+  for (const entry of ENGINES) {
+    if (await entry.canPlay(source, video)) return entry;
+  }
+  return null;
+}
+
 export async function createEngine(video, source, callbacks) {
-  const entry = ENGINES.find((e) => e.canPlay(source, video));
+  const entry = await pickEngine(source, video);
   if (!entry) {
     throw new UnsupportedPlaybackError(`No engine for drm=${Boolean(source.drm)} hls=${source.isHls}`);
   }

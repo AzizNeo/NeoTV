@@ -32,15 +32,14 @@ export default defineConfig({
     sourcemap: true,
     // Fonts stay files: inlined as data: URIs they would need `font-src data:` in the CSP.
     assetsInlineLimit: (file) => (/\.(woff2?|ttf|otf)$/i.test(file) ? false : undefined),
-    // The only chunks above Vite's 500 kB default are the player engines (hls.js,
-    // and shaka which is lazy-loaded for EME DRM only). App code stays far below.
+    // The only chunks above Vite's 500 kB default are the player engines (hls.js and shaka), both
+    // lazy-loaded when a stream opens (src/features/player/engines/index.js). App code stays far below.
     chunkSizeWarningLimit: 800,
     rollupOptions: {
       output: {
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
           query: ['@tanstack/react-query'],
-          hls: ['hls.js'],
         },
       },
     },
