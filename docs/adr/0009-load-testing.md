@@ -45,6 +45,9 @@ proxy's throughput needs a local origin and is a separate test.
 - On demand: the *Load test* workflow runs the `load` profile (ramp to N viewers, hold, ramp
   down) and reports thresholds, per-endpoint latency and containers' CPU and memory.
 
+**k6 runs with `--no-usage-report`**: by default it sends anonymous usage data to Grafana Labs on
+every run; CI sends nothing to third parties it does not need.
+
 **The k6 summary export never leaves the runner**: its `setup_data` holds the accounts' access
 tokens. Only the Markdown made from its `metrics` is published.
 
@@ -136,3 +139,41 @@ Reading it:
   (5/s per IP): the input check keeps the *average* under 4/s, but during the ramp viewers start in
   step and their releases cluster. Follow-up: report 429s per endpoint, and either stagger viewer
   starts or lower the input bound — the test's pacing, not the system, is what failed.
+
+**2026-10-17 — 200 viewers, 40 s per view, rerun** after two test changes: 429s reported per
+endpoint, and each viewer's first iteration starting at a random offset within the 10 s heartbeat
+period. Same runner and stack.
+
+| | first 200-viewer run | rerun |
+| --- | --- | --- |
+| Result | failed (9 × 429) | **all thresholds passed** |
+| 429s | 9 (endpoint not reported) | **0** on every endpoint |
+| Server errors | 0 | 0 |
+| API p99 (SLO ≤ 1 s) | 357 ms | 401 ms |
+| Traffic | 10,759 req (24.4/s) | 10,537 req (23.9/s) |
+| Peak CPU (of 200 %) | api 122, worker 86, beat 32 | api 81, worker 95, beat 57 |
+
+| Endpoint | Requests | 429 | median | p95 | p99 | max |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `titles.rails` | 1,011 | 0 | 59 ms | 351 ms | 867 ms | 1,312 ms |
+| `auth.login` | 471 | 0 | 105 ms | 381 ms | 844 ms | 1,363 ms |
+| `playback.open` | 1,011 | 0 | 22 ms | 157 ms | 401 ms | 1,049 ms |
+| `titles.browse` | 1,011 | 0 | 21 ms | 134 ms | 354 ms | 752 ms |
+| `titles.detail` | 1,011 | 0 | 17 ms | 104 ms | 284 ms | 555 ms |
+| `catalog.list` | 1,012 | 0 | 12 ms | 91 ms | 262 ms | 655 ms |
+| `playback.qoe` | 988 | 0 | 9.4 ms | 75 ms | 216 ms | 445 ms |
+| `playback.release` | 988 | 0 | 9.5 ms | 66 ms | 205 ms | 681 ms |
+| `playback.heartbeat` | 3,033 | 0 | 8.0 ms | 54 ms | 192 ms | 665 ms |
+
+Reading it:
+- **The 429s were the test's pacing.** With starts spread over the heartbeat period, none of the
+  ~10,500 requests was rate limited. The first run's endpoint was not reported, so the per-IP
+  release limit remains the likeliest — not proven — cause; any future 429 now names its endpoint.
+- **Latency matches the first run** (p99 401 vs 357 ms, medians within a few ms): the difference is
+  run-to-run noise on a shared runner, not a regression. 200 viewers is the measured ceiling here.
+- **`titles.rails` p99 reached 867 ms — 87 % of the budget** — and is the first endpoint to break
+  past 200 viewers; with sign-in (844 ms, deliberate hashing) it confirms where capacity work starts.
+- CPU peaks are single 10 s samples and swap places between runs (api 122 → 81 %, worker 86 → 95 %).
+  Read together: API and Celery side compete for the same two cores. Beat's 57 % is unexpected for
+  a scheduler and is noted for profiling, not explained.
+
