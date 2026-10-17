@@ -98,3 +98,41 @@ Reading it:
   the home rails (several queries per call). Both are the first candidates when capacity matters.
 - Container CPU and memory were sampled *after* the run in this report (idle values, not shown);
   the workflow now samples every 10 s during the run and reports peaks.
+
+**2026-10-17 — 200 viewers, 40 s per view** (same runner and stack; container peaks sampled every 10 s).
+
+| | |
+| --- | --- |
+| Result | **failed on `rate_limited`: 9 requests got 429**; the SLO thresholds held |
+| Errors (SLO < 0.5 %) | 0.09 % — the nine 429s; no server errors |
+| API p99 (SLO ≤ 1 s) | **357 ms** (×4.4 from 50 viewers) |
+| Traffic | 10,759 requests (24.4/s), 1,269 viewer sessions, 202 virtual users at peak |
+| Container peaks | api 122 % CPU (of 200 %), worker 86 %, postgres 39 %, beat 32 %, redis 8 %; memory ≤ 220 MiB each |
+
+| Endpoint | Requests | median | p95 | p99 | max |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `titles.rails` | 1,032 | 59 ms | 345 ms | 700 ms | 1,174 ms |
+| `auth.login` | 471 | 108 ms | 395 ms | 599 ms | 1,000 ms |
+| `playback.open` | 1,032 | 24 ms | 175 ms | 329 ms | 746 ms |
+| `titles.browse` | 1,032 | 23 ms | 154 ms | 324 ms | 1,135 ms |
+| `titles.detail` | 1,032 | 18 ms | 123 ms | 268 ms | 462 ms |
+| `catalog.list` | 1,033 | 12 ms | 98 ms | 222 ms | 558 ms |
+| `playback.release` | 1,015 | 9.5 ms | 71 ms | 175 ms | 494 ms |
+| `playback.heartbeat` | 3,096 | 8.2 ms | 59 ms | 152 ms | 560 ms |
+| `playback.qoe` | 1,015 | 9.3 ms | 68 ms | 139 ms | 538 ms |
+
+Reading it:
+- **The objectives held at 200 viewers** (p99 357 ms, no server errors), but the tail grew fast:
+  p95 rose 5–10× while traffic rose 2.8×. That is a queue forming — the knee of the curve is near.
+- **The machine, not only the API, was the limit.** The API used 1.2 of 2 cores while k6, Postgres
+  and the worker shared the rest. Capacity numbers for production need the load generator on its
+  own machine; on this runner, ~200 viewers is the ceiling of what can be measured.
+- **The worker's 86 % CPU is the outbox**: every open, heartbeat-free release and QoE report emits
+  domain events delivered by Celery. Under load it competes with the API for the same cores — in
+  production they belong on separate hosts (the compose file already runs them as separate services).
+- **Home rails are the costliest read under load** (p99 700 ms, 70 % of the budget; several queries
+  per call) — the first candidate for a short server-side cache when capacity matters.
+- **The 429s:** the run fails on any 429 by design. The likeliest source is `playback.release`
+  (5/s per IP): the input check keeps the *average* under 4/s, but during the ramp viewers start in
+  step and their releases cluster. Follow-up: report 429s per endpoint, and either stagger viewer
+  starts or lower the input bound — the test's pacing, not the system, is what failed.
