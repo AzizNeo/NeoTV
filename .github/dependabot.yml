@@ -1,0 +1,44 @@
+# Weekly dependency updates. Minor and patch releases arrive as one grouped pull request per
+# ecosystem; majors come one by one, because they are the ones that need reading. Security updates
+# (enabled in the repository settings) are not limited by this schedule.
+version: 2
+updates:
+  # Python: Dependabot edits requirements*.txt; the hash-locked requirements*.lock files are made by
+  # tools/lock_deps.py, so CI's "Locks are current" step fails on such a PR until someone runs
+  # `python -m tools.lock_deps` on its branch — a deliberate, reviewed step (see CONTRIBUTING.md).
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      python-minor-and-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: deps
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: deps
+
+  # Workflows pin every action to a commit SHA (with the release in a comment); Dependabot moves the
+  # SHA and the comment together.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      github-actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

@@ -267,6 +267,10 @@ Foundation open movies — *Big Buck Bunny*, *Sintel*, *Tears of Steel* (© Blen
 and public HLS test streams from Apple, Akamai and Unified Streaming, played straight from their hosts. The demo
 artwork is original (`tools/demo_art.py`). Use NeoTV with content you are licensed to distribute.
 
+## Security
+
+Please report vulnerabilities privately — see [SECURITY.md](SECURITY.md). Contributions: [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
 [MIT](LICENSE) © 2026 AzizNeo

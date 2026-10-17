@@ -104,6 +104,13 @@ An unknown template or a missing or extra field fails by name (`EMAIL_TEMPLATE_U
   never reaches server logs or a `Referer` header. Message bodies are deleted after sending; an hourly
   job clears any body older than 24 hours.
 
+## Dependency updates
+
+Dependabot opens weekly pull requests (`.github/dependabot.yml`). npm and GitHub Actions updates are
+complete as they arrive. A **Python** update changes `requirements*.txt` only: run
+`python -m tools.lock_deps` on its branch to regenerate the hash-locked `requirements*.lock` files
+(CI's "Locks are current" step fails until then), review the lock diff and push it.
+
 ## Commits and decisions
 
 - One concern per change; the message says what changed and why.
