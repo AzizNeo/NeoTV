@@ -35,6 +35,11 @@ def call(path: str, *, body: object = None, token: str | None = None) -> tuple[i
         return err.code, err.read()
 
 
+def data(body: bytes) -> dict:
+    """Success bodies are an envelope: {"success": true, "data": …}."""
+    return json.loads(body).get("data") or {}
+
+
 def main() -> int:
     password = os.environ.get("DEMO_PASSWORD")
     if not password:
@@ -57,16 +62,17 @@ def main() -> int:
 
     status, body = call("/api/v1/auth/login", body={"username": USERNAME, "password": password})
     check("generated admin signs in", status == 200, body[:200])
-    token = json.loads(body).get("access_token") if status == 200 else None
+    token = data(body).get("access_token") if status == 200 else None
+    check("sign-in returns an access token", bool(token), body[:200])
     if token:
         status, body = call("/api/v1/auth/me", token=token)
-        role = json.loads(body).get("role") if status == 200 else None
+        role = data(body).get("role") if status == 200 else None
         check("account is an admin", role == "admin", body[:200])
         status, body = call("/api/v1/catalog/admin/channels?per_page=50&include_inactive=true", token=token)
-        names = {c["name"] for c in json.loads(body).get("items", [])} if status == 200 else set()
+        names = {c["name"] for c in data(body).get("items", [])} if status == 200 else set()
         check("demo content seeded", {"Sintel", "Big Buck Bunny"} <= names, body[:200])
         status, body = call("/api/v1/tmdb/status", token=token)
-        check("TMDB module mounted", status == 200 and "configured" in json.loads(body), body[:200])
+        check("TMDB module mounted", status == 200 and "configured" in data(body), body[:200])
     status, _ = call("/api/v1/auth/login", body={"username": USERNAME, "password": password + "x"})
     check("wrong password refused", status in (400, 401), status)
 
