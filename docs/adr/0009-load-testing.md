@@ -127,8 +127,8 @@ Reading it:
 - **The machine, not only the API, was the limit.** The API used 1.2 of 2 cores while k6, Postgres
   and the worker shared the rest. Capacity numbers for production need the load generator on its
   own machine; on this runner, ~200 viewers is the ceiling of what can be measured.
-- **The worker's 86 % CPU is the outbox**: every open, heartbeat-free release and QoE report emits
-  domain events delivered by Celery. Under load it competes with the API for the same cores — in
+- **The worker's 86 % CPU is most likely the outbox** (not yet profiled): playback actions emit
+  domain events that Celery delivers. Under load it competes with the API for the same cores — in
   production they belong on separate hosts (the compose file already runs them as separate services).
 - **Home rails are the costliest read under load** (p99 700 ms, 70 % of the budget; several queries
   per call) — the first candidate for a short server-side cache when capacity matters.
