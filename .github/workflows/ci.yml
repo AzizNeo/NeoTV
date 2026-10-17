@@ -169,6 +169,11 @@ jobs:
         run: ./promtool check rules deploy/prometheus/neotv.rules.yml
       - name: Rules behave as specified
         run: ./promtool test rules deploy/prometheus/neotv.rules.test.yml
+      - name: Grafana dashboard is current and every query parses
+        run: |
+          python3 deploy/grafana/generate_dashboard.py --check
+          python3 deploy/grafana/generate_dashboard.py --as-rules dashboard-queries.json
+          ./promtool check rules dashboard-queries.json
       - name: Prometheus configuration is valid (scrape job, rule files, Alertmanager)
         run: |
           mkdir -p /tmp/secrets && echo "ci-placeholder" > /tmp/secrets/metrics_token
