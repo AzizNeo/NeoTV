@@ -54,6 +54,12 @@ class Metrics:
             registry=self.registry,
             multiprocess_mode="livemostrecent",
         )
+        self.active_streams = Gauge(
+            "neotv_playback_active_streams",
+            "Streams holding a concurrency slot right now (all accounts)",
+            registry=self.registry,
+            multiprocess_mode="livemostrecent",
+        )
         # Per-process state (each worker has its own breakers): open if open in any live worker.
         self.circuit_open = Gauge(
             "neotv_circuit_open",

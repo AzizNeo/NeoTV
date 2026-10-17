@@ -139,4 +139,5 @@ manifest = ModuleManifest(
         UpstreamUnavailableError: (502, "UPSTREAM_UNAVAILABLE"),
         PlaybackConfigurationError: (500, "PLAYBACK_MISCONFIGURED"),
     },
+    post_boot="app.modules.playback.post_boot:install_metrics",
 )

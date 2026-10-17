@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import delete, select, text, update
@@ -49,6 +49,16 @@ class OutboxWriter:
 class OutboxRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
+
+    def oldest_undelivered_at(self) -> datetime | None:
+        """Creation time of the oldest event not yet delivered (pending, backing off or in flight)."""
+        from sqlalchemy import func
+
+        return self._session.execute(
+            select(func.min(OutboxRecord.created_at)).where(
+                OutboxRecord.status.in_((OutboxStatus.PENDING, OutboxStatus.DISPATCHING))
+            )
+        ).scalar_one_or_none()
 
     def claim(self, limit: int) -> list[tuple[str, str]]:
         now = utcnow()

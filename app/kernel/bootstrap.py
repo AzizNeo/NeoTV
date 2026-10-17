@@ -15,6 +15,7 @@ from app.kernel.http.profile_context import ProfileContextMissingError
 from app.kernel.observability.logging import configure_logging
 from app.kernel.observability.metrics import Metrics, install_metrics
 from app.kernel.observability.tracing import install_tracing
+from app.kernel.outbox.metrics import install_outbox_metrics
 from app.kernel.redis import build_redis
 from app.kernel.resilience.circuit_breaker import CircuitBreakerRegistry, CircuitOpenError
 from app.kernel.resilience.locks import LockFactory, LockNotAcquiredError
@@ -136,6 +137,7 @@ def install_kernel(app: Flask, container: Container, settings: Settings) -> None
             metrics.circuit_open.labels(name).set(1 if state == "open" else 0)
 
     metrics.add_collector(_collect_breakers)
+    install_outbox_metrics(metrics, container.resolve(UnitOfWorkFactory), container.resolve(Clock))
 
     # Breakers live in each worker's memory: every worker publishes its own state after each request
     # (a few dict reads), so a scrape merged across workers (livemax) never misses an open circuit.
