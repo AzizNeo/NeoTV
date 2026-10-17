@@ -143,8 +143,8 @@ app/modules/<name>/
 | `recommendations` | Trending and personalised rows from playback events |
 | `admin` | Dashboard, user moderation, live sessions, abuse detection rules |
 
-More detail (in Turkish): [architecture audit](docs/MIMARI_DENETIM_RAPORU.md) ·
-[implementation notes](docs/IMPLEMENTATION_NOTES.md).
+How it got here: [ADR-0010](docs/adr/0010-from-audit-to-rewrite.md) (the audit of the prototype and where each finding
+is handled) · adding modules, features and e-mail providers: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Tech stack
 

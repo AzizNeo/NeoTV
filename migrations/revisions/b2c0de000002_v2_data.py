@@ -17,7 +17,7 @@ Design rules:
   refs keep meaning the same thing. PostgreSQL sequences are re-aligned.
 * Legacy timestamps are naive UTC (``datetime.utcnow``) → made aware UTC.
 
-Deliberate non-migrations (documented in docs/IMPLEMENTATION_NOTES.md):
+Deliberate non-migrations (also in docs/adr/0010-from-audit-to-rewrite.md):
 * Refresh tokens / web sessions: v2 auth is new; everyone signs in again.
 * Device fingerprints: v2 device keys are HMAC(pepper, …) and cannot be
   recomputed here; legacy devices are kept as *inactive* history rows.

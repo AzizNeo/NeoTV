@@ -1,4 +1,4 @@
-# Pre-v2 paths superseded by the modular v2 tree (see docs/IMPLEMENTATION_NOTES.md).
+# Pre-v2 paths superseded by the modular v2 tree (see docs/adr/0010-from-audit-to-rewrite.md).
 # `python -m tools.cleanup_legacy --apply` moves them to .legacy_backup/<timestamp>/.
 # Explicit list: files you add later are never touched. Never list .env, instance/ or docs/.
 

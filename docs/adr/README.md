@@ -15,3 +15,4 @@ One file per decision, numbered in the order they were written. A superseded rec
 | [0007](0007-browser-tests-under-production-csp.md) | Browser tests run the production build under the production CSP and fail on any violation | Accepted |
 | [0008](0008-observability.md) | Observability: correct metrics, one trace per request, SLOs and alerts as tested code | Accepted |
 | [0009](0009-load-testing.md) | Load testing: real client pacing, SLO thresholds, limits left on | Accepted |
+| [0010](0010-from-audit-to-rewrite.md) | From an audit to a rewrite: what was found, and where each finding is handled | Accepted |
