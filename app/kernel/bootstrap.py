@@ -113,6 +113,7 @@ def register_kernel_error_mappings(error_map: ErrorMap) -> None:
 def install_kernel(app: Flask, container: Container, settings: Settings) -> None:
     from app.kernel import task_tracking
     from app.kernel.http import health, request_context
+    from app.kernel.observability import client_telemetry
     from app.kernel.outbox import trigger
 
     configure_logging(level=settings.log_level, json_output=settings.json_logs)
@@ -130,6 +131,7 @@ def install_kernel(app: Flask, container: Container, settings: Settings) -> None
     install_error_handlers(app, error_map)
     app.register_blueprint(health.blueprint, url_prefix="/api/v1/health")
     app.register_blueprint(task_tracking.blueprint, url_prefix="/api/v1/tasks")
+    app.register_blueprint(client_telemetry.blueprint, url_prefix="/api/v1/kernel")
     metrics = container.resolve(Metrics)
     install_metrics(app, metrics, token=settings.metrics_token.get_secret_value() if settings.metrics_token else None)
     breakers = container.resolve(CircuitBreakerRegistry)

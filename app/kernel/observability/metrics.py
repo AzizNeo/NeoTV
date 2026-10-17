@@ -79,6 +79,26 @@ class Metrics:
         self.proxy_errors = Counter(
             "neotv_playback_proxy_errors_total", "Media proxy upstream failures", ["reason"], registry=self.registry
         )
+        # Browser (POST /api/v1/kernel/client-events): Web Vitals and uncaught errors; closed label sets.
+        self.web_vital_seconds = Histogram(
+            "neotv_web_vital_seconds",
+            "Web Vitals in seconds (LCP, INP, FCP, TTFB) as measured in viewers' browsers",
+            ["name"],
+            registry=self.registry,
+            buckets=(0.05, 0.1, 0.2, 0.5, 0.8, 1, 1.8, 2.5, 3, 4, 6, 10),
+        )
+        self.web_vital_cls = Histogram(
+            "neotv_web_vital_cls",
+            "Cumulative Layout Shift (unitless) as measured in viewers' browsers",
+            registry=self.registry,
+            buckets=(0.01, 0.05, 0.1, 0.15, 0.25, 0.5, 1),
+        )
+        self.web_vital_rating = Counter(
+            "neotv_web_vital_rating_total", "Web Vitals by Google's rating", ["name", "rating"], registry=self.registry
+        )
+        self.client_errors = Counter(
+            "neotv_client_errors_total", "Uncaught errors in viewers' browsers", ["source"], registry=self.registry
+        )
         self.active_streams = Gauge(
             "neotv_playback_active_streams",
             "Streams holding a concurrency slot right now (all accounts)",

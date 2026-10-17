@@ -6752,6 +6752,92 @@
         ]
       }
     },
+    "/api/v1/kernel/client-events": {
+      "post": {
+        "operationId": "kernel_client_events",
+        "summary": "Browser telemetry: Web Vitals and uncaught errors (sendBeacon; up to 20 per call)",
+        "tags": [
+          "kernel"
+        ],
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {},
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "public",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "events": {
+                    "items": {
+                      "discriminator": {
+                        "mapping": {
+                          "error": "#/components/schemas/ErrorEvent",
+                          "vital": "#/components/schemas/VitalEvent"
+                        },
+                        "propertyName": "kind"
+                      },
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/VitalEvent"
+                        },
+                        {
+                          "$ref": "#/components/schemas/ErrorEvent"
+                        }
+                      ]
+                    },
+                    "maxItems": 20,
+                    "minItems": 1,
+                    "title": "Events",
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "events"
+                ],
+                "title": "ClientEvents",
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/library/continue": {
       "get": {
         "operationId": "library_continue_watching",
@@ -13585,6 +13671,83 @@
           }
         }
       },
+      "ErrorEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "error",
+            "title": "Kind",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "error",
+              "unhandledrejection",
+              "render"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "message": {
+            "maxLength": 1000,
+            "title": "Message",
+            "type": "string"
+          },
+          "stack": {
+            "anyOf": [
+              {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Stack"
+          },
+          "path": {
+            "description": "Page path (query and fragment are dropped)",
+            "maxLength": 500,
+            "title": "Path",
+            "type": "string"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{32}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Trace Id"
+          },
+          "release": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Release"
+          }
+        },
+        "required": [
+          "kind",
+          "source",
+          "message",
+          "path"
+        ],
+        "title": "ErrorEvent",
+        "type": "object"
+      },
       "EventOut": {
         "properties": {
           "id": {
@@ -15904,6 +16067,51 @@
           "per_page"
         ],
         "title": "TitlePageOut",
+        "type": "object"
+      },
+      "VitalEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "vital",
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "enum": [
+              "LCP",
+              "INP",
+              "CLS",
+              "FCP",
+              "TTFB"
+            ],
+            "title": "Name",
+            "type": "string"
+          },
+          "value": {
+            "description": "Milliseconds; CLS is unitless",
+            "maximum": 600000,
+            "minimum": 0,
+            "title": "Value",
+            "type": "number"
+          },
+          "rating": {
+            "enum": [
+              "good",
+              "needs-improvement",
+              "poor"
+            ],
+            "title": "Rating",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "value",
+          "rating"
+        ],
+        "title": "VitalEvent",
         "type": "object"
       },
       "WebhookOut": {

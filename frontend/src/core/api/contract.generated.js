@@ -636,6 +636,14 @@ export const OPERATIONS = Object.freeze({
       "ACTION_TOKEN_INVALID"
     ]
   },
+  "kernel_client_events": {
+    "method": "POST",
+    "path": "/api/v1/kernel/client-events",
+    "auth": "public",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
+  },
   "kernel_tasks_task_status": {
     "method": "GET",
     "path": "/api/v1/tasks/{task_id}",
