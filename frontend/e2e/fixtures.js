@@ -26,8 +26,10 @@ export const test = base.extend({
   /** Opt-out for tests that provoke a violation on purpose (they assert on `cspViolations`). */
   allowCspViolations: [false, { option: true }],
   cspViolations: async ({}, use) => use([]), // eslint-disable-line no-empty-pattern -- Playwright's fixture signature
-  page: async ({ page, allowCspViolations, cspViolations: violations }, use) => {
-    const errors = [];
+  /** Opt-out for tests that throw on purpose (they assert on `pageErrors`). */
+  allowPageErrors: [false, { option: true }],
+  pageErrors: async ({}, use) => use([]), // eslint-disable-line no-empty-pattern -- Playwright's fixture signature
+  page: async ({ page, allowCspViolations, cspViolations: violations, allowPageErrors, pageErrors: errors }, use) => {
     // Reported straight to the test process, so nothing is lost when the page navigates.
     await page.exposeFunction('__e2eCspViolation', (text) => violations.push(text));
     await page.addInitScript(() => {
@@ -38,7 +40,7 @@ export const test = base.extend({
     page.on('pageerror', (error) => errors.push(`uncaught: ${error.message}`));
     await use(page);
     if (!allowCspViolations) expect(violations, 'CSP violations').toEqual([]);
-    expect(errors, 'uncaught page errors').toEqual([]);
+    if (!allowPageErrors) expect(errors, 'uncaught page errors').toEqual([]);
   },
 });
 
