@@ -263,10 +263,20 @@ jobs:
           export LOAD_PASSWORD
           docker compose -f compose.demo.yml exec -T -e LOAD_PASSWORD api python -m tools.load_seed --count 2
           # The export holds the accounts' tokens (setup_data): it stays on the runner, never uploaded.
-          k6 run --quiet --summary-export "$RUNNER_TEMP/k6.json" -e BASE=http://localhost:8080 -e PROFILE=smoke deploy/load/neotv.js
+          set -o pipefail
+          k6 run --quiet --summary-export "$RUNNER_TEMP/k6.json" -e BASE=http://localhost:8080 -e PROFILE=smoke deploy/load/neotv.js 2>&1 | tee "$RUNNER_TEMP/k6.log"
       - name: Load smoke report
         if: always()
-        run: test -f "$RUNNER_TEMP/k6.json" && python3 tools/k6_summary.py "$RUNNER_TEMP/k6.json" >> "$GITHUB_STEP_SUMMARY" || true
+        run: |
+          test -f "$RUNNER_TEMP/k6.json" && python3 tools/k6_summary.py "$RUNNER_TEMP/k6.json" >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Load smoke failure details
+        if: failure()
+        run: |
+          # As annotations: readable without downloading logs. Neither output carries tokens.
+          note() { sed "/Password/d" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g'; }
+          test -f "$RUNNER_TEMP/k6.json" && echo "::error title=k6 report::$(python3 tools/k6_summary.py "$RUNNER_TEMP/k6.json" | note)"
+          test -f "$RUNNER_TEMP/k6.log" && echo "::error title=k6 output::$(grep -vE '^\s*$' "$RUNNER_TEMP/k6.log" | tail -40 | note)"
+          echo "::error title=api log::$(docker compose -f compose.demo.yml logs --no-log-prefix --tail 30 api 2>&1 | note)"
       - name: Restart keeps data and secrets (idempotent setup)
         run: |
           docker compose -f compose.demo.yml down

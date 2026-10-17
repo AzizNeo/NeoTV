@@ -89,11 +89,12 @@ function headers(token, device) {
 }
 
 // Every request goes through here: one name per endpoint (not per URL), the SLO tag, 429 counting.
-function call(method, path, { name, body = null, token, device, expect = [200] } = {}) {
+// `warmup`: setup's requests (cold workers, first sign-ins) are kept out of the SLO thresholds.
+function call(method, path, { name, body = null, token, device, expect = [200], warmup = false } = {}) {
   if (!ENDPOINTS.includes(name)) throw new Error(`unknown endpoint name "${name}": add it to ENDPOINTS`);
   const res = http.request(method, `${BASE}${path}`, body === null ? null : JSON.stringify(body), {
     headers: headers(token, device),
-    tags: { name, slo: 'api' },
+    tags: { name, slo: warmup ? 'setup' : 'api' },
     responseCallback: http.expectedStatuses(...expect),
   });
   if (res.status === 429) rateLimited.add(1, { name });
@@ -104,8 +105,8 @@ function call(method, path, { name, body = null, token, device, expect = [200] }
 // Success bodies are an envelope: {"success": true, "data": …}.
 const data = (res, path) => (res.status < 300 ? res.json(path ? `data.${path}` : 'data') : null);
 
-function login(username) {
-  const res = call('POST', '/api/v1/auth/login', { name: 'auth.login', body: { username, password: PASSWORD } });
+function login(username, warmup = false) {
+  const res = call('POST', '/api/v1/auth/login', { name: 'auth.login', body: { username, password: PASSWORD }, warmup });
   return data(res, 'access_token');
 }
 
@@ -119,12 +120,12 @@ export function setup() {
 
   const tokens = [];
   for (let n = 1; n <= ACCOUNTS; n += 1) {
-    const token = login(account(n));
+    const token = login(account(n), true);
     if (!token) fail(`${account(n)} cannot sign in — run tools/load_seed.py --count ${ACCOUNTS} first`);
     tokens.push(token);
     sleep(LOGIN_SPACING_S);
   }
-  const channels = call('GET', '/api/v1/catalog/channels?per_page=50', { name: 'catalog.list', token: tokens[0] });
+  const channels = call('GET', '/api/v1/catalog/channels?per_page=50', { name: 'catalog.list', token: tokens[0], warmup: true });
   const refs = (data(channels, 'items') || []).map((c) => `catalog:${c.id}`);
   if (refs.length === 0) fail('no channels to watch — seed the demo content (tools/seed_demo.py)');
   return { tokens, refs };
