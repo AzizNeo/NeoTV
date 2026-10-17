@@ -30,9 +30,11 @@ _to_delete/
 .legacy_backup/
 *.log
 
-# IDE state (contains local paths)
+# IDE state (contains local paths and personal settings)
 .vs/
+.vscode/
 .idea/
+*.code-workspace
 
 # Windows: project root doubles as an old virtualenv — never commit it
 /Lib/

@@ -1,5 +1,6 @@
 # gitleaks config: default rules + project allowlist.
-# CI runs `gitleaks git` on every push/PR; a new finding fails the build.
+# CI scans every commit of every branch (`gitleaks git --log-opts=--all`) on every push/PR; a new
+# finding fails the build. A reviewed false positive in history goes to .gitleaksignore, with a reason.
 [extend]
 useDefault = true
 

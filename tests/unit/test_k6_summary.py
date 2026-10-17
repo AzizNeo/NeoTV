@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from tools.k6_summary import report
 
-TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl"
+# A sentinel, not a credential: the export's setup_data holds real access tokens in a run.
+TOKEN = "setup-data-sentinel-must-not-leak"
 
 
 def _summary(**extra: dict) -> dict:

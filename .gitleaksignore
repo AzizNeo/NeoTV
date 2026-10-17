@@ -1,0 +1,5 @@
+# Reviewed false positives that live in git history (history is not rewritten for them).
+# Format: <commit>:<file>:<rule>:<line> — one per line, each with the reason above it.
+
+# A made-up JWT used as a "must not leak" sentinel in a unit test; replaced by a plain string later.
+fa68d3fb6efdfe309aa2f599b375b9ff02e23699:tests/unit/test_k6_summary.py:generic-api-key:7

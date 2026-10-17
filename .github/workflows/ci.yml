@@ -9,6 +9,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege: every job reads the code and nothing more, unless it says otherwise (badges).
+permissions:
+  contents: read
+
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -66,20 +70,24 @@ jobs:
           diff -u openapi/openapi.json /tmp/openapi.json
 
   secrets-scan:
-    # Fails the build if a secret lands in the tree (config: .gitleaks.toml).
+    # Fails the build if a secret is in any commit of any branch — deleting a file does not remove
+    # it from history, and history is what a public repository publishes (config: .gitleaks.toml;
+    # reviewed false positives: .gitleaksignore).
     runs-on: ubuntu-latest
     env:
       GITLEAKS_VERSION: "8.21.2"
       GITLEAKS_SHA256: "5bc41815076e6ed6ef8fbecc9d9b75bcae31f39029ceb55da08086315316e3ba"
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # the whole history, every branch
       - name: Install gitleaks (pinned + checksum-verified)
         run: |
           curl -sSfL -o gitleaks.tgz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
           echo "${GITLEAKS_SHA256}  gitleaks.tgz" | sha256sum -c -
           tar xzf gitleaks.tgz gitleaks
-      - name: Scan working tree
-        run: ./gitleaks dir . --config .gitleaks.toml --redact --no-banner
+      - name: Scan the whole history
+        run: ./gitleaks git . --log-opts="--all" --config .gitleaks.toml --gitleaks-ignore-path .gitleaksignore --redact --no-banner
 
   # A newcomer's first run, on the OS/Python the team actually uses. Catches what
   # unit tests cannot: missing wheels/deps, .env encoding, Windows code pages.
