@@ -68,3 +68,33 @@ tokens. Only the Markdown made from its `metrics` is published.
 ## Results
 
 Capacity runs (the *Load test* workflow) are recorded here as they are made.
+
+**2026-10-17 — 50 viewers, 40 s per view** (GitHub runner, 2 vCPU; whole stack on the same machine
+as k6: Postgres, Redis, 2 gunicorn workers × threads, worker, beat, nginx). 1 min ramp, 3 min hold.
+
+| | |
+| --- | --- |
+| Result | all thresholds passed; 0 errors, 0 rate-limited, 100 % checks |
+| Traffic | 2,905 requests (8.7/s), 523 viewer sessions, 52 virtual users at peak |
+| API p99 (SLO ≤ 1 s) | **81 ms** |
+
+| Endpoint | Requests | median | p95 | p99 | max |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `auth.login` | 321 | 63 ms | 92 ms | 124 ms | 172 ms |
+| `titles.rails` | 259 | 28 ms | 46 ms | 71 ms | 117 ms |
+| `titles.browse` | 259 | 11 ms | 20 ms | 40 ms | 98 ms |
+| `titles.detail` | 259 | 9.1 ms | 18 ms | 23 ms | 29 ms |
+| `catalog.list` | 260 | 6.5 ms | 13 ms | 21 ms | 22 ms |
+| `playback.open` | 259 | 10 ms | 20 ms | 33 ms | 36 ms |
+| `playback.heartbeat` | 777 | 5.3 ms | 9.6 ms | 16 ms | 34 ms |
+| `playback.qoe` | 255 | 5.7 ms | 11 ms | 17 ms | 20 ms |
+| `playback.release` | 255 | 4.7 ms | 10 ms | 15 ms | 37 ms |
+
+Reading it:
+- **50 concurrent viewers use about 8 % of the latency budget** (p99 81 ms of 1 s). This run says
+  the expected peak is comfortable; it does not say where the limit is — that needs a breakpoint
+  run (more viewers until a threshold breaks).
+- **Sign-in is the most expensive request** (median 63 ms, password hashing — deliberate), then
+  the home rails (several queries per call). Both are the first candidates when capacity matters.
+- Container CPU and memory were sampled *after* the run in this report (idle values, not shown);
+  the workflow now samples every 10 s during the run and reports peaks.
