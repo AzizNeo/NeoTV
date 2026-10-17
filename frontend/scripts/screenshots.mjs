@@ -7,7 +7,8 @@
  *
  * Output (../docs/screenshots/): 1440×900 PNGs, one 390×844 mobile view, and demo.gif — a short
  * walk-through recorded with Chromium's screencast (needs ffmpeg on PATH to assemble the GIF).
- * Optional: CHROMIUM_PATH (a system Chromium), NEOTV_SKIP_GIF=1.
+ * Optional: CHROMIUM_PATH (a system Chromium), NEOTV_SKIP_GIF=1, NEOTV_SKIP_PLAYBACK=1 (no stream needed:
+ * keeps player.png, up-next.png and demo.gif, refreshes every page screenshot).
  * Playwright is deliberately not a dependency: only maintainers refreshing the README need it.
  */
 /* eslint-disable no-console -- maintainer CLI: progress on stdout is its interface */
@@ -25,6 +26,7 @@ if (!user || !password) throw new Error('Set NEOTV_USER and NEOTV_PASSWORD');
 const out = resolve(dirname(fileURLToPath(import.meta.url)), '../../docs/screenshots');
 await mkdir(out, { recursive: true });
 const DESKTOP = { width: 1440, height: 900 };
+const SKIP_PLAYBACK = Boolean(process.env.NEOTV_SKIP_PLAYBACK);
 
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 
@@ -88,28 +90,30 @@ try {
 
     // ── Player first: the home page then shows "continue watching" ────
     await signIn(page);
-    await play(page, 'sintel');
-    await seek(page, 9);
-    await wake(page);
-    await page.getByRole('button', { name: 'Ayarlar' }).click();
-    await page.getByRole('menuitem', { name: /Altyazı/ }).click();
-    await page.getByRole('menuitemradio', { name: 'Türkçe' }).click();
-    await page.waitForTimeout(1500);
-    await wake(page);
-    await page.getByRole('button', { name: 'Ayarlar' }).click();
-    await page.waitForTimeout(300);
-    await shot(page, 'player');
-    await page.keyboard.press('Escape');
-    await page.keyboard.press('Escape');
+    if (!SKIP_PLAYBACK) {
+      await play(page, 'sintel');
+      await seek(page, 9);
+      await wake(page);
+      await page.getByRole('button', { name: 'Ayarlar' }).click();
+      await page.getByRole('menuitem', { name: /Altyazı/ }).click();
+      await page.getByRole('menuitemradio', { name: 'Türkçe' }).click();
+      await page.waitForTimeout(1500);
+      await wake(page);
+      await page.getByRole('button', { name: 'Ayarlar' }).click();
+      await page.waitForTimeout(300);
+      await shot(page, 'player');
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('Escape');
 
-    await play(page, 'test-streams');
-    const duration = await page.evaluate(() => document.querySelector('video').duration);
-    await seek(page, duration - 14);
-    await page.waitForSelector('section[aria-label="Sonraki bölüm"]', { timeout: 10_000 });
-    await wake(page);
-    await page.waitForTimeout(500);
-    await shot(page, 'up-next');
-    await page.keyboard.press('Escape');
+      await play(page, 'test-streams');
+      const duration = await page.evaluate(() => document.querySelector('video').duration);
+      await seek(page, duration - 14);
+      await page.waitForSelector('section[aria-label="Sonraki bölüm"]', { timeout: 10_000 });
+      await wake(page);
+      await page.waitForTimeout(500);
+      await shot(page, 'up-next');
+      await page.keyboard.press('Escape');
+    }
 
     for (const [name, path] of [
       ['home', '/'],
@@ -149,7 +153,7 @@ try {
   }
 
   // ── demo.gif: a ~20-second walk-through ────────────────────────────
-  if (!process.env.NEOTV_SKIP_GIF) {
+  if (!process.env.NEOTV_SKIP_GIF && !SKIP_PLAYBACK) {
     const frames = join(out, '.frames');
     await rm(frames, { recursive: true, force: true });
     await mkdir(frames);

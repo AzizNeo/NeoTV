@@ -1,0 +1,10 @@
+# Public pages may be indexed; the API and signed-in areas are not content for search engines.
+User-agent: *
+Disallow: /api/
+Disallow: /account
+Disallow: /admin
+Disallow: /billing/
+Disallow: /devices
+Disallow: /favorites
+Disallow: /history
+Disallow: /profiles
