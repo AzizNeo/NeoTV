@@ -30,7 +30,7 @@ WORKDIR /srv/neotv
 COPY --chown=neotv:neotv app ./app
 COPY --chown=neotv:neotv migrations ./migrations
 COPY --chown=neotv:neotv tools ./tools
-COPY --chown=neotv:neotv run.py celery_worker.py ./
+COPY --chown=neotv:neotv run.py celery_worker.py gunicorn.conf.py ./
 # state/: small writable data of single-host setups (the demo's generated secrets, console mail).
 RUN mkdir -p /var/lib/neotv/hls /var/lib/neotv/state instance && chown -R neotv:neotv /var/lib/neotv instance
 USER neotv

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from flask import Flask
+from flask import Flask, Response
 
 from app.kernel.cache.stampede import CacheComputeTimeoutError
 from app.kernel.capabilities import CapabilityIndex
@@ -136,4 +136,12 @@ def install_kernel(app: Flask, container: Container, settings: Settings) -> None
             metrics.circuit_open.labels(name).set(1 if state == "open" else 0)
 
     metrics.add_collector(_collect_breakers)
+
+    # Breakers live in each worker's memory: every worker publishes its own state after each request
+    # (a few dict reads), so a scrape merged across workers (livemax) never misses an open circuit.
+    @app.after_request
+    def _publish_breakers(response: Response) -> Response:
+        _collect_breakers()
+        return response
+
     trigger.install(app)
