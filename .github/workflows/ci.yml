@@ -149,6 +149,27 @@ jobs:
       - name: nginx config is valid (security-headers snippet included)
         run: docker run --rm --add-host api:127.0.0.1 neotv/web:ci nginx -t
 
+  # Alerting as code: the generated rules are current, valid, and behave as specified
+  # (promtool unit tests: which alerts fire on which synthetic series — and which stay quiet).
+  observability-rules:
+    runs-on: ubuntu-latest
+    env:
+      PROMETHEUS_VERSION: "3.5.0"
+      PROMETHEUS_SHA256: e811827af26d822afb09a4f28314f61b618b12cff5369835a67f674d8b46f39a
+    steps:
+      - uses: actions/checkout@v4
+      - name: promtool (pinned, checksum-verified)
+        run: |
+          curl -sSfL -o prometheus.tgz "https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz"
+          echo "${PROMETHEUS_SHA256}  prometheus.tgz" | sha256sum -c -
+          tar xzf prometheus.tgz --strip-components=1 "prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool"
+      - name: Generated rules are current
+        run: python3 deploy/prometheus/generate_rules.py --check
+      - name: Rules are valid
+        run: ./promtool check rules deploy/prometheus/neotv.rules.yml
+      - name: Rules behave as specified
+        run: ./promtool test rules deploy/prometheus/neotv.rules.test.yml
+
   # Browser tests: the production build under the production CSP against a fresh, seeded backend.
   # Every test also fails on a CSP violation or an uncaught page error (frontend/e2e/fixtures.js).
   e2e:

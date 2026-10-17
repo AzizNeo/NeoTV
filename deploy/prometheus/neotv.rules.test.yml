@@ -1,0 +1,175 @@
+# Behaviour tests for neotv.rules.yml:  promtool test rules deploy/prometheus/neotv.rules.test.yml
+# Synthetic series (1 sample per minute) → which alerts must fire, and — just as important — stay quiet.
+rule_files:
+  - neotv.rules.yml
+evaluation_interval: 1m
+
+tests:
+  # ── An outage: 10 % of API requests fail → page within minutes ─────────────
+  - interval: 1m
+    input_series:
+      - series: 'neotv_http_requests_total{endpoint="titles.browse",method="GET",status="200"}'
+        values: '0+900x60'
+      - series: 'neotv_http_requests_total{endpoint="titles.browse",method="GET",status="500"}'
+        values: '0+100x60'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: NeoTVAvailabilityBudgetBurnPage
+        exp_alerts:
+          - exp_labels: {severity: page, slo: availability}
+            exp_annotations:
+              description: 'Objective 99.5%. Bad-event ratio over 1h: 10% (alert at 7.20%).'
+              runbook_url: 'docs/runbooks.md#slo-availability'
+              summary: 'API requests answered without a server error (5xx): error budget burning 14.4x too fast'
+
+  # ── A healthy API (0.1 % errors) pages nobody and opens no ticket ──────────
+  - interval: 1m
+    input_series:
+      - series: 'neotv_http_requests_total{endpoint="titles.browse",method="GET",status="200"}'
+        values: '0+999x420'
+      - series: 'neotv_http_requests_total{endpoint="titles.browse",method="GET",status="500"}'
+        values: '0+1x420'
+    alert_rule_test:
+      - eval_time: 7h
+        alertname: NeoTVAvailabilityBudgetBurnPage
+        exp_alerts: []
+      - eval_time: 7h
+        alertname: NeoTVAvailabilityBudgetBurnTicket
+        exp_alerts: []
+
+  # ── A slow leak (4 % errors): below the page threshold, but a ticket ──────
+  - interval: 1m
+    input_series:
+      - series: 'neotv_http_requests_total{endpoint="titles.browse",method="GET",status="200"}'
+        values: '0+960x120'
+      - series: 'neotv_http_requests_total{endpoint="titles.browse",method="GET",status="500"}'
+        values: '0+40x120'
+    alert_rule_test:
+      - eval_time: 90m
+        alertname: NeoTVAvailabilityBudgetBurnPage
+        exp_alerts: []
+      - eval_time: 90m
+        alertname: NeoTVAvailabilityBudgetBurnTicket
+        exp_alerts:
+          - exp_labels: {severity: ticket, slo: availability}
+            exp_annotations:
+              description: 'Objective 99.5%. Bad-event ratio over 6h: 4% (alert at 3.00%).'
+              runbook_url: 'docs/runbooks.md#slo-availability'
+              summary: 'API requests answered without a server error (5xx): error budget burning 6x too fast'
+
+  # ── Probes and the media proxy never count against the API's SLOs ─────────
+  # The health check fails hard and the origin behind the proxy is down: the API SLO stays quiet,
+  # the origin alert fires.
+  - interval: 1m
+    input_series:
+      - series: 'neotv_http_requests_total{endpoint="titles.browse",method="GET",status="200"}'
+        values: '0+1000x40'
+      - series: 'neotv_http_requests_total{endpoint="kernel_health.ready",method="GET",status="503"}'
+        values: '0+60x40'
+      - series: 'neotv_http_requests_total{endpoint="playback.proxy",method="GET",status="502"}'
+        values: '0+300x40'
+      - series: 'neotv_playback_proxy_errors_total{reason="timeout"}'
+        values: '0+300x40'
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: NeoTVAvailabilityBudgetBurnPage
+        exp_alerts: []
+      - eval_time: 30m
+        alertname: NeoTVOriginFailures
+        exp_alerts:
+          - exp_labels: {severity: ticket}
+            exp_annotations:
+              runbook_url: 'docs/runbooks.md#origin-failures'
+              summary: 'Over 5% of media requests fail at the origin (100%)'
+
+  # ── Latency: most requests take over a second → page ──────────────────────
+  - interval: 1m
+    input_series:
+      - series: 'neotv_http_request_seconds_bucket{endpoint="titles.browse",le="1.0"}'
+        values: '0+500x60'
+      - series: 'neotv_http_request_seconds_count{endpoint="titles.browse"}'
+        values: '0+1000x60'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: NeoTVLatencyBudgetBurnPage
+        exp_alerts:
+          - exp_labels: {severity: page, slo: latency}
+            exp_annotations:
+              description: 'Objective 99.0%. Bad-event ratio over 1h: 50% (alert at 14.40%).'
+              runbook_url: 'docs/runbooks.md#slo-latency'
+              summary: 'API requests answered within 1 s: error budget burning 14.4x too fast'
+
+  # ── Playback start: 40 % of streams take over 3 s → ticket, not a page ────
+  - interval: 1m
+    input_series:
+      - series: 'neotv_playback_startup_seconds_bucket{device="tv",le="3.0"}'
+        values: '0+6x120'
+      - series: 'neotv_playback_startup_seconds_count{device="tv"}'
+        values: '0+10x120'
+    alert_rule_test:
+      - eval_time: 60m
+        alertname: NeoTVPlaybackStartBudgetBurnPage
+        exp_alerts: []
+      - eval_time: 60m
+        alertname: NeoTVPlaybackStartBudgetBurnTicket
+        exp_alerts:
+          - exp_labels: {severity: ticket, slo: playback_start}
+            exp_annotations:
+              description: 'Objective 95.0%. Bad-event ratio over 6h: 40% (alert at 30.00%).'
+              runbook_url: 'docs/runbooks.md#slo-playback-start'
+              summary: 'streams showing their first frame within 3 s: error budget burning 6x too fast'
+
+  # ── Operations ─────────────────────────────────────────────────────────────
+  - interval: 1m
+    input_series:
+      - series: 'up{job="neotv-api",instance="api:8000"}'
+        values: '1 1 1 0 0 0 0 0 0 0'
+      - series: 'neotv_outbox_lag_seconds'
+        values: '0 30 600 600 600 600 600 600 600 600 600 600 600 600 600'
+      - series: 'neotv_outbox_dead_letters'
+        values: '0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1'
+      - series: 'neotv_circuit_open{name="tmdb"}'
+        values: '0 1 1 1 1 1 1 1 1'
+      - series: 'neotv_circuit_open{name="egress"}'
+        values: '0 0 0 0 0 0 0 0 0'
+      - series: 'neotv_client_errors_total{source="error"}'
+        values: '0+10x30'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: NeoTVApiDown
+        exp_alerts:
+          - exp_labels: {severity: page, job: neotv-api, instance: "api:8000"}
+            exp_annotations:
+              runbook_url: 'docs/runbooks.md#api-down'
+              summary: 'Prometheus cannot scrape the NeoTV API'
+      - eval_time: 13m
+        alertname: NeoTVOutboxLagging
+        exp_alerts:
+          - exp_labels: {severity: ticket}
+            exp_annotations:
+              runbook_url: 'docs/runbooks.md#outbox-lagging'
+              summary: 'Domain events wait over 5 minutes for delivery (workers down or a consumer failing)'
+      - eval_time: 5m
+        alertname: NeoTVDeadLetters
+        exp_alerts: []          # not yet: a dead letter must wait 15 min before anyone is paged…
+      - eval_time: 18m
+        alertname: NeoTVDeadLetters
+        exp_alerts:             # …then it is a ticket
+          - exp_labels: {severity: ticket}
+            exp_annotations:
+              runbook_url: 'docs/runbooks.md#dead-letters'
+              summary: 'Event deliveries that gave up and wait for a human: 1'
+      - eval_time: 7m
+        alertname: NeoTVCircuitOpen
+        exp_alerts:
+          - exp_labels: {severity: ticket, name: tmdb}
+            exp_annotations:
+              runbook_url: 'docs/runbooks.md#circuit-open'
+              summary: 'Circuit tmdb has been open for 5 minutes'
+      - eval_time: 25m
+        alertname: NeoTVBrowserErrors
+        exp_alerts:
+          - exp_labels: {severity: ticket}
+            exp_annotations:
+              runbook_url: 'docs/runbooks.md#browser-errors'
+              summary: 'Viewers'' browsers report 10 uncaught errors per minute'
