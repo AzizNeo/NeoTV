@@ -2,11 +2,14 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
 import { readSecurityHeaders } from './scripts/security-headers.mjs';
+import pkg from './package.json' with { type: 'json' };
 
 const API_TARGET = process.env.VITE_DEV_API_TARGET ?? 'http://127.0.0.1:5000';
 
 export default defineConfig({
   plugins: [react()],
+  // The release reported with browser errors (which build threw it).
+  define: { __NEOTV_RELEASE__: JSON.stringify(pkg.version) },
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

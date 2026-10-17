@@ -23,7 +23,7 @@ export default defineConfig([
     extends: [js.configs.recommended, reactHooks.configs.flat.recommended, reactRefresh.configs.vite],
     languageOptions: {
       ecmaVersion: 'latest',
-      globals: { ...globals.browser, ...globals.node },
+      globals: { ...globals.browser, ...globals.node, __NEOTV_RELEASE__: 'readonly' }, // vite define (release)
       parserOptions: { ecmaFeatures: { jsx: true }, sourceType: 'module' },
     },
     rules: {

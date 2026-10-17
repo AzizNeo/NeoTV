@@ -25,6 +25,8 @@ export class ErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     console.error('ErrorBoundary', error, info?.componentStack);
+    // Announced, not reported: shared/ stays free of core/ (telemetry listens for this event).
+    window.dispatchEvent(new CustomEvent('app:render-error', { detail: { error, componentStack: info?.componentStack } }));
   }
 
   render() {
