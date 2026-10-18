@@ -8,11 +8,11 @@ on:
       - 'docs/**'
       - '.gitignore'
       - 'LICENSE'
+  # Pull requests always run the full CI: main's ruleset requires these checks, and a workflow
+  # skipped by a path filter never reports them, so a docs-only PR could never be merged.
+  # (Pushes to main can skip docs-only changes: they were already checked as a pull request.)
   pull_request:
     branches: [ main ]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
