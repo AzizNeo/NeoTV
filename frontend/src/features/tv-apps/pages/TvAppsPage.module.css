@@ -1,0 +1,91 @@
+.notice {
+  margin: 0 0 1rem;
+  color: var(--text-2);
+}
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+.item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--border-radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+.icon {
+  color: var(--color-text-secondary);
+  flex: none;
+}
+.body {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+.body small {
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+.warn {
+  color: var(--text-1);
+  font-weight: 600;
+  border-bottom: 2px solid var(--danger);
+}
+.form {
+  display: grid;
+  gap: 0.5rem;
+}
+.form label {
+  font-weight: 600;
+}
+.hint {
+  color: var(--text-2);
+}
+.buttons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+.once {
+  margin-top: 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius-md);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--text-1);
+}
+.details {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+}
+.detail dt {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+.detail dd {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.detail code {
+  flex: 1;
+  min-width: 0;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--border-radius-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}

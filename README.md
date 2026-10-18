@@ -47,7 +47,7 @@ the capture machine has no internet access.</sub>
 
 ## Highlights
 
-- **Modular monolith with a real contract.** 13 domain modules plug into a kernel through manifests
+- **Modular monolith with a real contract.** 15 domain modules plug into a kernel through manifests
   (capabilities, events, extension points, routes, tasks, permissions). Modules may only import each other's
   `api.py`; [import-linter](.importlinter) fails the build otherwise. Optional modules can be switched off with
   `DISABLED_MODULES` and dependants degrade gracefully — or fail at boot with a *named* error.
@@ -67,6 +67,12 @@ the capture machine has no internet access.</sub>
   where you left off; a player with quality / audio / subtitle menus on one track model for every engine,
   picture-in-picture, OS media controls, a `?` shortcut sheet generated from the same table as the key handler,
   live-TV zapping by arrow keys or channel number, and Netflix-style post-play.
+- **TV apps (Xtream-compatible player API).** IPTV apps on smart TVs and boxes (TiviMate, IPTV Smarters …)
+  sign in with per-device app credentials from Account → TV apps — never the account password — and see the
+  same catalogue, plan limits and kids rules as the web player: `player_api.php`, `xmltv.php`, `get.php` and
+  HLS stream URLs that open a normal playback session and redirect to the signed proxy. Credentials are masked
+  in every log and trace, and guessing is capped per address
+  ([ADR-0011](docs/adr/0011-xtream-compatible-player-api.md)).
 - **Two languages, one contract.** Each feature owns its TR/EN catalog; a missing key, language or placeholder
   fails at start-up (and in tests), never on screen. The account language follows the user across devices and
   into e-mails ([ADR-0002](docs/adr/0002-i18n-feature-owned-catalogs.md)).
@@ -105,6 +111,10 @@ flowchart LR
     recommendations -. signals .-> library
     admin --> identity
     admin --> playback
+    tmdb --> titles
+    xtream --> playback
+    xtream --> profile
+    xtream -. catalogue .-> titles
   end
 
   API -->|HTTPS| EP --> Modules
@@ -266,7 +276,8 @@ NeoTV ships **no channels or media**. The demo seeds only streams published for 
 Foundation open movies — *Big Buck Bunny*, *Sintel*, *Tears of Steel* (© Blender Foundation,
 [CC BY](https://creativecommons.org/licenses/by/3.0/), [blender.org](https://www.blender.org/about/projects/)) —
 and public HLS test streams from Apple, Akamai and Unified Streaming, played straight from their hosts. The demo
-artwork is original (`tools/demo_art.py`). Use NeoTV with content you are licensed to distribute.
+artwork is original (`tools/demo_art.py`). Use NeoTV with content you are licensed to distribute. The
+Xtream-compatible player API serves only this catalogue to the viewer's own apps; it provides no content of its own.
 
 ## Security
 

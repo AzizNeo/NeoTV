@@ -170,3 +170,22 @@ start with one release point at it.
 **Fix:** roll back the front-end release (the `web` image) if a release introduced them; fix
 forward otherwise. Messages, stacks and paths are scrubbed of query strings and tokens before
 they are logged.
+
+<a id="xtream-guessing"></a>
+## NeoTVXtreamGuessing — addresses keep sending wrong TV app credentials (ticket)
+
+**Means:** addresses that failed 30 TV-app credential checks within 10 minutes keep calling
+(`XtreamAuthGuard`, ADR-0011): more than one refused request per minute for 10 minutes. Their
+requests are refused without checking credentials, so this is load and intent, not a breach — app
+passwords are random and no account is locked by it.
+
+**Check:** `sum by (result) (rate(neotv_xtream_auth_total[10m]))` — `denied` rising with
+`blocked` is guessing; `denied` alone at a low rate is usually one TV with a revoked or changed
+credential. The addresses are in the access log (`docker compose logs --since 1h web | grep
+'/player_api.php\|/live/'`); credentials there are masked by design.
+
+**Fix:** if one or a few addresses: block them at the edge (firewall / load balancer). If it is
+spread: the per-address guard keeps each to ~30 tries per 10 minutes; raise nothing, watch the
+`denied` rate. If an owner reports their TV stopped after a password change, that is expected —
+a new account password revokes every app credential; they create a new one under Account →
+TV apps.
