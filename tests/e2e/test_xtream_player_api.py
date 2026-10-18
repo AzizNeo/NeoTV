@@ -157,7 +157,7 @@ def test_a_kids_credential_lists_kids_content_only(api: Api, lineup: dict[str, A
     assert "Late Night" not in names and {"News One", "Cartoons", "Studio"} <= names
 
 
-def test_unknown_and_pending_actions_answer_an_empty_list(api: Api) -> None:
+def test_unknown_actions_answer_an_empty_list(api: Api) -> None:
     creds = _credential(api, api.user("tv8"))
     assert _call(api, creds, "no_such_action").body == []
 
@@ -167,3 +167,177 @@ def test_stream_ids_round_trip_and_reject_garbage() -> None:
     assert str(content_ref(121)) == "catalog:12" and str(content_ref("32")) == "live:3"
     for garbage in ("", "abc", "-11", "10", "19", "1" * 19, 125):
         assert content_ref(garbage) is None, garbage
+
+
+# ── movies and series ───────────────────────────────────────────────────────
+
+TITLES = "/api/v1/titles/admin/titles"
+VOD_STREAM_TYPES: dict[str, type | tuple[type, ...]] = {
+    "num": int,
+    "name": str,
+    "stream_type": str,
+    "stream_id": int,
+    "stream_icon": str,
+    "rating": str,
+    "rating_5based": int,
+    "added": str,
+    "is_adult": str,
+    "category_id": str,
+    "category_ids": list,
+    "container_extension": str,
+    "custom_sid": str,
+    "direct_source": str,
+}
+SERIES_TYPES: dict[str, type | tuple[type, ...]] = {
+    "num": int,
+    "name": str,
+    "series_id": int,
+    "cover": str,
+    "plot": str,
+    "cast": str,
+    "director": str,
+    "genre": str,
+    "releaseDate": str,
+    "last_modified": str,
+    "rating": str,
+    "rating_5based": int,
+    "backdrop_path": list,
+    "youtube_trailer": str,
+    "episode_run_time": str,
+    "category_id": str,
+    "category_ids": list,
+}
+EPISODE_TYPES: dict[str, type | tuple[type, ...]] = {
+    "id": str,
+    "episode_num": int,
+    "title": str,
+    "container_extension": str,
+    "info": dict,
+    "custom_sid": str,
+    "added": str,
+    "season": int,
+    "direct_source": str,
+}
+
+
+@pytest.fixture
+def shelf(api: Api, admin: str) -> dict[str, Any]:
+    film = api.channel(admin, "Sintel src", kind="vod")
+    late = api.channel(admin, "Late src", kind="vod", rating="adult")
+    ep1 = api.channel(admin, "Ep1 src", kind="vod")
+    ep2 = api.channel(admin, "Ep2 src", kind="vod")
+    gone = api.channel(admin, "Gone src", kind="vod")
+    docs = {
+        "sintel": {
+            "kind": "movie",
+            "name": "Sintel",
+            "rating": "general",
+            "synopsis": "Bir kız ve ejderhası.",
+            "year": 2010,
+            "runtime_minutes": 15,
+            "poster_url": "https://img.example.com/sintel.jpg",
+            "play_ref": film["ref"],
+            "genres": ["Animasyon", "Fantastik"],
+            "translations": {"en": {"name": "Sintel (EN)", "synopsis": "A girl and her dragon."}},
+        },
+        "late": {"kind": "movie", "name": "Late", "rating": "adult", "play_ref": late["ref"]},
+        "gone": {"kind": "movie", "name": "Gone", "rating": "general", "play_ref": gone["ref"], "genres": ["Dram"]},
+        "shorts": {
+            "kind": "series",
+            "name": "Open Shorts",
+            "rating": "general",
+            "genres": ["Animasyon"],
+            "seasons": [
+                {
+                    "number": 1,
+                    "episodes": [{"number": 1, "name": "Bir", "play_ref": ep1["ref"], "runtime_minutes": 90}],
+                },
+                {
+                    "number": 2,
+                    "episodes": [
+                        {"number": 1, "name": "İki", "play_ref": ep2["ref"]},
+                        {"number": 2, "name": "Yakında"},  # announced: nothing plays yet
+                    ],
+                },
+            ],
+        },
+        "draft": {"kind": "movie", "name": "Draft", "play_ref": film["ref"], "is_published": False},
+    }
+    for slug, doc in docs.items():
+        reply = api.put(f"{TITLES}/{slug}", token=admin, json=doc)
+        assert reply.status == 201, (slug, reply.body)
+    assert api.delete(f"/api/v1/catalog/admin/channels/{gone['id']}", token=admin).status == 204  # unplayable now
+    return {"film": film, "late": late, "ep1": ep1, "ep2": ep2}
+
+
+def test_vod_lists_playable_published_titles_with_exact_types(api: Api, shelf: dict[str, Any]) -> None:
+    creds = _credential(api, api.user("vod1"))
+    categories = _call(api, creds, "get_vod_categories").body
+    names = [c["category_name"] for c in categories]
+    assert names == ["Animasyon", "Fantastik", "Diğer"]  # genres of playable movies; no genre → "Other"
+    streams = _call(api, creds, "get_vod_streams").body
+    for item in streams:
+        _shape(item, VOD_STREAM_TYPES)
+    by_name = {s["name"]: s for s in streams}
+    assert set(by_name) == {"Sintel", "Late"}  # no draft, no unplayable title, no series
+    sintel = by_name["Sintel"]
+    assert sintel["stream_id"] == stream_id(shelf["film"]["ref"]) and sintel["container_extension"] == "m3u8"
+    ids = {c["category_name"]: int(c["category_id"]) for c in categories}
+    assert sintel["category_ids"] == [ids["Animasyon"], ids["Fantastik"]]
+    assert by_name["Late"]["is_adult"] == "1" and by_name["Late"]["category_id"] == str(ids["Diğer"])
+
+    only = _call(api, creds, "get_vod_streams", category_id=str(ids["Fantastik"])).body
+    assert [s["name"] for s in only] == ["Sintel"]
+
+
+def test_vod_info_and_the_account_language(api: Api, shelf: dict[str, Any]) -> None:
+    token = api.user("vod2")
+    creds = _credential(api, token)
+    vod_id = str(stream_id(shelf["film"]["ref"]))
+    info = _call(api, creds, "get_vod_info", vod_id=vod_id).body
+    assert info["info"]["plot"] == "Bir kız ve ejderhası." and info["info"]["duration_secs"] == 900
+    assert info["info"]["duration"] == "00:15:00" and info["info"]["releasedate"] == "2010"
+    assert info["movie_data"]["stream_id"] == int(vod_id) and info["movie_data"]["category_id"].isdigit()
+
+    assert api.put("/api/v1/auth/me/locale", token=token, json={"locale": "en"}).status == 200
+    english = _call(api, creds, "get_vod_info", vod_id=vod_id).body
+    assert (english["info"]["name"], english["info"]["plot"]) == ("Sintel (EN)", "A girl and her dragon.")
+
+    for missing in ("", "abc", str(stream_id(shelf["ep1"]["ref"])), "999991"):  # an episode is not a movie
+        reply = _call(api, creds, "get_vod_info", vod_id=missing)
+        assert (reply.status, reply.body) == (404, []), missing
+
+
+def test_series_list_and_info(api: Api, shelf: dict[str, Any]) -> None:
+    creds = _credential(api, api.user("ser1"))
+    categories = _call(api, creds, "get_series_categories").body
+    assert [c["category_name"] for c in categories] == ["Animasyon"]
+    [show] = _call(api, creds, "get_series").body
+    _shape(show, SERIES_TYPES)
+    assert show["name"] == "Open Shorts" and show["category_id"] == categories[0]["category_id"]
+
+    details = _call(api, creds, "get_series_info", series_id=str(show["series_id"])).body
+    assert set(details) == {"seasons", "info", "episodes"}
+    assert [(s["season_number"], s["name"], s["episode_count"]) for s in details["seasons"]] == [
+        (1, "Sezon 1", "1"),
+        (2, "Sezon 2", "1"),  # the announced episode is not listed
+    ]
+    assert set(details["episodes"]) == {"1", "2"}
+    first = details["episodes"]["1"][0]
+    _shape(first, EPISODE_TYPES)
+    assert first["id"] == str(stream_id(shelf["ep1"]["ref"])) and first["season"] == 1
+    assert first["info"]["duration"] == "01:30:00" and first["info"]["duration_secs"] == 5400
+    assert details["info"]["series_id"] == show["series_id"] and "num" not in details["info"]
+    assert _call(api, creds, "get_series_info", series_id="999999").status == 404
+    assert _call(api, creds, "get_series_info", series_id="x").status == 404
+
+
+def test_kids_credentials_see_kids_titles_only(api: Api, shelf: dict[str, Any]) -> None:
+    token = api.user("vod3")
+    assert api.post("/api/v1/billing/trial", token=token).status == 200
+    kids = api.post("/api/v1/profiles", token=token, json={"name": "Kids", "is_kids": True}).data
+    creds = _credential(api, token, kids["id"])
+    assert {s["name"] for s in _call(api, creds, "get_vod_streams").body} == {"Sintel"}
+    late_id = str(stream_id(shelf["late"]["ref"]))
+    assert _call(api, creds, "get_vod_info", vod_id=late_id).status == 404  # hidden, not merely unlisted
+    assert "Diğer" not in [c["category_name"] for c in _call(api, creds, "get_vod_categories").body]

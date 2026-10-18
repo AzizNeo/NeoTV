@@ -56,7 +56,11 @@ under the same entitlement, rating and concurrency rules as the web player.
    digit (`catalog:12` → `121`, `live:3` → `32`; a new namespace takes a new digit, none is ever
    renumbered). Category names get a numeric id in `xtream_categories` the first time they are
    listed, and keep it. Lists come from read capabilities of the owning modules
-   (`catalog.read`, `live.read`), which apply the kids filter themselves.
+   (`catalog.read`, `live.read`, `titles.read`), which apply the kids filter themselves.
+   Movies and series are the storefront's published, playable titles (not raw catalogue VOD
+   entries), in the account's language; their categories are the titles' genres ("Other" for
+   none). A movie's stream id is that of its play source, an episode's that of its own; series
+   are keyed by the title's id. Announced episodes (nothing plays yet) are not listed.
 7. **Inside the API, behind `endpoint()`.** The protocol's routes live under `/api/v1/xtream/`
    like every other route (rate limit, OpenAPI, fitness tests); nginx maps the root paths apps
    call (`/player_api.php` …) onto them. Answers are the protocol's bare JSON, `no-store`.

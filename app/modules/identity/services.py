@@ -60,6 +60,7 @@ def to_summary(user: User) -> UserSummary:
         is_active=bool(user.is_active),
         created_at=user.created_at,
         last_login_at=user.last_login_at,
+        locale=user.locale,
     )
 
 

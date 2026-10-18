@@ -53,6 +53,7 @@ class XtreamPrincipal:
     profile_id: int
     is_kids: bool
     created_at: datetime
+    locale: str  # the account's language: names, synopses and genres come in it
 
 
 def generate(length: int) -> str:

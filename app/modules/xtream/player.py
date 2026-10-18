@@ -80,6 +80,23 @@ def player_api() -> Response:
         return _answer(catalog.live_categories(who))
     if action == "get_live_streams":
         return _answer(catalog.live_streams(who, category_id=request.values.get("category_id") or None))
-    if action in {"get_vod_categories", "get_vod_streams", "get_series_categories", "get_series"}:
-        return _answer([])  # VOD and series: next step (ADR-0011, X2)
+    return _titles(catalog, who, action)
+
+
+def _titles(catalog: XtreamCatalog, who: XtreamPrincipal, action: str) -> Response:
+    category = request.values.get("category_id") or None
+    if action == "get_vod_categories":
+        return _answer(catalog.vod_categories(who))
+    if action == "get_vod_streams":
+        return _answer(catalog.vod_streams(who, category_id=category))
+    if action == "get_vod_info":
+        info = catalog.vod_info(who, request.values.get("vod_id", ""))
+        return _answer(info) if info is not None else _answer([], status=404)
+    if action == "get_series_categories":
+        return _answer(catalog.series_categories(who))
+    if action == "get_series":
+        return _answer(catalog.series(who, category_id=category))
+    if action == "get_series_info":
+        details = catalog.series_info(who, request.values.get("series_id", ""))
+        return _answer(details) if details is not None else _answer([], status=404)
     return _answer([])  # unknown actions: an empty list, as Xtream servers answer

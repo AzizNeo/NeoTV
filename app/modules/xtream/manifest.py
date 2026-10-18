@@ -39,6 +39,7 @@ def _services(c: Any) -> None:
             c.resolve(UnitOfWorkFactory),
             c.resolve(CapabilityIndex).required("catalog.read"),
             c.resolve(CapabilityIndex).optional("live.read"),
+            c.resolve(CapabilityIndex).optional("titles.read"),
         ),
     )
 
@@ -50,7 +51,7 @@ manifest = ModuleManifest(
     requires=frozenset(
         {"identity.authentication", "identity.users", "profile.context", "profile.directory", "catalog.read"}
     ),
-    optional_requires=frozenset({"live.read", "billing.entitlements"}),
+    optional_requires=frozenset({"live.read", "titles.read", "billing.entitlements"}),
     models=("app.modules.xtream.models",),
     services=_services,
     routes=(

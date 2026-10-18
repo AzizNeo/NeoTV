@@ -31,6 +31,7 @@ from app.modules.xtream.domain import (
     secret_digest,
 )
 from app.modules.xtream.models import XtreamCredential
+from app.shared_kernel.locale import DEFAULT_LOCALE, SUPPORTED_LOCALES
 
 _USERNAME_ATTEMPTS = 3  # 31^10 names: a collision is already ~never; three tries make it a non-event
 
@@ -185,6 +186,7 @@ class CredentialService:
                 profile_id=profile.id,
                 is_kids=profile.is_kids,
                 created_at=row.created_at,
+                locale=user.locale if user.locale in SUPPORTED_LOCALES else DEFAULT_LOCALE,
             )
 
     # ── helpers ───────────────────────────────────────────────────────────

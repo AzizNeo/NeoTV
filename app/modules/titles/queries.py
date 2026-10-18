@@ -12,7 +12,7 @@ matches the original and every translation; "A–Z" sorts by the name the viewer
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal
 
 from sqlalchemy import ColumnElement, Select, func, or_, select
@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.kernel.uow import UnitOfWorkFactory
 from app.modules.playback.api import ContentDirectory
+from app.modules.titles.api import EpisodeListing, TitleListing
 from app.modules.titles.domain import TitleKind, TitleNotFoundError
 from app.modules.titles.models import Episode, Genre, GenreText, Title, TitleText, title_genres
 from app.modules.titles.services import title_refs
@@ -208,6 +209,58 @@ class TitleQueryService:
                 genre_links=[GenreLink(slug=g.slug, name=_genre_name(g, locale)) for g in title.genres],
             )
 
+    # ── capability titles.read ────────────────────────────────────────────
+    def listing(self, *, kind: TitleKind, kids_only: bool, locale: str) -> list[TitleListing]:
+        with self._uow() as uow:
+            rows = list(
+                uow.session.execute(
+                    _visible(kids_only).where(Title.kind == str(kind)).order_by(*_order("name", locale), Title.id)
+                ).scalars()
+            )
+            alive = self._alive(rows)
+            return [_listing(t, alive, locale) for t in rows if _first_playable(t, alive) is not None]
+
+    def movie_by_ref(self, play_ref: str, *, kids_only: bool, locale: str) -> TitleListing | None:
+        with self._uow() as uow:
+            title = uow.session.execute(
+                _visible(kids_only)
+                .where(Title.kind == str(TitleKind.MOVIE), Title.play_ref == play_ref)
+                .order_by(Title.id)
+                .limit(1)
+            ).scalar_one_or_none()
+            if title is None:
+                return None
+            alive = self._alive([title])
+            return _listing(title, alive, locale) if title.play_ref in alive else None
+
+    def series(self, title_id: int, *, kids_only: bool, locale: str) -> TitleListing | None:
+        with self._uow() as uow:
+            title = uow.session.execute(
+                _visible(kids_only).where(Title.kind == str(TitleKind.SERIES), Title.id == title_id)
+            ).scalar_one_or_none()
+            if title is None:
+                return None
+            alive = self._alive([title])
+            episodes = tuple(
+                EpisodeListing(
+                    id=e.id,
+                    season=s.number,
+                    number=e.number,
+                    name=_text(e, locale)[0],
+                    synopsis=_text(e, locale)[1],
+                    runtime_minutes=e.runtime_minutes,
+                    still_url=e.still_url,
+                    play_ref=e.play_ref,
+                    added_at=title.updated_at,  # episodes carry no timestamp of their own
+                )
+                for s in title.seasons
+                for e in s.episodes
+                if e.play_ref is not None and e.play_ref in alive
+            )
+            if not episodes:
+                return None
+            return replace(_listing(title, alive, locale), episodes=episodes)
+
     # ── internals ──────────────────────────────────────────────────────────
     def _alive(self, titles: list[Title]) -> set[str]:
         refs = sorted({r for t in titles for r in title_refs(t)})
@@ -309,6 +362,26 @@ def _card(t: Title, alive: set[str], locale: str) -> TitleCard:
         poster_url=t.poster_url,
         backdrop_url=t.backdrop_url,
         available=_first_playable(t, alive) is not None,
+    )
+
+
+def _listing(t: Title, alive: set[str], locale: str) -> TitleListing:
+    name, synopsis = _text(t, locale)
+    return TitleListing(
+        id=t.id,
+        slug=t.slug,
+        kind=t.kind,
+        name=name,
+        synopsis=synopsis,
+        year=t.year,
+        rating=t.rating,
+        runtime_minutes=t.runtime_minutes,
+        genres=tuple(_genre_name(g, locale) for g in t.genres),
+        poster_url=t.poster_url,
+        backdrop_url=t.backdrop_url,
+        play_ref=t.play_ref if t.kind == TitleKind.MOVIE else None,
+        added_at=t.created_at,
+        updated_at=t.updated_at,
     )
 
 
