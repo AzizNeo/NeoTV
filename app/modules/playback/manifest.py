@@ -18,6 +18,7 @@ from app.modules.playback.api import (
     GrantVerifier,
     SessionDirectory,
     SessionInactiveError,
+    SessionOpener,
     StreamUrlFactory,
 )
 from app.modules.playback.gate import (
@@ -65,11 +66,18 @@ def _services(c: Any) -> None:
     from app.modules.playback.gate import ContentDirectoryService
     from app.modules.playback.grants import MediaGrantVerifier, SignedStreamUrlFactory
     from app.modules.playback.hls_proxy import HlsProxyService
-    from app.modules.playback.services import PlaybackSessionService, SessionDirectoryService
+    from app.modules.playback.services import PlaybackSessionService, SessionDirectoryService, SessionOpenerService
 
     c.register(StreamConcurrencyGuard, lambda c: StreamConcurrencyGuard(c.resolve("kernel.redis")))
     c.register(StreamUrlFactory, lambda c: SignedStreamUrlFactory(c.resolve(UrlSigner)))
-    c.register(GrantVerifier, lambda c: MediaGrantVerifier(c.resolve(UrlSigner), c.resolve(StreamConcurrencyGuard)))
+    c.register(
+        GrantVerifier,
+        lambda c: MediaGrantVerifier(
+            c.resolve(UrlSigner),
+            c.resolve(StreamConcurrencyGuard),
+            on_media_heartbeat=lambda user_id, token: c.resolve(PlaybackSessionService).touch_record(user_id, token),
+        ),
+    )
     c.register(
         HlsProxyService,
         lambda c: HlsProxyService(c.resolve(EgressGateway), c.resolve(StreamUrlFactory), c.resolve(Metrics)),
@@ -90,6 +98,10 @@ def _services(c: Any) -> None:
         ),
     )
     c.register(
+        SessionOpener,
+        lambda c: SessionOpenerService(c.resolve(PlaybackSessionService)),
+    )
+    c.register(
         SessionDirectory,
         lambda c: SessionDirectoryService(
             c.resolve(StreamConcurrencyGuard), c.resolve(PlaybackSessionService), c.resolve(UnitOfWorkFactory)
@@ -106,6 +118,7 @@ manifest = ModuleManifest(
         "playback.grants": GrantVerifier,
         "playback.content": ContentDirectory,
         "playback.sessions": SessionDirectory,
+        "playback.open": SessionOpener,
     },
     requires=frozenset({"identity.authentication", "profile.context"}),
     optional_requires=frozenset({"billing.entitlements"}),

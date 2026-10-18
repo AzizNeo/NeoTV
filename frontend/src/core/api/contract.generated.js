@@ -1224,6 +1224,14 @@ export const OPERATIONS = Object.freeze({
     "idempotent": false,
     "errors": []
   },
+  "xtream_player_stream": {
+    "method": "GET",
+    "path": "/api/v1/xtream/{section}/{username}/{password}/{filename}",
+    "auth": "public",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
+  },
   "xtream_player_xmltv": {
     "method": "GET",
     "path": "/api/v1/xtream/xmltv.php",

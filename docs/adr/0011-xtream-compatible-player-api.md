@@ -48,9 +48,19 @@ under the same entitlement, rating and concurrency rules as the web player.
    above all — revokes every credential (`identity.password_changed`), and deleting a profile
    revokes the credentials bound to it (`profile.profile_deleted`). Revoked rows are kept, so a
    username is never handed out twice.
-5. **Streams never expose the origin.** A stream URL from the app opens a normal playback
-   session (plan, rating, concurrency slot) and answers with a redirect to the short-lived signed
-   proxy URL the web player uses. HLS (`.m3u8`) only.
+5. **Streams never expose the origin.** `/<live|movie|series>/<user>/<password>/<id>.m3u8` opens
+   a normal playback session through capability `playback.open` — plan, kids rating, policies and
+   the concurrent-stream limit, exactly as for the web player — and answers `302` to the
+   short-lived signed proxy URL the web player uses. HLS only (`415` otherwise); DRM-protected
+   content is refused (`403 DRM_UNSUPPORTED`), as these apps have no licence exchange. One
+   credential is one device: switching channels replaces its stream. Refusals are one word in a
+   plain-text body (`404`, `429 STREAM_LIMIT_EXCEEDED`, `403 <reason>`), since players show the
+   status. Apps send no heartbeats, so these sessions are **kept alive by their media
+   requests**: their token carries a mark (`~`, outside the token alphabet) inside the signed
+   grant, and every media request of such a session — segments included — must find the slot
+   alive and refreshes it (the audit record at most every 10 s). The slot frees itself ~35 s
+   after the player stops; an ended session is refused at its next request. Web player sessions
+   keep their heartbeat contract unchanged.
 6. **Stable numbers for what apps store.** Apps keep stream and category ids (favourites, the
    last channel, hidden groups). A stream id is the content's id with its namespace as the last
    digit (`catalog:12` → `121`, `live:3` → `32`; a new namespace takes a new digit, none is ever

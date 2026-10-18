@@ -20,8 +20,9 @@ from flask import Blueprint, Response, request
 from app.kernel.capabilities import CapabilityIndex
 from app.kernel.container import resolve
 from app.kernel.http.endpoint import endpoint
-from app.kernel.resilience.rate_limit import Rate
+from app.kernel.resilience.rate_limit import Rate, client_ip
 from app.kernel.time import Clock
+from app.modules.playback.api import PlaybackRefusedError, SessionOpener
 from app.modules.xtream import protocol
 from app.modules.xtream.catalog import XtreamCatalog
 from app.modules.xtream.domain import XtreamPrincipal
@@ -34,6 +35,10 @@ _TAGS = ("xtream",)
 _RATE = Rate("xtream.player_api", rps=5, burst=40, per="ip")
 # Whole-catalogue exports: apps fetch them at start-up and then every few hours.
 _EXPORT_RATE = Rate("xtream.export", rps=0.2, burst=6, per="ip")
+# Opening a stream is a session (a slot, an audit record): zapping is fine, a scan is not.
+_STREAM_RATE = Rate("xtream.stream", rps=1, burst=10, per="ip")
+#: Refusal → HTTP status for players (they show the status, not a body).
+_REFUSAL_STATUS = {"CONTENT_NOT_FOUND": 404, "STREAM_LIMIT_EXCEEDED": 429}
 _EPG_LIMIT_DEFAULT = 4
 _EPG_LIMIT_MAX = 50
 
@@ -48,6 +53,11 @@ def _answer(payload: Any, *, status: int = 200) -> Response:
 def _principal() -> XtreamPrincipal | None:
     values = request.values  # query string and form body
     return resolve(CredentialService).authenticate(values.get("username", ""), values.get("password", ""))
+
+
+def _opener() -> SessionOpener:
+    opener: SessionOpener = resolve(CapabilityIndex).required("playback.open")
+    return opener
 
 
 def _entitled_streams(user_id: int) -> int:
@@ -75,7 +85,7 @@ def player_api() -> Response:
             password=request.values.get("password", ""),
             created_at=who.created_at,
             max_connections=_entitled_streams(who.user_id),
-            active_connections=0,
+            active_connections=_opener().active_for_user(who.user_id),
         )
         return _answer(
             protocol.login(account, server_url=resolve(CredentialService).server_url, now=resolve(Clock).now())
@@ -159,4 +169,56 @@ def _file(body: bytes, content_type: str, filename: str) -> Response:
     response = Response(body, status=200, content_type=content_type)
     response.headers["Cache-Control"] = "no-store"
     response.headers["Content-Disposition"] = f'inline; filename="{filename}"'
+    return response
+
+
+@blueprint.get("/<any(live, movie, series):section>/<string:username>/<string:password>/<string:filename>")
+@endpoint(
+    auth="public",
+    summary="Xtream Codes stream URL: opens a playback session and redirects to the signed HLS URL",
+    tags=_TAGS,
+    rate=_STREAM_RATE,
+)
+def stream(section: str, username: str, password: str, filename: str) -> Response:
+    """``/<section>/<user>/<password>/<stream id>.m3u8`` → 302 to a short-lived signed NeoTV URL.
+
+    The session is opened under every playback rule (plan, kids rating, concurrent streams) and is
+    kept alive by the player's own media requests; the same credential switching channels replaces
+    its previous stream, as one device does in the web player. ``section`` is the app's grouping
+    only — what may be played is decided by playback, not by the path.
+    """
+    who = resolve(CredentialService).authenticate(username, password)
+    if who is None:
+        return _plain(401, "unauthorised")
+    stem, dot, extension = filename.rpartition(".")
+    if not dot or extension != protocol.OUTPUT_FORMATS[0]:
+        return _plain(415, "HLS only: set the app's stream format to HLS (.m3u8)")
+    ref = protocol.content_ref(stem)
+    if ref is None:
+        return _plain(404, "CONTENT_NOT_FOUND")
+    try:
+        opened = _opener().open(
+            user_id=who.user_id,
+            profile_id=who.profile_id,
+            is_kids=who.is_kids,
+            content_ref=str(ref),
+            client_device_id=f"xtream-{who.credential_id:08d}",  # one credential = one device
+            ip=client_ip(),
+            user_agent=request.headers.get("User-Agent", "Xtream app"),
+            keepalive="media",
+        )
+    except PlaybackRefusedError as refused:
+        return _plain(_REFUSAL_STATUS.get(refused.code, 403), refused.code)
+    if opened.drm:  # Xtream apps have no licence exchange: never hand out what they cannot decrypt
+        _opener().release(opened.session_token)
+        return _plain(403, "DRM_UNSUPPORTED")
+    response = Response(status=302)
+    response.headers["Location"] = resolve(CredentialService).server_url + opened.manifest_url
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+def _plain(status: int, text: str) -> Response:
+    response = Response(text, status=status, mimetype="text/plain")
+    response.headers["Cache-Control"] = "no-store"
     return response

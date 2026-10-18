@@ -49,7 +49,14 @@ manifest = ModuleManifest(
     version="0.1.0",
     description="Xtream-compatible player API for TV apps: per-device app credentials bound to a profile.",
     requires=frozenset(
-        {"identity.authentication", "identity.users", "profile.context", "profile.directory", "catalog.read"}
+        {
+            "identity.authentication",
+            "identity.users",
+            "profile.context",
+            "profile.directory",
+            "catalog.read",
+            "playback.open",
+        }
     ),
     optional_requires=frozenset({"live.read", "titles.read", "billing.entitlements"}),
     models=("app.modules.xtream.models",),

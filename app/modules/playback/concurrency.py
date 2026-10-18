@@ -123,6 +123,10 @@ class StreamConcurrencyGuard:
             )
         )
 
+    def persist_due(self, token: str, *, every_s: int) -> bool:
+        """True at most once per ``every_s`` per session: when to copy liveness into the audit record."""
+        return bool(self._redis.set(f"playback:persisted:{token}", 1, nx=True, ex=every_s))
+
     def owner(self, token: str) -> SlotOwner | None:
         data = self._redis.hgetall(self._meta(token))
         if not data:
