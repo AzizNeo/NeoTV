@@ -15,6 +15,7 @@ from app.modules.xtream.domain import (
     ProfileLockedError,
     ProfileNotOwnedError,
 )
+from app.modules.xtream.guard import XtreamAuthGuard
 from app.modules.xtream.services import CredentialService
 from app.shared_kernel.events import PasswordChanged, ProfileDeleted
 
@@ -33,6 +34,7 @@ def _services(c: Any) -> None:
         )
 
     c.register(CredentialService, credentials)
+    c.register(XtreamAuthGuard, lambda c: XtreamAuthGuard(c.resolve("kernel.redis")))
     c.register(
         XtreamCatalog,
         lambda c: XtreamCatalog(

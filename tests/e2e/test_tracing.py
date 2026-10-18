@@ -154,3 +154,17 @@ def test_untraced_logs_have_no_trace_fields(caplog):
     with caplog.at_level(logging.INFO):
         logging.getLogger("neotv.test").info("plain")
     assert not getattr(caplog.records[-1], "trace_id", None)
+
+
+def test_credentials_in_urls_never_reach_a_span(traced_app, spans):
+    """Xtream apps send credentials in the path or the query (ADR-0011); spans keep neither."""
+    client = traced_app.test_client()
+    client.get("/api/v1/xtream/live/abcdefghjk/secretpass12/121.m3u8")
+    client.get("/api/v1/xtream/player_api.php?username=abcdefghjk&password=secretpass12&action=get_live_streams")
+    targets = [s.attributes["http.target"] for s in _server(spans)]
+    assert targets == [
+        "/api/v1/xtream/live/***/***/121.m3u8",
+        "/api/v1/xtream/player_api.php?username=***&password=***&action=get_live_streams",
+    ]
+    exported = repr([dict(s.attributes) for s in spans.get_finished_spans()])
+    assert "secretpass12" not in exported and "abcdefghjk" not in exported

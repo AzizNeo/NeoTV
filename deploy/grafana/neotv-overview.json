@@ -727,14 +727,56 @@
       }
     },
     {
-      "type": "row",
-      "title": "Platform",
-      "collapsed": false,
-      "panels": [],
+      "type": "timeseries",
+      "title": "TV app (Xtream) credential checks by result",
+      "description": "ok; denied (wrong or revoked credential, suspended account); blocked (an address that failed too often, refused without checking). A rise in denied+blocked is guessing.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (result) (rate(neotv_xtream_auth_total[5m]))",
+          "legendFormat": "{{result}}",
+          "refId": "A"
+        }
+      ],
       "id": 17,
       "gridPos": {
         "x": 0,
         "y": 56,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "row",
+      "title": "Platform",
+      "collapsed": false,
+      "panels": [],
+      "id": 18,
+      "gridPos": {
+        "x": 0,
+        "y": 64,
         "w": 24,
         "h": 1
       }
@@ -773,10 +815,10 @@
           "refId": "A"
         }
       ],
-      "id": 18,
+      "id": 19,
       "gridPos": {
         "x": 0,
-        "y": 57,
+        "y": 65,
         "w": 12,
         "h": 8
       }
@@ -815,10 +857,10 @@
           "refId": "A"
         }
       ],
-      "id": 19,
+      "id": 20,
       "gridPos": {
         "x": 12,
-        "y": 57,
+        "y": 65,
         "w": 12,
         "h": 8
       }
@@ -857,10 +899,10 @@
           "refId": "A"
         }
       ],
-      "id": 20,
+      "id": 21,
       "gridPos": {
         "x": 0,
-        "y": 65,
+        "y": 73,
         "w": 12,
         "h": 8
       }
@@ -870,10 +912,10 @@
       "title": "Browsers",
       "collapsed": false,
       "panels": [],
-      "id": 21,
+      "id": 22,
       "gridPos": {
         "x": 0,
-        "y": 73,
+        "y": 81,
         "w": 24,
         "h": 1
       }
@@ -939,10 +981,10 @@
           "refId": "D"
         }
       ],
-      "id": 22,
+      "id": 23,
       "gridPos": {
         "x": 0,
-        "y": 74,
+        "y": 82,
         "w": 12,
         "h": 8
       }
@@ -981,10 +1023,10 @@
           "refId": "A"
         }
       ],
-      "id": 23,
+      "id": 24,
       "gridPos": {
         "x": 12,
-        "y": 74,
+        "y": 82,
         "w": 12,
         "h": 8
       }
@@ -1023,10 +1065,10 @@
           "refId": "A"
         }
       ],
-      "id": 24,
+      "id": 25,
       "gridPos": {
         "x": 0,
-        "y": 82,
+        "y": 90,
         "w": 12,
         "h": 8
       }
@@ -1065,10 +1107,10 @@
           "refId": "A"
         }
       ],
-      "id": 25,
+      "id": 26,
       "gridPos": {
         "x": 12,
-        "y": 82,
+        "y": 90,
         "w": 12,
         "h": 8
       }

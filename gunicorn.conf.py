@@ -8,6 +8,9 @@ scraped worker merges them (app.kernel.observability.metrics). This file sets th
 * the directory is set here, in the master, before any worker imports prometheus_client;
 * it is emptied when the master starts (a restarted container must not resume old counts);
 * a worker that exits has its live gauges removed (``mark_process_dead``).
+
+The access log goes through a logger that removes credentials from URLs (ADR-0011): Xtream apps
+and signed media URLs carry them in the path or the query string.
 """
 
 from __future__ import annotations
@@ -17,6 +20,8 @@ import shutil
 import tempfile
 from pathlib import Path
 from typing import Any
+
+logger_class = "app.kernel.observability.access_log.RedactingLogger"
 
 multiproc_dir = os.environ.setdefault("PROMETHEUS_MULTIPROC_DIR", str(Path(tempfile.gettempdir()) / "neotv-prometheus"))
 

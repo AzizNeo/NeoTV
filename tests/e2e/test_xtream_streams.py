@@ -119,3 +119,36 @@ def test_web_player_sessions_keep_their_heartbeat_contract(app: Flask, api: Api,
         grant = _grant(opened["manifest_url"])
         segment = resolve(GrantVerifier).verify(grant)  # web sessions: segments do not touch the slot
         assert segment.session_token == opened["session_token"]
+
+
+def test_an_address_that_keeps_guessing_is_refused_without_checking(
+    app: Flask, api: Api, channels: dict[str, Any]
+) -> None:
+    from app.kernel.observability.metrics import Metrics
+    from app.modules.xtream.guard import XtreamAuthGuard
+
+    creds = _credential(api, api.user("st8"))
+    guesser, neighbour = {"REMOTE_ADDR": "203.0.113.7"}, {"REMOTE_ADDR": "198.51.100.9"}
+    wrong = {"username": creds[0], "password": "z" * 12}
+    for _ in range(XtreamAuthGuard.MAX_FAILURES):
+        reply = api.get(f"{BASE}/player_api.php", query_string=wrong, environ_base=guesser)
+        assert reply.body == {"user_info": {"auth": 0}}
+    right = {"username": creds[0], "password": creds[1]}
+    blocked = api.get(f"{BASE}/player_api.php", query_string=right, environ_base=guesser)
+    assert (blocked.status, blocked.body) == (429, {"user_info": {"auth": 0}})  # even the right password
+    stream = api.get(
+        f"{BASE}/live/{creds[0]}/{creds[1]}/{stream_id(channels['news']['ref'])}.m3u8", environ_base=guesser
+    )
+    assert (stream.status, stream.raw) == (429, b"TOO_MANY_FAILURES")
+    assert api.get(f"{BASE}/xmltv.php", query_string=right, environ_base=guesser).status == 429
+    # The owner's TV elsewhere is not locked out: the block is per address, never per credential.
+    assert api.get(f"{BASE}/player_api.php", query_string=right, environ_base=neighbour).body["user_info"]["auth"] == 1
+    with app.app_context():
+        counts = {
+            s.labels["result"]: s.value
+            for family in resolve(Metrics).registry.collect()
+            if family.name == "neotv_xtream_auth"
+            for s in family.samples
+            if s.name.endswith("_total")
+        }
+    assert counts["blocked"] >= 3 and counts["denied"] >= XtreamAuthGuard.MAX_FAILURES and counts["ok"] >= 1

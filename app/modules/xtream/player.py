@@ -20,12 +20,14 @@ from flask import Blueprint, Response, request
 from app.kernel.capabilities import CapabilityIndex
 from app.kernel.container import resolve
 from app.kernel.http.endpoint import endpoint
+from app.kernel.observability.metrics import Metrics
 from app.kernel.resilience.rate_limit import Rate, client_ip
 from app.kernel.time import Clock
 from app.modules.playback.api import PlaybackRefusedError, SessionOpener
 from app.modules.xtream import protocol
 from app.modules.xtream.catalog import XtreamCatalog
 from app.modules.xtream.domain import XtreamPrincipal
+from app.modules.xtream.guard import XtreamAuthGuard
 from app.modules.xtream.services import CredentialService
 
 blueprint = Blueprint("xtream_player", __name__)
@@ -50,9 +52,26 @@ def _answer(payload: Any, *, status: int = 200) -> Response:
     return response
 
 
+class _Blocked(Exception):
+    """This address failed too often (XtreamAuthGuard): refused without checking anything."""
+
+
+def _authenticate(username: str, password: str) -> XtreamPrincipal | None:
+    """Every credential check of the protocol goes through here: guessing guard + metric."""
+    guard, metrics, ip = resolve(XtreamAuthGuard), resolve(Metrics), client_ip()
+    if guard.blocked(ip):
+        metrics.xtream_auth.labels("blocked").inc()
+        raise _Blocked
+    who = resolve(CredentialService).authenticate(username, password)
+    if who is None:
+        guard.record_failure(ip)
+    metrics.xtream_auth.labels("ok" if who is not None else "denied").inc()
+    return who
+
+
 def _principal() -> XtreamPrincipal | None:
     values = request.values  # query string and form body
-    return resolve(CredentialService).authenticate(values.get("username", ""), values.get("password", ""))
+    return _authenticate(values.get("username", ""), values.get("password", ""))
 
 
 def _opener() -> SessionOpener:
@@ -73,7 +92,10 @@ def _entitled_streams(user_id: int) -> int:
     rate=_RATE,
 )
 def player_api() -> Response:
-    who = _principal()
+    try:
+        who = _principal()
+    except _Blocked:
+        return _answer(protocol.DENIED, status=429)
     action = request.values.get("action", "")
     if who is None:
         # The login probe (no action) expects 200 + auth 0; data requests are refused outright.
@@ -132,7 +154,10 @@ def _titles(catalog: XtreamCatalog, who: XtreamPrincipal, action: str) -> Respon
     rate=_EXPORT_RATE,
 )
 def xmltv() -> Response:
-    who = _principal()
+    try:
+        who = _principal()
+    except _Blocked:
+        return _refused(429)
     if who is None:
         return _refused()
     body = resolve(XtreamCatalog).guide(who, now=resolve(Clock).now())
@@ -147,7 +172,10 @@ def xmltv() -> Response:
     rate=_EXPORT_RATE,
 )
 def playlist() -> Response:
-    who = _principal()
+    try:
+        who = _principal()
+    except _Blocked:
+        return _refused(429)
     if who is None:
         return _refused()
     text = protocol.m3u(
@@ -159,8 +187,8 @@ def playlist() -> Response:
     return _file(text.encode(), "audio/x-mpegurl; charset=utf-8", "neotv.m3u")
 
 
-def _refused() -> Response:
-    response = Response(b"", status=401)
+def _refused(status: int = 401) -> Response:
+    response = Response(b"", status=status)
     response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -187,7 +215,10 @@ def stream(section: str, username: str, password: str, filename: str) -> Respons
     its previous stream, as one device does in the web player. ``section`` is the app's grouping
     only — what may be played is decided by playback, not by the path.
     """
-    who = resolve(CredentialService).authenticate(username, password)
+    try:
+        who = _authenticate(username, password)
+    except _Blocked:
+        return _plain(429, "TOO_MANY_FAILURES")
     if who is None:
         return _plain(401, "unauthorised")
     stem, dot, extension = filename.rpartition(".")

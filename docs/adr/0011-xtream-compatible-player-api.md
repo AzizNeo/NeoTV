@@ -82,7 +82,20 @@ under the same entitlement, rating and concurrency rules as the web player.
    inject an entry. `get.php` lists live channels, movies, then series episode by episode, with
    HLS URLs only; exports have their own, tighter rate limit. The playlist holds the credential
    in every URL — inherent to the protocol, which is why credentials are per device (decision 2).
-9. **The protocol's shapes are tested as a contract.** Xtream clients are strict about field
+9. **Credentials never land in a log or a trace.** One pure rule set
+   (`shared_kernel.redaction`) masks the credential segments of `/<live|movie|series|timeshift>/…`
+   paths and the values of `username`, `password`, `sig`, `token` query parameters. It is applied
+   by the gunicorn access log (`logger_class`, every URL-bearing atom), by the request and
+   outbound-request spans (instrumentation response hooks — the last write before a span ends),
+   and mirrored in nginx's own log format, which also drops query strings and referrers. Metrics
+   carry no user or credential label.
+10. **Guessing is capped per address, never per credential.** After 30 failed checks in 10 minutes
+    an address is refused (`429`) without its credentials being checked, for the rest of the
+    window. A per-credential lock would let anyone who saw a username lock its owner's TV out;
+    the passwords are random, so online guessing is the only attack and this bounds it. A success
+    does not reset the count. `neotv_xtream_auth_total{result=ok|denied|blocked}` is on the
+    dashboard.
+11. **The protocol's shapes are tested as a contract.** Xtream clients are strict about field
    names and types (numbers as strings, `"0"`/`"1"` flags); each response shape is pinned by tests
    modelled on what the common clients parse.
 
@@ -100,7 +113,9 @@ under the same entitlement, rating and concurrency rules as the web player.
 
 - The owner side is `/api/v1/xtream/credentials` (`GET`, `POST`, `DELETE /<id>`); the answer
   to `POST` is the only place the password ever appears. `server_url` is `FRONTEND_BASE_URL`:
-  the public origin, behind which nginx will route the protocol paths (X4).
+  the public origin, where nginx maps `/player_api.php`, `/xmltv.php`, `/get.php` and
+  `/<live|movie|series>/<user>/<password>/<file>` onto `/api/v1/xtream/` (the SPA's own `/live`
+  page is untouched: the stream pattern needs exactly four segments).
 - The credential cap is checked inside the issuing transaction but without a lock: two parallel
   requests could pass it together. The rate limit makes that practically impossible, and the cap
   is a hygiene limit, not a security boundary.
