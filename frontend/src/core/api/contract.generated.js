@@ -1184,5 +1184,39 @@ export const OPERATIONS = Object.freeze({
     "errors": [
       "METADATA_LINK_NOT_FOUND"
     ]
+  },
+  "xtream_issue_credential": {
+    "method": "POST",
+    "path": "/api/v1/xtream/credentials",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": [
+      "XTREAM_KIDS_PROFILE",
+      "XTREAM_PROFILE_NOT_FOUND",
+      "XTREAM_PROFILE_LOCKED",
+      "XTREAM_CREDENTIAL_LIMIT"
+    ]
+  },
+  "xtream_list_credentials": {
+    "method": "GET",
+    "path": "/api/v1/xtream/credentials",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": [
+      "XTREAM_KIDS_PROFILE"
+    ]
+  },
+  "xtream_revoke_credential": {
+    "method": "DELETE",
+    "path": "/api/v1/xtream/credentials/{credential_id}",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": [
+      "XTREAM_KIDS_PROFILE",
+      "XTREAM_CREDENTIAL_NOT_FOUND"
+    ]
   }
 });

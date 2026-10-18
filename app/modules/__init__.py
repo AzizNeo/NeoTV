@@ -23,4 +23,5 @@ INSTALLED_MODULES: tuple[str, ...] = (
     "app.modules.library",
     "app.modules.recommendations",
     "app.modules.admin",
+    "app.modules.xtream",
 )
