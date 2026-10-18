@@ -7,7 +7,7 @@ import json
 import logging
 import math
 from dataclasses import asdict, dataclass
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
@@ -17,7 +17,7 @@ from app.kernel.resilience.best_effort import best_effort
 from app.kernel.resilience.circuit_breaker import CircuitBreakerRegistry, CircuitOpenError
 from app.kernel.time import Clock
 from app.kernel.uow import UnitOfWorkFactory
-from app.modules.catalog.api import NAMESPACE, CatalogStats
+from app.modules.catalog.api import NAMESPACE, CatalogStats, ChannelListing
 from app.modules.catalog.models import Channel, Playlist
 from app.modules.catalog.parsing import ParsedEntry
 from app.shared_kernel.events import ContentRemoved
@@ -353,6 +353,26 @@ class CatalogReaderService:
     def stats(self) -> CatalogStats:
         with self._uow() as uow:
             return ChannelRepository(uow.session).stats()
+
+    def listing(self, *, kind: Literal["live", "vod"], kids_only: bool) -> list[ChannelListing]:
+        with self._uow() as uow:
+            stmt = select(Channel).where(Channel.is_active.is_(True), Channel.kind == kind)
+            if kids_only:
+                stmt = stmt.where(Channel.rating.in_(sorted(KIDS_ALLOWED)))
+            rows = uow.session.execute(stmt.order_by(Channel.group_name, Channel.name, Channel.id)).scalars()
+            return [
+                ChannelListing(
+                    ref=f"{NAMESPACE}:{c.id}",
+                    id=c.id,
+                    name=c.name,
+                    logo=c.logo_url,
+                    group=c.group_name,
+                    kind=c.kind,
+                    rating=c.rating,
+                    added_at=c.created_at,
+                )
+                for c in rows
+            ]
 
 
 # ── Administration ──────────────────────────────────────────────────────────

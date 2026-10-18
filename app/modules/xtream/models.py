@@ -17,3 +17,21 @@ class XtreamCredential(db.Model):
     created_at = created_at_column()
     last_used_at = db.Column(UTCDateTime())
     revoked_at = db.Column(UTCDateTime())
+
+
+class XtreamCategory(db.Model):
+    """Stable numeric ids for category names: Xtream apps key categories by number, NeoTV groups by name.
+
+    A row is created the first time a name is listed and never changes, so an app's saved favourites
+    and hidden categories keep pointing at the same group.
+    """
+
+    __tablename__ = "xtream_categories"
+    __table_args__ = (
+        db.UniqueConstraint("section", "name", name="uq_xtream_categories_section_name"),
+        db.CheckConstraint("section IN ('live','vod','series')", name="section_valid"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    section = db.Column(db.String(10), nullable=False)
+    name = db.Column(db.String(128), nullable=False)

@@ -11,6 +11,7 @@ import hashlib
 import hmac
 import secrets
 from dataclasses import dataclass
+from datetime import datetime
 
 #: Lower-case letters and digits without the look-alikes 0/o, 1/l/i — typed on a TV remote.
 ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"
@@ -47,9 +48,11 @@ class XtreamPrincipal:
     """Who a valid app credential acts as (resolved on every request, never cached)."""
 
     credential_id: int
+    username: str
     user_id: int
     profile_id: int
     is_kids: bool
+    created_at: datetime
 
 
 def generate(length: int) -> str:

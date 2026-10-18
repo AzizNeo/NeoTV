@@ -7,6 +7,7 @@ from app.kernel.manifest import ModuleManifest, RouteSpec, SubscriptionSpec
 from app.kernel.settings import Settings
 from app.kernel.time import Clock
 from app.kernel.uow import UnitOfWorkFactory
+from app.modules.xtream.catalog import XtreamCatalog
 from app.modules.xtream.domain import (
     CredentialLimitReachedError,
     CredentialNotFoundError,
@@ -32,16 +33,31 @@ def _services(c: Any) -> None:
         )
 
     c.register(CredentialService, credentials)
+    c.register(
+        XtreamCatalog,
+        lambda c: XtreamCatalog(
+            c.resolve(UnitOfWorkFactory),
+            c.resolve(CapabilityIndex).required("catalog.read"),
+            c.resolve(CapabilityIndex).optional("live.read"),
+        ),
+    )
 
 
 manifest = ModuleManifest(
     name="xtream",
     version="0.1.0",
     description="Xtream-compatible player API for TV apps: per-device app credentials bound to a profile.",
-    requires=frozenset({"identity.authentication", "identity.users", "profile.context", "profile.directory"}),
+    requires=frozenset(
+        {"identity.authentication", "identity.users", "profile.context", "profile.directory", "catalog.read"}
+    ),
+    optional_requires=frozenset({"live.read", "billing.entitlements"}),
     models=("app.modules.xtream.models",),
     services=_services,
-    routes=(RouteSpec("app.modules.xtream.http:blueprint", "/api/v1/xtream"),),
+    routes=(
+        RouteSpec("app.modules.xtream.http:blueprint", "/api/v1/xtream"),
+        # Apps call <server>/player_api.php: nginx maps the protocol's root paths onto this prefix.
+        RouteSpec("app.modules.xtream.player:blueprint", "/api/v1/xtream"),
+    ),
     subscriptions=(
         SubscriptionSpec(
             PasswordChanged.NAME, "xtream.revoke_on_password_change", "app.modules.xtream.handlers:on_password_changed"

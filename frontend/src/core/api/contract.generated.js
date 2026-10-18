@@ -1208,6 +1208,14 @@ export const OPERATIONS = Object.freeze({
       "XTREAM_KIDS_PROFILE"
     ]
   },
+  "xtream_player_player_api": {
+    "method": "POST",
+    "path": "/api/v1/xtream/player_api.php",
+    "auth": "public",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
+  },
   "xtream_revoke_credential": {
     "method": "DELETE",
     "path": "/api/v1/xtream/credentials/{credential_id}",

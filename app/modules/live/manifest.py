@@ -6,7 +6,7 @@ from app.kernel.manifest import ExtensionSpec, ModuleManifest, RouteSpec
 from app.kernel.settings import Settings
 from app.kernel.time import Clock
 from app.kernel.uow import UnitOfWorkFactory
-from app.modules.live.api import LiveReader, LiveStats
+from app.modules.live.api import LiveListing, LiveReader, LiveStats
 from app.modules.live.provider import LiveOfflineError, TranscoderUnavailableError
 from app.modules.live.services import (
     EpgImportError,
@@ -26,6 +26,11 @@ class _LiveReader:
         from app.modules.live.services import LiveChannelService
 
         return self._c.resolve(LiveChannelService).stats(self._c.resolve(TranscodeOrchestrator).running_count())
+
+    def listing(self, *, kids_only: bool) -> list[LiveListing]:
+        from app.modules.live.services import LiveChannelService
+
+        return self._c.resolve(LiveChannelService).listing(kids_only=kids_only)
 
 
 def _services(c: Any) -> None:

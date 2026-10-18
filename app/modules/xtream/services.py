@@ -73,6 +73,10 @@ class CredentialService:
         # Same work for an unknown username as for a known one: no timing hint about which names exist.
         self._decoy = secret_digest(key, "x" * USERNAME_LENGTH, "x" * PASSWORD_LENGTH)
 
+    @property
+    def server_url(self) -> str:
+        return self._server_url
+
     # ── Owner side (account settings) ─────────────────────────────────────
 
     def list(self, *, user_id: int, context: ProfileContext) -> list[CredentialView]:
@@ -175,7 +179,12 @@ class CredentialService:
             if row.last_used_at is None or now - row.last_used_at >= timedelta(seconds=LAST_USED_RESOLUTION_S):
                 row.last_used_at = now
             return XtreamPrincipal(
-                credential_id=row.id, user_id=row.user_id, profile_id=profile.id, is_kids=profile.is_kids
+                credential_id=row.id,
+                username=row.username,
+                user_id=row.user_id,
+                profile_id=profile.id,
+                is_kids=profile.is_kids,
+                created_at=row.created_at,
             )
 
     # ── helpers ───────────────────────────────────────────────────────────

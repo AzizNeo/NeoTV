@@ -51,7 +51,16 @@ under the same entitlement, rating and concurrency rules as the web player.
 5. **Streams never expose the origin.** A stream URL from the app opens a normal playback
    session (plan, rating, concurrency slot) and answers with a redirect to the short-lived signed
    proxy URL the web player uses. HLS (`.m3u8`) only.
-6. **The protocol's shapes are tested as a contract.** Xtream clients are strict about field
+6. **Stable numbers for what apps store.** Apps keep stream and category ids (favourites, the
+   last channel, hidden groups). A stream id is the content's id with its namespace as the last
+   digit (`catalog:12` → `121`, `live:3` → `32`; a new namespace takes a new digit, none is ever
+   renumbered). Category names get a numeric id in `xtream_categories` the first time they are
+   listed, and keep it. Lists come from read capabilities of the owning modules
+   (`catalog.read`, `live.read`), which apply the kids filter themselves.
+7. **Inside the API, behind `endpoint()`.** The protocol's routes live under `/api/v1/xtream/`
+   like every other route (rate limit, OpenAPI, fitness tests); nginx maps the root paths apps
+   call (`/player_api.php` …) onto them. Answers are the protocol's bare JSON, `no-store`.
+8. **The protocol's shapes are tested as a contract.** Xtream clients are strict about field
    names and types (numbers as strings, `"0"`/`"1"` flags); each response shape is pinned by tests
    modelled on what the common clients parse.
 
