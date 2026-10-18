@@ -8,6 +8,7 @@ account's language; their categories are the titles' genres.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select
@@ -15,13 +16,16 @@ from sqlalchemy import select
 from app.kernel.db import dialect_insert
 from app.kernel.uow import UnitOfWorkFactory
 from app.modules.catalog.api import CatalogReader
-from app.modules.live.api import LiveReader
+from app.modules.live.api import LiveListing, LiveReader, ProgramListing
 from app.modules.titles.api import TitleCatalogReader, TitleKind, TitleListing
 from app.modules.xtream import protocol
 from app.modules.xtream.domain import XtreamPrincipal
 from app.modules.xtream.models import XtreamCategory
 
 ADULT = "adult"
+#: The guide window apps get: what just ended (for "catch up on what I missed" screens) to days ahead.
+GUIDE_BEHIND = timedelta(hours=6)
+GUIDE_AHEAD = timedelta(days=3)
 
 
 class XtreamCatalog:
@@ -66,7 +70,7 @@ class XtreamCatalog:
                 "name": o.name,
                 "icon": o.logo,
                 "category_id": ids[protocol.OWN_LIVE_CATEGORY],
-                "epg_channel_id": o.epg_channel_id,
+                "epg_channel_id": o.epg_channel_id or protocol.own_epg_id(o.ref),
                 "added_at": o.added_at,
                 "adult": o.rating == ADULT,
             }
@@ -75,6 +79,100 @@ class XtreamCatalog:
         if category_id is not None:
             rows = [r for r in rows if str(r["category_id"]) == category_id]
         return [protocol.live_stream(num=n, **row) for n, row in enumerate(rows, start=1)]
+
+    # ── guide (only NeoTV's own live channels have one) ───────────────────
+
+    def short_epg(self, who: XtreamPrincipal, stream: str, *, limit: int, now: datetime) -> dict[str, Any]:
+        channel = self._own_channel(who, stream)
+        if channel is None:
+            return {"epg_listings": []}
+        programmes = [p for p in self._programmes([channel], now, now + GUIDE_AHEAD) if p.ends_at > now][:limit]
+        return {"epg_listings": [self._listing(channel, p) for p in programmes]}
+
+    def simple_data_table(self, who: XtreamPrincipal, stream: str, *, now: datetime) -> dict[str, Any]:
+        channel = self._own_channel(who, stream)
+        if channel is None:
+            return {"epg_listings": []}
+        programmes = self._programmes([channel], now - GUIDE_BEHIND, now + GUIDE_AHEAD)
+        return {"epg_listings": [self._listing(channel, p, now=now) for p in programmes]}
+
+    def guide(self, who: XtreamPrincipal, *, now: datetime) -> bytes:
+        own = self._live.listing(kids_only=who.is_kids) if self._live is not None else []
+        by_id = {c.id: c for c in own}
+        channels = [protocol.GuideChannel(epg_id=self._epg_id(c), name=c.name, icon=c.logo) for c in own]
+        programmes = [
+            protocol.GuideProgramme(
+                epg_id=self._epg_id(by_id[p.channel_id]),
+                title=p.title,
+                description=p.description,
+                starts_at=p.starts_at,
+                ends_at=p.ends_at,
+            )
+            for p in self._programmes(own, now - GUIDE_BEHIND, now + GUIDE_AHEAD)
+        ]
+        return protocol.xmltv(channels, programmes, language=who.locale)
+
+    def _own_channel(self, who: XtreamPrincipal, stream: str) -> LiveListing | None:
+        ref = protocol.content_ref(stream)
+        if ref is None or ref.namespace != "live" or self._live is None:
+            return None
+        return next((c for c in self._live.listing(kids_only=who.is_kids) if c.id == ref.id), None)
+
+    def _programmes(self, channels: list[LiveListing], start: datetime, end: datetime) -> list[ProgramListing]:
+        if self._live is None or not channels:
+            return []
+        return self._live.programmes(channel_ids=[c.id for c in channels], start=start, end=end)
+
+    @staticmethod
+    def _epg_id(channel: LiveListing) -> str:
+        return channel.epg_channel_id or protocol.own_epg_id(channel.ref)
+
+    def _listing(self, channel: LiveListing, p: ProgramListing, *, now: datetime | None = None) -> dict[str, Any]:
+        return protocol.epg_listing(
+            program_id=p.id,
+            epg_id=self._epg_id(channel),
+            ref=channel.ref,
+            title=p.title,
+            description=p.description,
+            starts_at=p.starts_at,
+            ends_at=p.ends_at,
+            now=now,
+        )
+
+    # ── M3U playlist ──────────────────────────────────────────────────────
+
+    def playlist(self, who: XtreamPrincipal) -> list[protocol.PlaylistEntry]:
+        """Everything the credential can play: live channels, movies, then series episode by episode."""
+        entries = [
+            protocol.PlaylistEntry("live", c.ref, c.name, c.group, c.logo)
+            for c in self._catalog.listing(kind="live", kids_only=who.is_kids)
+        ]
+        own = self._live.listing(kids_only=who.is_kids) if self._live is not None else []
+        entries += [
+            protocol.PlaylistEntry("live", c.ref, c.name, protocol.OWN_LIVE_CATEGORY, c.logo, self._epg_id(c))
+            for c in own
+        ]
+        other = protocol.word(who.locale, "other")
+        for movie in self._title_list(who, TitleKind.MOVIE):
+            group = movie.genres[0] if movie.genres else other
+            entries.append(protocol.PlaylistEntry("movie", str(movie.play_ref), movie.name, group, movie.poster_url))
+        for show in self._series_with_episodes(who):
+            entries += [
+                protocol.PlaylistEntry(
+                    "series", e.play_ref, f"{show.name} S{e.season:02d}E{e.number:02d}", show.name, show.poster_url
+                )
+                for e in show.episodes
+            ]
+        return entries
+
+    def _series_with_episodes(self, who: XtreamPrincipal) -> list[TitleListing]:
+        if self._titles is None:
+            return []
+        shows = (
+            self._titles.series(listed.id, kids_only=who.is_kids, locale=who.locale)
+            for listed in self._title_list(who, TitleKind.SERIES)
+        )
+        return [show for show in shows if show is not None]
 
     # ── movies and series (the storefront's titles) ───────────────────────
 

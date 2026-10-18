@@ -1216,6 +1216,22 @@ export const OPERATIONS = Object.freeze({
     "idempotent": false,
     "errors": []
   },
+  "xtream_player_playlist": {
+    "method": "GET",
+    "path": "/api/v1/xtream/get.php",
+    "auth": "public",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
+  },
+  "xtream_player_xmltv": {
+    "method": "GET",
+    "path": "/api/v1/xtream/xmltv.php",
+    "auth": "public",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
+  },
   "xtream_revoke_credential": {
     "method": "DELETE",
     "path": "/api/v1/xtream/credentials/{credential_id}",

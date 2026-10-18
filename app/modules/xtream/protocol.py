@@ -8,10 +8,13 @@ here, once, and pinned by tests.
 
 from __future__ import annotations
 
+import base64
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlsplit
+from xml.etree import ElementTree
 
 from app.shared_kernel.content import ContentRef, InvalidContentRefError
 
@@ -304,3 +307,136 @@ def season(number: int, *, name: str, episode_count: int, cover: str | None) -> 
         "overview": "",
         "air_date": "",
     }
+
+
+# ── guide ───────────────────────────────────────────────────────────────────
+
+
+def own_epg_id(ref: str) -> str:
+    """Guide id for a NeoTV channel without an XMLTV id of its own (same in lists and in xmltv.php)."""
+    return f"neotv.{stream_id(ref)}"
+
+
+def _clock(moment: datetime) -> str:
+    return moment.astimezone(UTC).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _b64(text: str | None) -> str:
+    return base64.b64encode((text or "").encode()).decode()
+
+
+def epg_listing(
+    *,
+    program_id: int,
+    epg_id: str,
+    ref: str,
+    title: str,
+    description: str | None,
+    starts_at: datetime,
+    ends_at: datetime,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """One guide entry. Title and description are Base64 in this protocol — apps decode them."""
+    item: dict[str, Any] = {
+        "id": str(program_id),
+        "epg_id": epg_id,
+        "title": _b64(title),
+        "lang": "",
+        "start": _clock(starts_at),
+        "end": _clock(ends_at),
+        "description": _b64(description),
+        "channel_id": epg_id,
+        "start_timestamp": epoch(starts_at),
+        "stop_timestamp": epoch(ends_at),
+        "stream_id": str(stream_id(ref)),
+    }
+    if now is not None:  # get_simple_data_table also says what is on air
+        item["now_playing"] = 1 if starts_at <= now < ends_at else 0
+        item["has_archive"] = 0
+    return item
+
+
+@dataclass(frozen=True, slots=True)
+class GuideChannel:
+    epg_id: str
+    name: str
+    icon: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class GuideProgramme:
+    epg_id: str
+    title: str
+    description: str | None
+    starts_at: datetime
+    ends_at: datetime
+
+
+_XML_INVALID = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]")
+
+
+def _xml(text: str) -> str:
+    """Characters XML 1.0 cannot carry at all are dropped (escaping cannot represent them)."""
+    return _XML_INVALID.sub("", text)
+
+
+def _xmltv_time(moment: datetime) -> str:
+    return moment.astimezone(UTC).strftime("%Y%m%d%H%M%S +0000")
+
+
+def xmltv(channels: list[GuideChannel], programmes: list[GuideProgramme], *, language: str) -> bytes:
+    """An XMLTV document. Built with an XML library, so names can never break out of their element."""
+    root = ElementTree.Element("tv", {"generator-info-name": "NeoTV"})
+    for channel in channels:
+        node = ElementTree.SubElement(root, "channel", {"id": _xml(channel.epg_id)})
+        ElementTree.SubElement(node, "display-name").text = _xml(channel.name)
+        if channel.icon:
+            ElementTree.SubElement(node, "icon", {"src": _xml(channel.icon)})
+    for programme in programmes:
+        node = ElementTree.SubElement(
+            root,
+            "programme",
+            {
+                "start": _xmltv_time(programme.starts_at),
+                "stop": _xmltv_time(programme.ends_at),
+                "channel": _xml(programme.epg_id),
+            },
+        )
+        ElementTree.SubElement(node, "title", {"lang": language}).text = _xml(programme.title)
+        if programme.description:
+            ElementTree.SubElement(node, "desc", {"lang": language}).text = _xml(programme.description)
+    return b'<?xml version="1.0" encoding="UTF-8"?>\n' + ElementTree.tostring(root, encoding="utf-8")
+
+
+# ── M3U playlist (get.php) ──────────────────────────────────────────────────
+
+
+@dataclass(frozen=True, slots=True)
+class PlaylistEntry:
+    section: str  # live | movie | series — the path segment of the stream URL
+    ref: str
+    name: str
+    group: str
+    logo: str | None
+    epg_id: str | None = None
+
+
+def _attr(value: str) -> str:
+    """An M3U attribute or title: one line, no quote that could end the attribute early."""
+    return " ".join(value.replace('"', "'").split())
+
+
+def stream_url(server_url: str, section: str, username: str, password: str, ref: str) -> str:
+    return f"{server_url}/{section}/{username}/{password}/{stream_id(ref)}.{OUTPUT_FORMATS[0]}"
+
+
+def m3u(entries: list[PlaylistEntry], *, server_url: str, username: str, password: str) -> str:
+    guide = f"{server_url}/xmltv.php?username={username}&password={password}"
+    lines = [f'#EXTM3U url-tvg="{guide}" x-tvg-url="{guide}"']
+    for e in entries:
+        attrs = [f'tvg-id="{_attr(e.epg_id or "")}"', f'tvg-name="{_attr(e.name)}"']
+        attrs.append(f'tvg-logo="{_attr(e.logo or "")}"')
+        attrs.append(f'group-title="{_attr(e.group)}"')
+        lines.append(f"#EXTINF:-1 {' '.join(attrs)},{_attr(e.name)}")
+        lines.append(stream_url(server_url, e.section, username, password, e.ref))
+    return "\n".join(lines) + "\n"

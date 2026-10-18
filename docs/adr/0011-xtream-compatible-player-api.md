@@ -64,7 +64,15 @@ under the same entitlement, rating and concurrency rules as the web player.
 7. **Inside the API, behind `endpoint()`.** The protocol's routes live under `/api/v1/xtream/`
    like every other route (rate limit, OpenAPI, fitness tests); nginx maps the root paths apps
    call (`/player_api.php` …) onto them. Answers are the protocol's bare JSON, `no-store`.
-8. **The protocol's shapes are tested as a contract.** Xtream clients are strict about field
+8. **Guide and playlist exports.** Only NeoTV's own live channels have a guide (`live.read`
+   `programmes`); its window is 6 hours back to 3 days ahead. A channel without an XMLTV id gets
+   `neotv.<stream id>`, the same id in `get_live_streams`, `xmltv.php` and the M3U, so apps can
+   match them. `xmltv.php` is built with an XML library and drops characters XML cannot carry;
+   M3U names and attributes are flattened to one line without quotes, so a channel name can never
+   inject an entry. `get.php` lists live channels, movies, then series episode by episode, with
+   HLS URLs only; exports have their own, tighter rate limit. The playlist holds the credential
+   in every URL — inherent to the protocol, which is why credentials are per device (decision 2).
+9. **The protocol's shapes are tested as a contract.** Xtream clients are strict about field
    names and types (numbers as strings, `"0"`/`"1"` flags); each response shape is pinned by tests
    modelled on what the common clients parse.
 

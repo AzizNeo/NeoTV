@@ -29,6 +29,16 @@ class LiveListing:
     added_at: datetime
 
 
+@dataclass(frozen=True, slots=True)
+class ProgramListing:
+    id: int
+    channel_id: int
+    title: str
+    description: str | None
+    starts_at: datetime
+    ends_at: datetime
+
+
 class LiveReader(Protocol):
     """Capability ``live.read``."""
 
@@ -37,5 +47,9 @@ class LiveReader(Protocol):
         """Active channels in the operator's order; kids profiles see kids ratings only."""
         ...
 
+    def programmes(self, *, channel_ids: list[int], start: datetime, end: datetime) -> list[ProgramListing]:
+        """Guide entries overlapping [start, end) for these channels, by channel then start time."""
+        ...
 
-__all__ = ["NAMESPACE", "LiveListing", "LiveReader", "LiveStats"]
+
+__all__ = ["NAMESPACE", "LiveListing", "LiveReader", "LiveStats", "ProgramListing"]

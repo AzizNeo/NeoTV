@@ -32,6 +32,10 @@ _TAGS = ("xtream",)
 # An app loads a few lists at start-up, then mostly streams; per address, as the caller is not
 # known before its credential is checked.
 _RATE = Rate("xtream.player_api", rps=5, burst=40, per="ip")
+# Whole-catalogue exports: apps fetch them at start-up and then every few hours.
+_EXPORT_RATE = Rate("xtream.export", rps=0.2, burst=6, per="ip")
+_EPG_LIMIT_DEFAULT = 4
+_EPG_LIMIT_MAX = 50
 
 
 def _answer(payload: Any, *, status: int = 200) -> Response:
@@ -80,6 +84,14 @@ def player_api() -> Response:
         return _answer(catalog.live_categories(who))
     if action == "get_live_streams":
         return _answer(catalog.live_streams(who, category_id=request.values.get("category_id") or None))
+    if action == "get_short_epg":
+        limit = request.values.get("limit", "")
+        count = min(int(limit), _EPG_LIMIT_MAX) if limit.isdigit() and int(limit) > 0 else _EPG_LIMIT_DEFAULT
+        return _answer(
+            catalog.short_epg(who, request.values.get("stream_id", ""), limit=count, now=resolve(Clock).now())
+        )
+    if action == "get_simple_data_table":
+        return _answer(catalog.simple_data_table(who, request.values.get("stream_id", ""), now=resolve(Clock).now()))
     return _titles(catalog, who, action)
 
 
@@ -100,3 +112,51 @@ def _titles(catalog: XtreamCatalog, who: XtreamPrincipal, action: str) -> Respon
         details = catalog.series_info(who, request.values.get("series_id", ""))
         return _answer(details) if details is not None else _answer([], status=404)
     return _answer([])  # unknown actions: an empty list, as Xtream servers answer
+
+
+@blueprint.get("/xmltv.php")
+@endpoint(
+    auth="public",
+    summary="Xtream Codes XMLTV guide for the credential's channels",
+    tags=_TAGS,
+    rate=_EXPORT_RATE,
+)
+def xmltv() -> Response:
+    who = _principal()
+    if who is None:
+        return _refused()
+    body = resolve(XtreamCatalog).guide(who, now=resolve(Clock).now())
+    return _file(body, "application/xml; charset=utf-8", "neotv.xml")
+
+
+@blueprint.get("/get.php")
+@endpoint(
+    auth="public",
+    summary="Xtream Codes M3U playlist of everything the credential can play (HLS URLs)",
+    tags=_TAGS,
+    rate=_EXPORT_RATE,
+)
+def playlist() -> Response:
+    who = _principal()
+    if who is None:
+        return _refused()
+    text = protocol.m3u(
+        resolve(XtreamCatalog).playlist(who),
+        server_url=resolve(CredentialService).server_url,
+        username=who.username,
+        password=request.values.get("password", ""),
+    )
+    return _file(text.encode(), "audio/x-mpegurl; charset=utf-8", "neotv.m3u")
+
+
+def _refused() -> Response:
+    response = Response(b"", status=401)
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+def _file(body: bytes, content_type: str, filename: str) -> Response:
+    response = Response(body, status=200, content_type=content_type)
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Content-Disposition"] = f'inline; filename="{filename}"'
+    return response
