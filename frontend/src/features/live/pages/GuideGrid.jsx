@@ -7,6 +7,7 @@ import { useT } from '../i18n';
 import { catchupAction } from '../catchup';
 
 const HOUR_PX = 240;
+const MIN_TARGET_PX = 24;
 /** Horizontal programme guide: one lane per channel, blocks positioned by time. */
 /** Wall clock as state (render stays pure); ticks once a minute so the now-line moves. */
 function useNow(intervalMs = 60_000) {
@@ -66,7 +67,10 @@ export function GuideGrid({ channels, programs, onSelect, onCatchup, hours = 6, 
                   const e = Math.min(endMs, new Date(p.ends_at).getTime());
                   const airing = now >= new Date(p.starts_at).getTime() && now < new Date(p.ends_at).getTime();
                   const past = new Date(p.ends_at).getTime() <= now;
-                  const action = onCatchup ? catchupAction(channel, p, now) : null;
+                  // WCAG 2.5.8 (target size): a block clipped to a sliver at the grid's edge is not a
+                  // usable target for anyone, so it stays plain text; the rest of the programme is gone.
+                  const wide = offset(e) - offset(s) - 2 >= MIN_TARGET_PX;
+                  const action = onCatchup && wide ? catchupAction(channel, p, now) : null;
                   const className = `${styles.program} ${airing ? styles.airing : ''} ${past ? styles.past : ''} ${action ? styles.playable : ''}`;
                   const style = { left: offset(s), width: Math.max(2, offset(e) - offset(s) - 2) };
                   // The action is read after the visible text, so the accessible name contains what is

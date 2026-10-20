@@ -44,3 +44,16 @@ describe('the guide with catch-up', () => {
     expect(screen.queryByRole('button', { name: /Klip/ })).toBeNull(); // the music channel has no archive
   });
 });
+
+describe('target size', () => {
+  it('a programme clipped to a sliver at the grid edge is text, not a button (WCAG 2.5.8)', () => {
+    vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
+    // The grid starts on the half hour before now - 3 h; this one ends 2 minutes after that start.
+    const gridStart = new Date(NOW - 3 * 3_600_000);
+    gridStart.setMinutes(gridStart.getMinutes() < 30 ? 0 : 30, 0, 0);
+    const sliver = { id: 9, channel_id: 1, starts_at: new Date(gridStart.getTime() - 3_600_000).toISOString(), ends_at: new Date(gridStart.getTime() + 120_000).toISOString(), title: 'Gece', description: null };
+    render(<GuideGrid channels={[ARCHIVED]} programs={[sliver]} onSelect={vi.fn()} onCatchup={vi.fn()} back={3} />);
+    vi.useRealTimers();
+    expect(screen.queryByRole('button', { name: /Gece/ })).toBeNull();
+  });
+});
