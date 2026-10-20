@@ -75,6 +75,18 @@ over) — with `PROGRAM-DATE-TIME` anchors and a `DISCONTINUITY` at every hole. 
 the window are refused; nginx serves the files (`/_protected_archive/`, internal) after the API
 has checked the grant.
 
+## Xtream apps (C5)
+
+`get_live_streams` reports `tv_archive` / `tv_archive_duration` as what *this account* may watch
+back (`min(channel, plan)`; 0 on a plan without catch-up); `get_simple_data_table` reaches back
+that far and sets `has_archive` on programmes that have started inside it; `xmltv.php` covers the
+same span; the M3U marks archived channels `catchup="xc" catchup-days="N"`. Catch-up URLs —
+`/timeshift/<user>/<pass>/<minutes>/<YYYY-MM-DD:HH-MM>/<id>.m3u8` (UTC, as `server_info` says)
+and `/streaming/timeshift.php` — open the same session as a live stream, with the window, and
+redirect to the signed archive playlist; the playback gate's catch-up policy decides, so a
+widened or too-old window is refused with the same codes as on the web. nginx maps both root
+forms; their credentials are masked in every log like the other stream URLs.
+
 ## Consequences
 
 - Recording costs disk continuously for every archived channel (roughly bitrate × window); the

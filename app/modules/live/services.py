@@ -205,6 +205,7 @@ class LiveChannelService:
                     rating=c.rating,
                     epg_channel_id=c.epg_channel_id,
                     added_at=c.created_at,
+                    catchup_days=c.archive_days or 0,
                 )
                 for c in rows.scalars()
             ]

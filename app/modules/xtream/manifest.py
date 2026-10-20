@@ -42,6 +42,7 @@ def _services(c: Any) -> None:
             c.resolve(CapabilityIndex).required("catalog.read"),
             c.resolve(CapabilityIndex).optional("live.read"),
             c.resolve(CapabilityIndex).optional("titles.read"),
+            c.resolve(CapabilityIndex).optional("billing.entitlements"),
         ),
     )
 

@@ -9,7 +9,7 @@ account's language; their categories are the titles' genres.
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Protocol
 
 from sqlalchemy import select
 
@@ -28,6 +28,10 @@ GUIDE_BEHIND = timedelta(hours=6)
 GUIDE_AHEAD = timedelta(days=3)
 
 
+class _Entitlements(Protocol):  # consumer-owned port for the optional billing capability
+    def for_user(self, user_id: int) -> Any: ...
+
+
 class XtreamCatalog:
     def __init__(
         self,
@@ -35,11 +39,22 @@ class XtreamCatalog:
         catalog: CatalogReader,
         live: LiveReader | None,
         titles: TitleCatalogReader | None,
+        entitlements: _Entitlements | None = None,
     ) -> None:
         self._uow = uow
         self._catalog = catalog
         self._live = live
         self._titles = titles
+        self._entitlements = entitlements
+
+    def catchup_days(self, who: XtreamPrincipal, channel_days: int) -> int:
+        """How far back this account may watch a channel: min(channel archive, plan window).
+        The same rule as the playback gate's catch-up policy, which has the last word."""
+        if channel_days <= 0:
+            return 0
+        if self._entitlements is None:
+            return channel_days
+        return max(0, min(channel_days, int(getattr(self._entitlements.for_user(who.user_id), "catchup_days", 0))))
 
     # ── live ──────────────────────────────────────────────────────────────
 
@@ -73,6 +88,7 @@ class XtreamCatalog:
                 "epg_channel_id": o.epg_channel_id or protocol.own_epg_id(o.ref),
                 "added_at": o.added_at,
                 "adult": o.rating == ADULT,
+                "archive_days": self.catchup_days(who, o.catchup_days),
             }
             for o in own
         ]
@@ -93,11 +109,15 @@ class XtreamCatalog:
         channel = self._own_channel(who, stream)
         if channel is None:
             return {"epg_listings": []}
-        programmes = self._programmes([channel], now - GUIDE_BEHIND, now + GUIDE_AHEAD)
-        return {"epg_listings": [self._listing(channel, p, now=now) for p in programmes]}
+        days = self.catchup_days(who, channel.catchup_days)
+        since = now - timedelta(days=days) if days else None
+        # An archived channel's table reaches back as far as the account can watch (apps list it).
+        programmes = self._programmes([channel], min(since or now, now - GUIDE_BEHIND), now + GUIDE_AHEAD)
+        return {"epg_listings": [self._listing(channel, p, now=now, archived_since=since) for p in programmes]}
 
     def guide(self, who: XtreamPrincipal, *, now: datetime) -> bytes:
         own = self._live.listing(kids_only=who.is_kids) if self._live is not None else []
+        back = max([GUIDE_BEHIND, *(timedelta(days=self.catchup_days(who, c.catchup_days)) for c in own)])
         by_id = {c.id: c for c in own}
         channels = [protocol.GuideChannel(epg_id=self._epg_id(c), name=c.name, icon=c.logo) for c in own]
         programmes = [
@@ -108,7 +128,7 @@ class XtreamCatalog:
                 starts_at=p.starts_at,
                 ends_at=p.ends_at,
             )
-            for p in self._programmes(own, now - GUIDE_BEHIND, now + GUIDE_AHEAD)
+            for p in self._programmes(own, now - back, now + GUIDE_AHEAD)
         ]
         return protocol.xmltv(channels, programmes, language=who.locale)
 
@@ -127,7 +147,14 @@ class XtreamCatalog:
     def _epg_id(channel: LiveListing) -> str:
         return channel.epg_channel_id or protocol.own_epg_id(channel.ref)
 
-    def _listing(self, channel: LiveListing, p: ProgramListing, *, now: datetime | None = None) -> dict[str, Any]:
+    def _listing(
+        self,
+        channel: LiveListing,
+        p: ProgramListing,
+        *,
+        now: datetime | None = None,
+        archived_since: datetime | None = None,
+    ) -> dict[str, Any]:
         return protocol.epg_listing(
             program_id=p.id,
             epg_id=self._epg_id(channel),
@@ -137,6 +164,7 @@ class XtreamCatalog:
             starts_at=p.starts_at,
             ends_at=p.ends_at,
             now=now,
+            archived_since=archived_since,
         )
 
     # ── M3U playlist ──────────────────────────────────────────────────────
@@ -149,7 +177,15 @@ class XtreamCatalog:
         ]
         own = self._live.listing(kids_only=who.is_kids) if self._live is not None else []
         entries += [
-            protocol.PlaylistEntry("live", c.ref, c.name, protocol.OWN_LIVE_CATEGORY, c.logo, self._epg_id(c))
+            protocol.PlaylistEntry(
+                "live",
+                c.ref,
+                c.name,
+                protocol.OWN_LIVE_CATEGORY,
+                c.logo,
+                self._epg_id(c),
+                catchup_days=self.catchup_days(who, c.catchup_days),
+            )
             for c in own
         ]
         other = protocol.word(who.locale, "other")

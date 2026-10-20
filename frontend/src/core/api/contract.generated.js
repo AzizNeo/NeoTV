@@ -1256,6 +1256,22 @@ export const OPERATIONS = Object.freeze({
     "idempotent": false,
     "errors": []
   },
+  "xtream_player_timeshift": {
+    "method": "GET",
+    "path": "/api/v1/xtream/timeshift/{username}/{password}/{duration}/{start}/{filename}",
+    "auth": "public",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
+  },
+  "xtream_player_timeshift_php": {
+    "method": "GET",
+    "path": "/api/v1/xtream/streaming/timeshift.php",
+    "auth": "public",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
+  },
   "xtream_player_xmltv": {
     "method": "GET",
     "path": "/api/v1/xtream/xmltv.php",
