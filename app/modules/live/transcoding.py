@@ -179,13 +179,15 @@ def build_command(
 class FfmpegProcess:
     """Owns one FFmpeg process group; drains stderr into a bounded ring buffer."""
 
-    def __init__(self, argv: list[str]) -> None:
+    def __init__(self, argv: list[str], *, env: dict[str, str] | None = None) -> None:
         kwargs: dict[str, object] = {
             "stdin": subprocess.DEVNULL,
             "stdout": subprocess.DEVNULL,
             "stderr": subprocess.PIPE,
             "bufsize": 0,
         }
+        if env is not None:
+            kwargs["env"] = {**os.environ, **env}
         if sys.platform.startswith("win"):
             kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore[attr-defined]
         else:

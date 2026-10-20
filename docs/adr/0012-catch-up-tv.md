@@ -50,6 +50,18 @@ Recording a stream copies it: whether that is allowed is a question of rights, n
 | C5 | Xtream: `tv_archive`, `tv_archive_duration`, `has_archive`, `/timeshift/…` |
 | C6 | End-to-end and load tests, README |
 
+## Recorder (C2)
+
+`flask live record` — a `recorder` service, scaled with replicas. Each archived channel is held by
+one replica through a Redis lease (30 s, renewed every 5 s pass), so a dead replica's channels move
+within the lease time. ffmpeg copies the source (`-c copy`, no transcoding) through the HLS muxer
+used as a segmenter: ~6 s MPEG-TS segments cut at key frames, named by their UTC start
+(`strftime`, `TZ=UTC`), folders created as needed, each written as `.tmp` and renamed when
+complete — a partial segment is never visible. External URLs pass the egress policy before
+ffmpeg sees them; an ingest channel is recorded only while its encoder is connected. Failures
+back off per channel (5 s doubling to 5 min, reset after a minute of healthy recording); the disk
+guard stops every recording at 90 % and resumes below 85 %.
+
 ## Consequences
 
 - Recording costs disk continuously for every archived channel (roughly bitrate × window); the

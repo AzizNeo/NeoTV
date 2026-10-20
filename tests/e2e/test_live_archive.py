@@ -111,3 +111,24 @@ def test_retention_keeps_each_window_and_drops_what_is_no_longer_archived(tmp_pa
     )
     assert 55 <= float(lag.split()[-1]) <= 120
     assert f'channel="{off["id"]}"' not in text  # only archived channels report
+
+
+def test_the_recorder_is_given_only_what_can_be_recorded_now(app: Any, api: Api, admin: str) -> None:
+    from app.kernel.container import resolve
+    from app.kernel.db import db
+    from app.modules.live.models import LiveChannel
+    from app.modules.live.services import ArchiveService
+
+    external = _channel(api, admin, upstream_url="https://live.example.com/a.m3u8")
+    studio = _channel(api, admin, source_type="ingest")
+    _channel(api, admin, upstream_url="https://live.example.com/not-archived.m3u8")
+    _archive(api, admin, external["id"], days=3, rights_confirmed=True)
+    _archive(api, admin, studio["id"], days=3)
+    with app.app_context():
+        sources = resolve(ArchiveService).recording_sources()
+        assert sources[external["id"]].url == "https://live.example.com/a.m3u8" and sources[external["id"]].external
+        assert studio["id"] not in sources  # the encoder is not connected: nothing to pull
+        db.session.get(LiveChannel, studio["id"]).is_live = True
+        db.session.commit()
+        live = resolve(ArchiveService).recording_sources()[studio["id"]]
+    assert live.url.endswith(f"/{studio['playback_id']}") and live.url.startswith("rtmp://") and not live.external

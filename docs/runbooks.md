@@ -4,7 +4,8 @@ What to do when an alert from `deploy/prometheus/neotv.rules.yml` fires. Each al
 (`runbook_url`); a test keeps every alert and every section in step.
 
 Conventions: commands assume the production stack (`docker-compose.yml`: services `api`,
-`worker-default`, `worker-playlist`, `worker-transcode`, `beat`, `web`, `postgres`, `redis`).
+`worker-default`, `worker-playlist`, `worker-transcode`, `recorder`, `beat`, `web`, `postgres`,
+`redis`).
 Logs are JSON — filter by `logger`, `request_id` or `trace_id` (a log line's `trace_id` opens the
 request's trace in the tracing backend when `OTEL_ENDPOINT` is set). **Severity:** `page` = act
 now; `ticket` = act within working hours.

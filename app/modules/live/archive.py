@@ -19,7 +19,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Protocol
 
-#: Nominal segment length the recorder cuts at (clock-aligned).
+#: Nominal segment length the recorder cuts at (at the next key frame).
 SEGMENT_SECONDS = 6
 #: A gap above this between two segment starts is a hole, not a long segment.
 _MAX_GAP_S = SEGMENT_SECONDS * 2

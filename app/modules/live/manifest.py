@@ -83,7 +83,12 @@ def _services(c: Any) -> None:
     )
     c.register(
         ArchiveService,
-        lambda c: ArchiveService(c.resolve(UnitOfWorkFactory), c.resolve(ArchiveStorage), c.resolve(Clock)),
+        lambda c: ArchiveService(
+            c.resolve(UnitOfWorkFactory),
+            c.resolve(ArchiveStorage),
+            c.resolve(Clock),
+            rtmp_base=settings.rtmp_internal_base,
+        ),
     )
 
 
@@ -103,6 +108,7 @@ manifest = ModuleManifest(
         "live.archive-retention": {"task": "live.archive_retention", "schedule": 600.0},
     },
     post_boot="app.modules.live.post_boot:install_metrics",
+    cli=("app.modules.live.cli:live_cli",),
     permissions=("live:write",),
     extensions=(ExtensionSpec("playback.content_providers", "app.modules.live.provider:build_provider"),),
     error_map={

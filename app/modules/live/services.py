@@ -514,13 +514,39 @@ class ArchivedChannel:
     since: datetime | None  # when the archive was switched on
 
 
+@dataclass(frozen=True, slots=True)
+class RecordingSource:
+    url: str
+    external: bool  # an operator-entered URL on the internet: checked by the egress policy
+
+
 class ArchiveService:
     """Which channels are archived, and the retention that keeps each to its window (ADR-0012)."""
 
-    def __init__(self, uow: UnitOfWorkFactory, storage: ArchiveStorage, clock: Clock) -> None:
+    def __init__(self, uow: UnitOfWorkFactory, storage: ArchiveStorage, clock: Clock, *, rtmp_base: str = "") -> None:
         self._uow = uow
         self._storage = storage
         self._clock = clock
+        self._rtmp_base = rtmp_base.rstrip("/")
+
+    def recording_sources(self) -> dict[int, RecordingSource]:
+        """What the recorder should record right now: archived channels whose source is up.
+
+        External: the upstream URL (the recorder checks it with the egress policy first). Ingest:
+        the internal RTMP stream, only while the encoder is connected (``is_live``) — otherwise
+        there is nothing to pull and the archive simply has a gap.
+        """
+        with self._uow() as uow:
+            rows = uow.session.execute(
+                select(LiveChannel).where(LiveChannel.archive_days > 0, LiveChannel.is_active.is_(True))
+            ).scalars()
+            sources: dict[int, RecordingSource] = {}
+            for channel in rows:
+                if channel.source_type == "external" and channel.upstream_url:
+                    sources[channel.id] = RecordingSource(channel.upstream_url, external=True)
+                elif channel.source_type == "ingest" and channel.is_live and self._rtmp_base:
+                    sources[channel.id] = RecordingSource(f"{self._rtmp_base}/{channel.playback_id}", external=False)
+            return sources
 
     def archived(self) -> list[ArchivedChannel]:
         with self._uow() as uow:

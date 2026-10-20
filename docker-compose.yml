@@ -18,6 +18,7 @@ x-backend: &backend
     TRUSTED_PROXY_COUNT: "1"
     HLS_SERVE_VIA_NGINX: "true"
     RTMP_INTERNAL_BASE: rtmp://rtmp:1935/live
+    ARCHIVE_ROOT: /var/lib/neotv/archive   # catch-up recordings (ADR-0012): a real disk, not tmpfs
     INGEST_CALLBACK_ALLOWED_IPS: ${INGEST_CALLBACK_ALLOWED_IPS:-172.16.0.0/12}
   depends_on:
     postgres: { condition: service_healthy }
@@ -74,12 +75,31 @@ services:
 
   api:
     <<: *backend
-    volumes: [hls:/var/lib/neotv/hls:ro]
+    volumes: [hls:/var/lib/neotv/hls:ro, archive:/var/lib/neotv/archive:ro]   # archive: playlists + metrics
 
   worker-default:
     <<: *worker
     command: ["celery", "-A", "app.wsgi:celery", "worker", "-Q", "default,outbox", "-P", "threads", "-c", "16",
               "--loglevel", "INFO", "--without-gossip", "--without-mingle", "-n", "default@%h"]
+    volumes: [archive:/var/lib/neotv/archive]   # live.archive_retention runs here
+
+  # Catch-up recorder (ADR-0012): records archived channels continuously (ffmpeg -c copy).
+  # Replicas share the channels through Redis leases; scale with `--scale recorder=N`.
+  recorder:
+    <<: *backend
+    environment:
+      <<: *backend-env
+      OTEL_SERVICE_NAME: neotv-recorder
+    command: ["flask", "--app", "app.wsgi", "live", "record"]
+    volumes: [archive:/var/lib/neotv/archive]
+    stop_grace_period: 20s
+    # No HTTP here: the recorder touches this file on every pass (every 5 s).
+    healthcheck:
+      test: ["CMD-SHELL", "test $$(( $$(date +%s) - $$(stat -c %Y /tmp/neotv-recorder.alive) )) -lt 30"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
 
   worker-playlist:
     <<: *worker
@@ -119,7 +139,7 @@ services:
       context: .
       dockerfile: deploy/nginx/Dockerfile
     ports: ["80:80"]
-    volumes: [hls:/var/lib/neotv/hls:ro]
+    volumes: [hls:/var/lib/neotv/hls:ro, archive:/var/lib/neotv/archive:ro]
     depends_on: [api]
     restart: unless-stopped
 
@@ -127,3 +147,4 @@ volumes:
   pgdata:
   redisdata:
   hls:
+  archive:
