@@ -40,6 +40,14 @@ class LiveSourceConfigError(LiveError):
     pass
 
 
+class ArchiveConfigError(LiveError):
+    pass
+
+
+class ArchiveRightsRequiredError(LiveError):
+    """Recording an external stream needs the administrator's confirmation of the rights (ADR-0012)."""
+
+
 class EpgImportError(LiveError):
     pass
 
@@ -84,6 +92,9 @@ class LiveChannelAdminDTO:
     sort_order: int
     is_live: bool
     is_active: bool
+    archive_days: int = 0
+    archive_confirmed_by: int | None = None
+    archive_confirmed_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,6 +114,12 @@ def _program(p: LiveProgram) -> ProgramDTO:
     )
 
 
+def _archive_off(channel: LiveChannel) -> None:
+    channel.archive_days = 0
+    channel.archive_confirmed_by = None
+    channel.archive_confirmed_at = None
+
+
 def _admin(c: LiveChannel) -> LiveChannelAdminDTO:
     return LiveChannelAdminDTO(
         id=c.id,
@@ -120,6 +137,9 @@ def _admin(c: LiveChannel) -> LiveChannelAdminDTO:
         sort_order=c.sort_order,
         is_live=bool(c.is_live),
         is_active=bool(c.is_active),
+        archive_days=c.archive_days or 0,
+        archive_confirmed_by=c.archive_confirmed_by,
+        archive_confirmed_at=c.archive_confirmed_at,
     )
 
 
@@ -291,11 +311,35 @@ class LiveChannelService:
             channel = uow.session.get(LiveChannel, channel_id)
             if channel is None:
                 raise LiveChannelNotFoundError("Live channel not found")
+            previous_source = channel.upstream_url
             for field, value in changes.items():
                 if field in allowed and value is not None:
                     setattr(channel, field, value)
             if channel.source_type == "external" and not channel.upstream_url:
                 raise LiveSourceConfigError("external channels need an upstream URL")
+            if channel.source_type == "external" and channel.upstream_url != previous_source:
+                # The right to record was confirmed for the old stream, not for this one (ADR-0012).
+                _archive_off(channel)
+            return _admin(channel)
+
+    def set_archive(
+        self, channel_id: int, *, days: int, rights_confirmed: bool, actor_id: int, max_days: int
+    ) -> LiveChannelAdminDTO:
+        """Switch a channel's catch-up archive on (``days`` > 0) or off (0)."""
+        if not 0 <= days <= max_days:
+            raise ArchiveConfigError(f"archive days must be between 0 and {max_days}")
+        with self._uow() as uow:
+            channel = uow.session.get(LiveChannel, channel_id)
+            if channel is None:
+                raise LiveChannelNotFoundError("Live channel not found")
+            if days == 0:
+                _archive_off(channel)
+                return _admin(channel)
+            if channel.source_type == "external" and not rights_confirmed:
+                raise ArchiveRightsRequiredError("confirm that the operator may record this external stream")
+            channel.archive_days = days
+            channel.archive_confirmed_by = actor_id
+            channel.archive_confirmed_at = self._clock.now()
             return _admin(channel)
 
     def rotate_ingest_key(self, channel_id: int) -> IssuedIngestKey:

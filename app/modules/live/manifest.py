@@ -10,6 +10,8 @@ from app.kernel.uow import UnitOfWorkFactory
 from app.modules.live.api import LiveListing, LiveReader, LiveStats, ProgramListing
 from app.modules.live.provider import LiveOfflineError, TranscoderUnavailableError
 from app.modules.live.services import (
+    ArchiveConfigError,
+    ArchiveRightsRequiredError,
     EpgImportError,
     InvalidIngestKeyError,
     LiveChannelNotFoundError,
@@ -88,6 +90,8 @@ manifest = ModuleManifest(
         InvalidIngestKeyError: (403, "INVALID_INGEST_KEY"),
         LiveSourceConfigError: (422, "LIVE_SOURCE_INVALID"),
         EpgImportError: (502, "EPG_IMPORT_FAILED"),
+        ArchiveConfigError: (422, "ARCHIVE_INVALID"),
+        ArchiveRightsRequiredError: (422, "ARCHIVE_RIGHTS_REQUIRED"),
         LiveOfflineError: (409, "LIVE_OFFLINE"),
         TranscoderUnavailableError: (503, "TRANSCODER_UNAVAILABLE"),
         EncoderUnavailableError: (503, "ENCODER_UNAVAILABLE"),

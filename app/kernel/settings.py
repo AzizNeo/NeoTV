@@ -101,6 +101,8 @@ class Settings(BaseSettings):
     hls_serve_via_nginx: bool = False
     transcode_encoders: CsvList = ["h264_nvenc", "h264_qsv", "h264_videotoolbox", "libx264"]
     transcode_idle_grace_s: int = Field(default=60, ge=10)
+    # Catch-up TV (ADR-0012): the longest archive a channel may keep.
+    archive_max_days: int = Field(default=7, ge=1, le=30)
     ingest_callback_allowed_ips: CsvList = ["127.0.0.1", "::1"]
     rtmp_internal_base: str = "rtmp://127.0.0.1:1935/live"
     epg_xmltv_url: str | None = None

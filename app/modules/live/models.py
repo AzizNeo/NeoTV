@@ -22,6 +22,11 @@ class LiveChannel(db.Model):
     is_live = db.Column(db.Boolean, nullable=False, default=False)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     started_at = db.Column(UTCDateTime())
+    # Catch-up (ADR-0012): days kept, 0 = off; for external sources, who confirmed the operator may
+    # record the stream, and when (cleared when the source changes).
+    archive_days = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    archive_confirmed_by = db.Column(db.Integer)  # soft reference to the administrator
+    archive_confirmed_at = db.Column(UTCDateTime())
     created_at = created_at_column()
     updated_at = updated_at_column()
 
@@ -33,6 +38,7 @@ class LiveChannel(db.Model):
             "(source_type = 'external' AND upstream_url IS NOT NULL) OR source_type = 'ingest'",
             name="external_has_upstream",
         ),
+        db.CheckConstraint("archive_days >= 0", name="archive_days_valid"),
     )
 
 

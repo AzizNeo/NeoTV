@@ -809,6 +809,18 @@ export const OPERATIONS = Object.freeze({
     "idempotent": false,
     "errors": []
   },
+  "live_admin_set_archive": {
+    "method": "PUT",
+    "path": "/api/v1/live/admin/channels/{channel_id}/archive",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": [
+      "LIVE_CHANNEL_NOT_FOUND",
+      "ARCHIVE_INVALID",
+      "ARCHIVE_RIGHTS_REQUIRED"
+    ]
+  },
   "live_admin_update": {
     "method": "PATCH",
     "path": "/api/v1/live/admin/channels/{channel_id}",

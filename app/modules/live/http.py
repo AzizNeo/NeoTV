@@ -87,6 +87,17 @@ class LiveChannelAdminOut(BaseModel):
     sort_order: int
     is_live: bool
     is_active: bool
+    archive_days: int = Field(description="Catch-up archive in days; 0 = not recorded (ADR-0012)")
+    archive_confirmed_by: int | None = Field(description="Administrator who switched the archive on")
+    archive_confirmed_at: datetime | None
+
+
+class ArchiveRequest(_Strict):
+    days: int = Field(ge=0, description="0 switches the archive off")
+    rights_confirmed: bool = Field(
+        default=False,
+        description="External sources only: the operator holds the rights to record this stream",
+    )
 
 
 class CreateLiveChannelRequest(_Strict):
@@ -292,6 +303,24 @@ def admin_update(channel_id: int, body: UpdateLiveChannelRequest) -> object:
         epg_channel_id=body.epg_channel_id,
         sort_order=body.sort_order,
         is_active=body.is_active,
+    )
+
+
+@blueprint.put("/admin/channels/<int:channel_id>/archive")
+@endpoint(
+    summary="Switch a channel's catch-up archive on or off (external sources need the rights confirmation)",
+    permission="live:write",
+    body=ArchiveRequest,
+    response=LiveChannelAdminOut,
+    errors=("LIVE_CHANNEL_NOT_FOUND", "ARCHIVE_INVALID", "ARCHIVE_RIGHTS_REQUIRED"),
+)
+def admin_set_archive(channel_id: int, body: ArchiveRequest) -> object:
+    return resolve(LiveChannelService).set_archive(
+        channel_id,
+        days=body.days,
+        rights_confirmed=body.rights_confirmed,
+        actor_id=current_user.id,
+        max_days=resolve(Settings).archive_max_days,
     )
 
 

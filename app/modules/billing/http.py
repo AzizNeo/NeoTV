@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Literal
 
 from flask import Blueprint, g, request
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.kernel.container import resolve
 from app.kernel.http.endpoint import endpoint
@@ -27,6 +27,7 @@ class EntitlementsOut(BaseModel):
     max_resolution: str
     offline_downloads: bool
     ads: bool
+    catchup_days: int = Field(description="Days of archived live TV the plan can watch (0 = none)")
 
 
 class PlanOut(BaseModel):
