@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from app.kernel.manifest import ExtensionSpec, ModuleManifest, RouteSpec
 from app.kernel.settings import Settings
 from app.kernel.time import Clock
 from app.kernel.uow import UnitOfWorkFactory
-from app.modules.live.api import LiveReader, LiveStats
+from app.modules.live.api import LiveListing, LiveReader, LiveStats, ProgramListing
 from app.modules.live.provider import LiveOfflineError, TranscoderUnavailableError
 from app.modules.live.services import (
     EpgImportError,
@@ -26,6 +27,28 @@ class _LiveReader:
         from app.modules.live.services import LiveChannelService
 
         return self._c.resolve(LiveChannelService).stats(self._c.resolve(TranscodeOrchestrator).running_count())
+
+    def listing(self, *, kids_only: bool) -> list[LiveListing]:
+        from app.modules.live.services import LiveChannelService
+
+        return self._c.resolve(LiveChannelService).listing(kids_only=kids_only)
+
+    def programmes(self, *, channel_ids: list[int], start: datetime, end: datetime) -> list[ProgramListing]:
+        from app.modules.live.services import EpgService
+
+        if not channel_ids:  # the guide service reads "no filter" as every channel
+            return []
+        return [
+            ProgramListing(
+                id=p.id,
+                channel_id=p.channel_id,
+                title=p.title,
+                description=p.description,
+                starts_at=p.starts_at,
+                ends_at=p.ends_at,
+            )
+            for p in self._c.resolve(EpgService).guide(start=start, end=end, channel_ids=channel_ids)
+        ]
 
 
 def _services(c: Any) -> None:

@@ -19,7 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 from enum import StrEnum
-from typing import Protocol
+from typing import Literal, Protocol
 
 from app.shared_kernel.content import ContentRef
 
@@ -174,6 +174,53 @@ class SessionDirectory(Protocol):
     def terminate(self, session_token: str) -> bool: ...
 
 
+#: How an open session stays alive. ``heartbeat``: the client calls the heartbeat endpoint (web
+#: player). ``media``: every media request of the session counts as one — for clients that cannot
+#: send heartbeats (Xtream apps); the slot frees itself ~35 s after the player stops fetching.
+KeepAlive = Literal["heartbeat", "media"]
+
+
+class PlaybackRefusedError(Exception):
+    """``playback.open`` could not open a session; ``code`` is the API error code playback uses."""
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+@dataclass(frozen=True, slots=True)
+class OpenedStream:
+    session_token: str
+    manifest_url: str  # a signed, short-lived NeoTV URL — never the origin
+    mime_type: str
+    is_live: bool
+    drm: dict[str, str] | None
+
+
+class SessionOpener(Protocol):
+    """Capability ``playback.open``: open a session for another front end, under every playback rule.
+
+    Entitlements, the kids rule, policies and the concurrent-stream limit apply exactly as for the
+    web player; refusals raise :class:`PlaybackRefusedError`.
+    """
+
+    def open(
+        self,
+        *,
+        user_id: int,
+        profile_id: int,
+        is_kids: bool,
+        content_ref: str,
+        client_device_id: str,
+        ip: str,
+        user_agent: str,
+        keepalive: KeepAlive = "heartbeat",
+    ) -> OpenedStream: ...
+
+    def release(self, session_token: str) -> bool: ...
+    def active_for_user(self, user_id: int) -> int: ...
+
+
 __all__ = [
     "INTERNAL_URI_PREFIX",
     "ActiveSessionView",
@@ -184,13 +231,17 @@ __all__ = [
     "ContentProvider",
     "Deny",
     "GrantVerifier",
+    "KeepAlive",
     "MediaGrant",
+    "OpenedStream",
     "PlaybackContext",
     "PlaybackPolicy",
+    "PlaybackRefusedError",
     "Rating",
     "ResolvedSource",
     "SessionDirectory",
     "SessionInactiveError",
+    "SessionOpener",
     "SourceEnhancer",
     "StreamUrlFactory",
 ]

@@ -123,7 +123,7 @@ _DEPENDANTS = {"titles": ["tmdb"]}
 
 
 @pytest.mark.parametrize(
-    "module", ["recommendations", "library", "drm", "admin", "billing", "devices", "live", "titles", "tmdb"]
+    "module", ["recommendations", "library", "drm", "admin", "billing", "devices", "live", "titles", "tmdb", "xtream"]
 )
 def test_optional_modules_can_be_switched_off(module: str) -> None:
     app = make_app(schema="none", disabled_modules=[module, *_DEPENDANTS.get(module, [])])

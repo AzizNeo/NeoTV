@@ -159,6 +159,13 @@ def panels() -> list[dict]:
             [("sum by (reason) (rate(neotv_playback_proxy_errors_total[5m]))", "{{reason}}")],
             "reqps",
         ),
+        _ts(
+            "TV app (Xtream) credential checks by result",
+            [("sum by (result) (rate(neotv_xtream_auth_total[5m]))", "{{result}}")],
+            "reqps",
+            "ok; denied (wrong or revoked credential, suspended account); blocked (an address that "
+            "failed too often, refused without checking). A rise in denied+blocked is guessing.",
+        ),
         _row("Platform"),
         _ts("Outbox lag", [("max(neotv_outbox_lag_seconds)", "oldest undelivered event")], "s"),
         _ts("Dead letters waiting for a human", [("max(neotv_outbox_dead_letters)", "dead letters")]),

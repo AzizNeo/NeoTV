@@ -130,6 +130,13 @@ def rule_file() -> str:
         "        annotations:",
         '          summary: "Viewers\' browsers report {{ $value | humanize }} uncaught errors per minute"',
         "          runbook_url: docs/runbooks.md#browser-errors",
+        "      - alert: NeoTVXtreamGuessing",
+        '        expr: sum(rate(neotv_xtream_auth_total{result="blocked"}[10m])) * 60 > 1',
+        "        for: 10m",
+        "        labels: {severity: ticket}",
+        "        annotations:",
+        '          summary: "TV app sign-ins refused for guessing: {{ $value | humanize }} per minute"',
+        "          runbook_url: docs/runbooks.md#xtream-guessing",
     ]
     return "\n".join(lines) + "\n"
 

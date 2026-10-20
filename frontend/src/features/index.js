@@ -15,7 +15,8 @@ import player from './player/manifest';
 import profiles from './profiles/manifest';
 import recommendations from './recommendations/manifest';
 import titles from './titles/manifest';
+import tvApps from './tv-apps/manifest';
 
 export const FEATURES = Object.freeze([
-  auth, profiles, player, catalog, titles, live, library, recommendations, billing, devices, admin,
+  auth, profiles, player, catalog, titles, live, library, recommendations, billing, devices, tvApps, admin,
 ]);

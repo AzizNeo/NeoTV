@@ -16,6 +16,7 @@ class UserSummary:
     is_active: bool
     created_at: datetime
     last_login_at: datetime | None
+    locale: str | None = None  # the account's chosen language; None → negotiated / default
 
 
 @dataclass(frozen=True, slots=True)

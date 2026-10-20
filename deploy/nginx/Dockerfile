@@ -13,4 +13,5 @@ RUN npm run build
 FROM nginx:1.27-alpine
 COPY deploy/nginx/nginx.conf /etc/nginx/conf.d/default.conf
 COPY deploy/nginx/security-headers.conf /etc/nginx/snippets/neotv-security-headers.conf
+COPY deploy/nginx/api-proxy.conf /etc/nginx/snippets/neotv-api-proxy.conf
 COPY --from=frontend /build/dist /usr/share/nginx/html

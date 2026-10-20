@@ -12693,6 +12693,509 @@
           }
         ]
       }
+    },
+    "/api/v1/xtream/{section}/{username}/{password}/{filename}": {
+      "get": {
+        "operationId": "xtream_player_stream",
+        "summary": "Xtream Codes stream URL: opens a playback session and redirects to the signed HLS URL",
+        "tags": [
+          "xtream"
+        ],
+        "parameters": [
+          {
+            "name": "section",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "live",
+                "movie",
+                "series"
+              ]
+            }
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "password",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {},
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "public"
+      }
+    },
+    "/api/v1/xtream/credentials": {
+      "get": {
+        "operationId": "xtream_list_credentials",
+        "summary": "App credentials of the account (never their passwords)",
+        "tags": [
+          "xtream"
+        ],
+        "parameters": [
+          {
+            "name": "X-Profile-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/CredentialOut"
+                      },
+                      "type": "array"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-error-codes": [
+          "XTREAM_KIDS_PROFILE"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "xtream_issue_credential",
+        "summary": "Create an app credential for a TV app; the password is in this answer only",
+        "tags": [
+          "xtream"
+        ],
+        "parameters": [
+          {
+            "name": "X-Profile-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/IssuedOut"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-error-codes": [
+          "XTREAM_KIDS_PROFILE",
+          "XTREAM_PROFILE_NOT_FOUND",
+          "XTREAM_PROFILE_LOCKED",
+          "XTREAM_CREDENTIAL_LIMIT"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "description": "Where it is used, e.g. 'Living-room TV'",
+                    "maxLength": 40,
+                    "minLength": 1,
+                    "title": "Label",
+                    "type": "string"
+                  },
+                  "profile_id": {
+                    "description": "The profile the TV app watches as (its rating limits apply)",
+                    "minimum": 1,
+                    "title": "Profile Id",
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "label",
+                  "profile_id"
+                ],
+                "title": "IssueIn",
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/xtream/credentials/{credential_id}": {
+      "delete": {
+        "operationId": "xtream_revoke_credential",
+        "summary": "Revoke an app credential (the TV app stops at its next request)",
+        "tags": [
+          "xtream"
+        ],
+        "parameters": [
+          {
+            "name": "credential_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "X-Profile-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {},
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-error-codes": [
+          "XTREAM_KIDS_PROFILE",
+          "XTREAM_CREDENTIAL_NOT_FOUND"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/xtream/get.php": {
+      "get": {
+        "operationId": "xtream_player_playlist",
+        "summary": "Xtream Codes M3U playlist of everything the credential can play (HLS URLs)",
+        "tags": [
+          "xtream"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {},
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "public"
+      }
+    },
+    "/api/v1/xtream/player_api.php": {
+      "get": {
+        "operationId": "xtream_player_player_api",
+        "summary": "Xtream Codes player API (app credentials; ?action=\u2026 selects the list)",
+        "tags": [
+          "xtream"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {},
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "public"
+      },
+      "post": {
+        "operationId": "xtream_player_player_api",
+        "summary": "Xtream Codes player API (app credentials; ?action=\u2026 selects the list)",
+        "tags": [
+          "xtream"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {},
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "public"
+      }
+    },
+    "/api/v1/xtream/xmltv.php": {
+      "get": {
+        "operationId": "xtream_player_xmltv",
+        "summary": "Xtream Codes XMLTV guide for the credential's channels",
+        "tags": [
+          "xtream"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {},
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "public"
+      }
     }
   },
   "components": {
@@ -13220,6 +13723,66 @@
           "id"
         ],
         "title": "CreatedResponse",
+        "type": "object"
+      },
+      "CredentialOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          },
+          "profile_id": {
+            "title": "Profile Id",
+            "type": "integer"
+          },
+          "profile_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "null when the profile was deleted (the credential no longer works)",
+            "title": "Profile Name"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "username",
+          "profile_id",
+          "profile_name",
+          "created_at",
+          "last_used_at"
+        ],
+        "title": "CredentialOut",
         "type": "object"
       },
       "DashboardOut": {
@@ -14153,6 +14716,30 @@
           "ingest_key"
         ],
         "title": "IngestKeyOut",
+        "type": "object"
+      },
+      "IssuedOut": {
+        "properties": {
+          "credential": {
+            "$ref": "#/components/schemas/CredentialOut"
+          },
+          "server_url": {
+            "description": "What the TV app calls the server / portal URL",
+            "title": "Server Url",
+            "type": "string"
+          },
+          "password": {
+            "description": "Shown once: only a keyed digest is stored",
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "credential",
+          "server_url",
+          "password"
+        ],
+        "title": "IssuedOut",
         "type": "object"
       },
       "LicenseOut": {

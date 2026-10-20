@@ -14,7 +14,7 @@ from pydantic import TypeAdapter
 
 from app.kernel.http.endpoint import EndpointDoc
 
-_PATH_PARAM = re.compile(r"<(?:(?P<conv>[a-z]+):)?(?P<name>[a-zA-Z_][a-zA-Z0-9_]*)>")
+_PATH_PARAM = re.compile(r"<(?:(?P<conv>[a-z]+)(?:\((?P<args>[^)]*)\))?:)?(?P<name>[a-zA-Z_][a-zA-Z0-9_]*)>")
 _CONVERTER_TYPES = {"int": "integer", "float": "number", "path": "string", "string": "string", None: "string"}
 
 ERROR_ENVELOPE = {
@@ -34,6 +34,12 @@ ERROR_ENVELOPE = {
         },
     },
 }
+
+
+def _path_schema(match: re.Match[str]) -> dict[str, Any]:
+    if match.group("conv") == "any":  # <any(a, b):name> → one of the listed values
+        return {"type": "string", "enum": [v.strip().strip("'\"") for v in (match.group("args") or "").split(",")]}
+    return {"type": _CONVERTER_TYPES.get(match.group("conv"), "string")}
 
 
 def _schema(tp: Any, components: dict[str, Any]) -> dict[str, Any]:
@@ -69,7 +75,7 @@ def build_openapi(app: Flask, *, title: str = "NeoTV API", version: str = "2.0.0
                 "name": m.group("name"),
                 "in": "path",
                 "required": True,
-                "schema": {"type": _CONVERTER_TYPES.get(m.group("conv"), "string")},
+                "schema": _path_schema(m),
             }
             for m in _PATH_PARAM.finditer(rule.rule)
         ]

@@ -18,11 +18,20 @@ from app.kernel.security.device_keys import DeviceKeys
 from app.kernel.settings import Settings
 from app.kernel.time import Clock
 from app.kernel.uow import UnitOfWork, UnitOfWorkFactory
-from app.modules.playback.api import ActiveSessionView, ContentDescriptor, PlaybackContext, ResolvedSource
+from app.modules.playback.api import (
+    ActiveSessionView,
+    ContentDescriptor,
+    KeepAlive,
+    OpenedStream,
+    PlaybackContext,
+    PlaybackRefusedError,
+    ResolvedSource,
+)
 from app.modules.playback.concurrency import StreamConcurrencyGuard
-from app.modules.playback.gate import PlaybackGate
+from app.modules.playback.gate import ContentNotFoundError, NoContentProviderError, PlaybackDeniedError, PlaybackGate
+from app.modules.playback.grants import MEDIA_SESSION_MARK
 from app.modules.playback.models import PlaybackEventRecord, PlaybackSessionRecord, QoeRecord
-from app.shared_kernel.content import ContentRef
+from app.shared_kernel.content import ContentRef, InvalidContentRefError
 from app.shared_kernel.events import PlaybackSessionEnded, PlaybackSessionStarted
 
 _log = logging.getLogger("playback")
@@ -91,10 +100,11 @@ class PlaybackSessionService:
         client_device_id: str | None,
         ip: str,
         user_agent: str,
+        keepalive: KeepAlive = "heartbeat",
     ) -> OpenedSession:
         ref = ContentRef.parse(content_ref)
         device_key = self._device_keys.key(user_id, client_device_id, user_agent)
-        token = secrets.token_urlsafe(24)
+        token = (MEDIA_SESSION_MARK if keepalive == "media" else "") + secrets.token_urlsafe(24)
         expires_at = int(time.time()) + self._settings.playback_grant_ttl_s
         ctx = PlaybackContext(
             user_id=user_id,
@@ -162,6 +172,10 @@ class PlaybackSessionService:
     def heartbeat(self, *, user_id: int, token: str) -> None:
         if not self._guard.heartbeat(user_id=user_id, token=token):
             raise SessionExpiredError("Playback session expired")
+        self.touch_record(user_id, token)
+
+    def touch_record(self, user_id: int, token: str) -> None:
+        """Liveness into the audit record (watched time is computed from it when the session ends)."""
         with self._uow() as uow:
             record = uow.session.get(PlaybackSessionRecord, token)
             if record is not None and record.user_id == user_id:
@@ -310,6 +324,55 @@ class PlaybackSessionService:
         if entitlements is None:
             return self._settings.default_max_streams
         return int(entitlements.for_user(user_id).max_streams)
+
+
+class SessionOpenerService:
+    """Capability ``playback.open`` — the web player's use case, with refusals as one named error."""
+
+    def __init__(self, sessions: PlaybackSessionService) -> None:
+        self._sessions = sessions
+
+    def open(
+        self,
+        *,
+        user_id: int,
+        profile_id: int,
+        is_kids: bool,
+        content_ref: str,
+        client_device_id: str,
+        ip: str,
+        user_agent: str,
+        keepalive: KeepAlive = "heartbeat",
+    ) -> OpenedStream:
+        try:
+            opened = self._sessions.open(
+                user_id=user_id,
+                profile=ProfileContext(profile_id=profile_id, user_id=user_id, is_kids=is_kids),
+                content_ref=content_ref,
+                client_device_id=client_device_id,
+                ip=ip,
+                user_agent=user_agent,
+                keepalive=keepalive,
+            )
+        except StreamLimitExceededError as exc:
+            raise PlaybackRefusedError("STREAM_LIMIT_EXCEEDED", str(exc)) from exc
+        except PlaybackDeniedError as exc:
+            raise PlaybackRefusedError(exc.code, str(exc)) from exc
+        except (ContentNotFoundError, NoContentProviderError, InvalidContentRefError) as exc:
+            raise PlaybackRefusedError("CONTENT_NOT_FOUND", "Content not found") from exc
+        return OpenedStream(
+            session_token=opened.token,
+            manifest_url=opened.source.manifest_url,
+            mime_type=opened.source.mime_type,
+            is_live=opened.source.is_live,
+            drm=opened.source.drm,
+        )
+
+    def release(self, session_token: str) -> bool:
+        return self._sessions.release(session_token, reason="client")
+
+    def active_for_user(self, user_id: int) -> int:
+        return self._sessions.active_for_user(user_id)
 
 
 class SessionDirectoryService:

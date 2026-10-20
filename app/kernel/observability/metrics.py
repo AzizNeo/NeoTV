@@ -41,6 +41,10 @@ class Metrics:
         self.playback_open = Counter(
             "neotv_playback_open_total", "Playback session open attempts", ["result"], registry=self.registry
         )
+        # TV apps (Xtream protocol, ADR-0011): result = ok | denied | blocked. No user label — ever.
+        self.xtream_auth = Counter(
+            "neotv_xtream_auth_total", "Xtream app credential checks", ["result"], registry=self.registry
+        )
         # Global facts (read from the database at scrape time): the freshest reading of a live worker.
         self.outbox_lag = Gauge(
             "neotv_outbox_lag_seconds",

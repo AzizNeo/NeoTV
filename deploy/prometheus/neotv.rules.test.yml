@@ -134,6 +134,10 @@ tests:
         values: '0 0 0 0 0 0 0 0 0'
       - series: 'neotv_client_errors_total{source="error"}'
         values: '0+10x30'
+      - series: 'neotv_xtream_auth_total{result="blocked"}'
+        values: '0+3x30'
+      - series: 'neotv_xtream_auth_total{result="denied"}'
+        values: '0+50x30'
     alert_rule_test:
       - eval_time: 6m
         alertname: NeoTVApiDown
@@ -173,3 +177,13 @@ tests:
             exp_annotations:
               runbook_url: 'docs/runbooks.md#browser-errors'
               summary: 'Viewers'' browsers report 10 uncaught errors per minute'
+      - eval_time: 5m
+        alertname: NeoTVXtreamGuessing
+        exp_alerts: []          # blocked addresses for a moment are the guard doing its job…
+      - eval_time: 25m
+        alertname: NeoTVXtreamGuessing
+        exp_alerts:             # …a steady stream of refused guesses is someone at it
+          - exp_labels: {severity: ticket}
+            exp_annotations:
+              runbook_url: 'docs/runbooks.md#xtream-guessing'
+              summary: 'TV app sign-ins refused for guessing: 3 per minute'

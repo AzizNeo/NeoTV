@@ -9,7 +9,7 @@ import { test, expect, signIn } from './fixtures';
  */
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const PUBLIC = ['/login', '/register', '/forgot-password'];
-const VIEWER = ['/', '/browse', '/title/sintel', '/live', '/plans', '/favorites', '/history', '/account', '/devices', '/profiles'];
+const VIEWER = ['/', '/browse', '/title/sintel', '/live', '/plans', '/favorites', '/history', '/account', '/devices', '/tv-apps', '/profiles'];
 
 async function expectNoViolations(page, path) {
   await page.goto(path);

@@ -48,6 +48,7 @@ modules =
     app.modules.library
     app.modules.recommendations
     app.modules.admin
+    app.modules.xtream
     app.modules._template
 ignore_imports =
     app.modules.** -> app.modules.*.api

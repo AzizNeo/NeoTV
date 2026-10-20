@@ -16,7 +16,7 @@ from app.kernel.db import dialect_insert, pairs
 from app.kernel.security.egress import EgressGateway
 from app.kernel.time import Clock
 from app.kernel.uow import UnitOfWorkFactory
-from app.modules.live.api import NAMESPACE, LiveStats
+from app.modules.live.api import NAMESPACE, LiveListing, LiveStats
 from app.modules.live.models import LiveChannel, LiveProgram
 from app.shared_kernel.events import ContentRemoved
 from app.shared_kernel.ratings import KIDS_ALLOWED
@@ -165,6 +165,25 @@ class LiveChannelService:
                     next=schedule.get(c.id, (None, None))[1],
                 )
                 for c in channels
+            ]
+
+    def listing(self, *, kids_only: bool) -> list[LiveListing]:
+        with self._uow() as uow:
+            stmt = select(LiveChannel).where(LiveChannel.is_active.is_(True))
+            if kids_only:
+                stmt = stmt.where(LiveChannel.rating.in_(sorted(KIDS_ALLOWED)))
+            rows = uow.session.execute(stmt.order_by(LiveChannel.sort_order, LiveChannel.name, LiveChannel.id))
+            return [
+                LiveListing(
+                    ref=f"{NAMESPACE}:{c.id}",
+                    id=c.id,
+                    name=c.name,
+                    logo=c.logo_url,
+                    rating=c.rating,
+                    epg_channel_id=c.epg_channel_id,
+                    added_at=c.created_at,
+                )
+                for c in rows.scalars()
             ]
 
     def get_active(self, channel_id: int) -> LiveChannel | None:

@@ -27,12 +27,18 @@ import os
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+from app.shared_kernel.redaction import redact_query, redact_target
+
 if TYPE_CHECKING:
     from flask import Flask
 
 _tracer: Any = None
 #: Paths never traced (comma-separated regexes, OpenTelemetry's excluded_urls format).
 EXCLUDED_URLS = "/api/v1/health/.*,/api/v1/kernel/metrics"
+
+
+#: Span attributes that hold a request URL (old and new HTTP semantic conventions).
+URL_ATTRIBUTES = ("http.target", "http.url", "url.full", "url.path", "url.query")
 
 
 class TelemetryUnavailableError(RuntimeError):
@@ -88,15 +94,34 @@ def install_tracing(
         assert endpoint
         provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=traces_url(endpoint))))
 
-    FlaskInstrumentor().instrument_app(app, tracer_provider=provider, excluded_urls=EXCLUDED_URLS)
+    FlaskInstrumentor().instrument_app(
+        app, tracer_provider=provider, excluded_urls=EXCLUDED_URLS, response_hook=redact_span
+    )
     # SQLAlchemy, requests and Celery instrumentors are once-per-process singletons: a second
     # instrument() is silently ignored. Start from a clean state so this app's provider is used.
     uninstall_tracing()
     with app.app_context():
         SQLAlchemyInstrumentor().instrument(engine=db.engine, tracer_provider=provider)
-    RequestsInstrumentor().instrument(tracer_provider=provider)
+    # Upstream URLs can carry a provider's credentials too; the request hook covers failed requests.
+    RequestsInstrumentor().instrument(tracer_provider=provider, request_hook=redact_span, response_hook=redact_span)
     CeleryInstrumentor().instrument(tracer_provider=provider)
     _tracer = provider.get_tracer("neotv")
+
+
+def redact_span(span: Any, *_: Any) -> None:
+    """Removes credentials from a span's URL attributes (shared_kernel.redaction).
+
+    Used as the instrumentations' response hook: the HTTP instrumentations write the URL
+    attributes when the request starts *and* again after their request hooks, so the last moment
+    before the span ends is the one that sticks. Spans are exported only once ended.
+    """
+    attributes = getattr(span, "attributes", None) or {}
+    for key in URL_ATTRIBUTES:
+        value = attributes.get(key)
+        if isinstance(value, str):
+            clean = redact_query(value) if key == "url.query" else redact_target(value)
+            if clean != value:
+                span.set_attribute(key, clean)
 
 
 def uninstall_tracing() -> None:
