@@ -1,4 +1,4 @@
-import { expect, signIn, test } from './fixtures';
+import { expect, showReady, signIn, test } from './fixtures';
 
 /**
  * End to end as a TV app would use NeoTV (ADR-0011): the owner creates sign-in details on the TV
@@ -10,7 +10,7 @@ const XTREAM = '/api/v1/xtream';
 test('a TV app signs in with details from the TV apps page and opens a channel', async ({ page, viewer, request }) => {
   await signIn(page, viewer);
   await page.goto('/tv-apps');
-  await page.getByRole('button', { name: 'TV uygulaması ekle' }).click();
+  await (await showReady(page, page.getByRole('button', { name: 'TV uygulaması ekle' }), 'The "TV uygulaması ekle" button')).click();
   const form = page.getByRole('dialog');
   await form.getByLabel('Cihaz adı').fill('Salon TV');
   await form.getByRole('button', { name: 'Oluştur' }).click();
