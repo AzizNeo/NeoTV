@@ -214,7 +214,9 @@ def login(body: LoginRequest) -> Response:
 @endpoint(
     auth="public",
     summary="Rotate the refresh cookie and obtain a new access token",
-    rate=Rate("auth.refresh", rps=1, burst=10, per="ip"),
+    # Once per page load and tab: a household behind one address (NAT) opening a few tabs, or a
+    # browser restoring a session, must not hit it. 384-bit tokens make guessing pointless.
+    rate=Rate("auth.refresh", rps=1, burst=30, per="ip"),
     response=SessionResponse,
     errors=("REFRESH_INVALID", "REFRESH_REUSED", "CSRF_HEADER_MISSING"),
 )

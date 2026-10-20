@@ -34,7 +34,7 @@ const PROFILES = {
   // Does every flow work under a little concurrency? Minutes, for CI.
   smoke: {
     viewers: { executor: 'constant-vus', vus: 2, duration: '30s' },
-    logins: { executor: 'constant-arrival-rate', rate: 1, timeUnit: '5s', duration: '30s', preAllocatedVUs: 1 },
+    logins: { executor: 'constant-arrival-rate', rate: 1, timeUnit: '5s', duration: '30s', preAllocatedVUs: 1, maxVUs: 1 },
   },
   // Ramp to the expected peak, hold it, ramp down.
   load: {
@@ -48,12 +48,17 @@ const PROFILES = {
       ],
       gracefulRampDown: `${WATCH_S + 10}s`,
     },
-    logins: { executor: 'constant-arrival-rate', rate: 1, timeUnit: '1s', duration: '4m30s', preAllocatedVUs: 2 },
+    logins: { executor: 'constant-arrival-rate', rate: 1, timeUnit: '1s', duration: '4m30s', preAllocatedVUs: 2, maxVUs: 2 },
   },
 };
 if (!PROFILES[PROFILE]) throw new Error(`PROFILE must be one of ${Object.keys(PROFILES).join(', ')}`);
 const PEAK = PROFILE === 'smoke' ? 2 : VIEWERS;
-const ACCOUNTS = Number(__ENV.ACCOUNTS || PEAK);
+// k6 numbers VUs across *all* scenarios (exec.vu.idInTest), so a viewer's id can be above PEAK
+// when the logins scenario took a low one. Every VU id gets its own account: no two viewers ever
+// share one (they would compete for its single stream slot — a 403 that is the test's fault).
+const SIGN_IN_VUS = PROFILE === 'smoke' ? 1 : 2;
+const TOTAL_VUS = PEAK + SIGN_IN_VUS;
+const ACCOUNTS = Number(__ENV.ACCOUNTS || TOTAL_VUS);
 const ENDPOINTS = [
   'auth.login', 'titles.rails', 'titles.browse', 'titles.detail', 'catalog.list',
   'playback.open', 'playback.heartbeat', 'playback.qoe', 'playback.release',
@@ -117,7 +122,9 @@ const account = (n) => `load-${String(n).padStart(4, '0')}`;
 
 export function setup() {
   if (!PASSWORD) fail('set LOAD_PASSWORD (the same value tools/load_seed.py used)');
-  if (ACCOUNTS < PEAK) fail(`ACCOUNTS (${ACCOUNTS}) < peak viewers (${PEAK}): each viewer needs its own account`);
+  if (ACCOUNTS < TOTAL_VUS) {
+    fail(`ACCOUNTS (${ACCOUNTS}) < VUs (${TOTAL_VUS} = ${PEAK} viewers + ${SIGN_IN_VUS} sign-in): each VU id needs its own account`);
+  }
   const ready = http.get(`${BASE}/api/v1/health/ready`);
   if (ready.status !== 200) fail(`API not ready: ${ready.status} ${ready.body}`);
 
@@ -141,7 +148,7 @@ export function viewer({ tokens, refs }) {
   // heartbeats and releases over the heartbeat period instead of clustering them (the 200-viewer
   // run's 429s on the per-IP release limit).
   if (exec.vu.iterationInScenario === 0) sleep(Math.random() * HEARTBEAT_S);
-  const token = tokens[(vu - 1) % tokens.length];
+  const token = tokens[vu - 1]; // VU ids are unique and ≤ TOTAL_VUS ≤ ACCOUNTS: never shared
   const device = `k6-viewer-${vu}`;
   const opts = { token, device };
 

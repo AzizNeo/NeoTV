@@ -1,4 +1,4 @@
-import { expect, offline, playerProblem, signIn, test } from './fixtures';
+import { expect, offline, playerProblem, showReady, signIn, test } from './fixtures';
 
 // Each test plays as its own fresh account: plans allow one simultaneous stream, and a session left
 // open by one test must never decide whether the next one can play.
@@ -10,7 +10,7 @@ test('proxy delivery: the stream URL of the origin never reaches the browser', a
   const requests = [];
   page.on('request', (request) => requests.push(request.url()));
   await page.goto('/title/big-buck-bunny');
-  await page.locator('main').getByRole('button', { name: 'Oynat' }).click();
+  await (await showReady(page, page.locator('main').getByRole('button', { name: 'Oynat' }), 'The "Oynat" button')).click();
   await expect.poll(() => requests.some((url) => url.includes('/api/v1/playback/proxy')), { timeout: 15_000 }).toBe(true);
   expect(requests.filter((url) => ORIGINS.some((host) => url.includes(host)))).toEqual([]);
 });
@@ -20,7 +20,7 @@ test('a video actually plays (hls.js in its blob worker, under the CSP)', async 
   test.slow();
   await signIn(page, viewer);
   await page.goto('/title/big-buck-bunny');
-  await page.locator('main').getByRole('button', { name: 'Oynat' }).click();
+  await (await showReady(page, page.locator('main').getByRole('button', { name: 'Oynat' }), 'The "Oynat" button')).click();
   const video = page.locator('video');
   // Either the video or the player's error card — and if it is the card, say what it says.
   await expect(video.or(page.getByRole('dialog').locator('h2 + p'))).toBeAttached({ timeout: 30_000 });

@@ -58,7 +58,7 @@ jobs:
           export LOAD_PASSWORD
           # Through demo_env like every demo service: it supplies the generated secrets (database, keys).
           docker compose -f compose.demo.yml exec -T -e LOAD_PASSWORD api \
-            python -m tools.demo_env exec -- python -m tools.load_seed --count "$VIEWERS"
+            python -m tools.demo_env exec -- python -m tools.load_seed --count "$((VIEWERS + 2))"  # + the two sign-in VUs (deploy/load/neotv.js)
           # Containers' CPU and memory sampled every 10 s while the load runs (peaks in the report).
           ( while sleep 10; do docker stats --no-stream --format '{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}'; done ) > "$RUNNER_TEMP/stats.log" &
           # The export holds the accounts' tokens (setup_data): it stays on the runner, never uploaded.
