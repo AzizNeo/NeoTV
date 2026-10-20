@@ -7,7 +7,6 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.kernel.observability.access_log import RedactingLogger
 from app.shared_kernel.redaction import redact_path, redact_query, redact_target
 
 
@@ -44,7 +43,10 @@ def test_parts_alone() -> None:
 
 
 def test_gunicorn_access_log_atoms_are_redacted() -> None:
+    pytest.importorskip("gunicorn", reason="gunicorn is not installed on Windows (requirements marker)")
     from gunicorn.config import Config
+
+    from app.kernel.observability.access_log import RedactingLogger
 
     logger = RedactingLogger(Config())
     environ = {
