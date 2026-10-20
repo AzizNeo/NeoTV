@@ -19,7 +19,7 @@ celery-redbeat==2.3.2
 redis==5.2.1
 psycopg[binary]==3.2.10
 waitress==3.0.2
-gunicorn==23.0.0; sys_platform != "win32"
+gunicorn==26.2.0; sys_platform != "win32"
 prometheus_client==0.22.1
 # Tracing (OpenTelemetry). Installed always, active only when OTEL_ENDPOINT is set; OTLP over HTTP
 # (protobuf only — no grpcio: smaller image, passes ordinary HTTP proxies).
