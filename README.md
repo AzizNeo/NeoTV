@@ -73,6 +73,12 @@ the capture machine has no internet access.</sub>
   HLS stream URLs that open a normal playback session and redirect to the signed proxy. Credentials are masked
   in every log and trace, and guessing is capped per address
   ([ADR-0011](docs/adr/0011-xtream-compatible-player-api.md)).
+- **Catch-up TV and start over.** Channels an operator chooses are recorded continuously (`recorder` service,
+  `ffmpeg -c copy`, one replica per channel through Redis leases); viewers watch back as far as their plan
+  allows — Free 0, Personal and Duo 3, Family 7 days — from the guide ("watch again", "start over"), in TV apps
+  (`tv_archive`, `/timeshift/…`) and in the player. The window is checked once by the playback gate and signed
+  into the grant; retention and a disk guard keep the volume in bounds
+  ([ADR-0012](docs/adr/0012-catch-up-tv.md)).
 - **Two languages, one contract.** Each feature owns its TR/EN catalog; a missing key, language or placeholder
   fails at start-up (and in tests), never on screen. The account language follows the user across devices and
   into e-mails ([ADR-0002](docs/adr/0002-i18n-feature-owned-catalogs.md)).
@@ -278,6 +284,9 @@ Foundation open movies — *Big Buck Bunny*, *Sintel*, *Tears of Steel* (© Blen
 and public HLS test streams from Apple, Akamai and Unified Streaming, played straight from their hosts. The demo
 artwork is original (`tools/demo_art.py`). Use NeoTV with content you are licensed to distribute. The
 Xtream-compatible player API serves only this catalogue to the viewer's own apps; it provides no content of its own.
+Catch-up recording is off for every channel until an administrator switches it on, and for an external stream
+only with a confirmation that the operator holds the rights to record it; the demo records nothing (its browser
+tests use a synthetic archive, `tools/seed_archive.py`).
 
 ## Security
 

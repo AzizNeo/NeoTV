@@ -128,3 +128,20 @@ def test_the_playlist_marks_holes_and_ends_only_when_the_window_has() -> None:
     live = render_playlist(segments, complete=False, query="").splitlines()
     assert "#EXT-X-PLAYLIST-TYPE:EVENT" in live and "#EXT-X-ENDLIST" not in live
     assert render_playlist([], complete=False, query="").count("#EXTINF") == 0
+
+
+def test_a_six_hour_window_is_listed_and_rendered_quickly(storage: LocalArchiveStorage) -> None:
+    """The playlist is built from directory listings on every request: 3 600 segments (6 h, the
+    longest window) must stay well under a second, or catch-up does not scale (ADR-0012)."""
+    import time
+
+    from app.modules.live.archive import render_playlist
+
+    start = T0 - timedelta(hours=6)
+    _record(storage, 3, _every(start, 6 * 3600 // SEGMENT_SECONDS))
+    began = time.perf_counter()
+    segments = storage.segments(3, start, T0, now=T0 + timedelta(minutes=1))
+    text = render_playlist(segments, complete=True, query="u=x&s=1.t&exp=1&sig=y")
+    elapsed = time.perf_counter() - began
+    assert len(segments) == 3600 and text.count("#EXTINF") == 3600
+    assert elapsed < 1.0, f"{elapsed:.3f}s for a 6-hour window"

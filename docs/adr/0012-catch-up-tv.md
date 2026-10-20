@@ -87,6 +87,16 @@ redirect to the signed archive playlist; the playback gate's catch-up policy dec
 widened or too-old window is refused with the same codes as on the web. nginx maps both root
 forms; their credentials are masked in every log like the other stream URLs.
 
+## Tests and load (C6)
+
+The browser suite plays a past programme end to end on a synthetic archive
+(`tools/seed_archive.py`: placeholder segments, refused in production) and checks the refusal
+for a plan without catch-up; the WCAG sweep covers the guide's catch-up buttons. The archive's
+per-request cost — a playlist built from directory listings — is guarded by a test: a 6-hour
+window (3 600 segments) listed and rendered in well under a second. The k6 load profile gains
+a catch-up flow once the demo can record a stream it holds the rights to; until then the demo
+records nothing, by decision 1.
+
 ## Consequences
 
 - Recording costs disk continuously for every archived channel (roughly bitrate × window); the

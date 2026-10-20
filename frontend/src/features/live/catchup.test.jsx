@@ -38,9 +38,9 @@ describe('the guide with catch-up', () => {
       />,
     );
     vi.useRealTimers();
-    fireEvent.click(screen.getByRole('button', { name: /Sabah Haberleri \(Haber, .*\) — tekrar izle/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Sabah Haberleri \d{2}:\d{2}–\d{2}:\d{2}, tekrar izle \(Haber\)$/ }));
     expect(onCatchup).toHaveBeenCalledWith({ ref: 'live:1', title: 'Sabah Haberleri', subtitle: 'Haber', window: { start: at(-70), end: at(-10) } });
-    expect(screen.getByRole('button', { name: /Öğle \(Haber\) — baştan başlat/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Öğle \d{2}:\d{2}–\d{2}:\d{2}, baştan başlat \(Haber\)$/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Klip/ })).toBeNull(); // the music channel has no archive
   });
 });

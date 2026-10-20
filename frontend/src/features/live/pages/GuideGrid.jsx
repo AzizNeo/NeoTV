@@ -69,15 +69,18 @@ export function GuideGrid({ channels, programs, onSelect, onCatchup, hours = 6, 
                   const action = onCatchup ? catchupAction(channel, p, now) : null;
                   const className = `${styles.program} ${airing ? styles.airing : ''} ${past ? styles.past : ''} ${action ? styles.playable : ''}`;
                   const style = { left: offset(s), width: Math.max(2, offset(e) - offset(s) - 2) };
+                  // The action is read after the visible text, so the accessible name contains what is
+                  // seen (WCAG 2.5.3, label in name): "Test Card 10:00–10:30, watch again (Akamai Live)".
                   const body = (
                     <>
                       <strong>
                         {action && (action.kind === 'startOver' ? <RotateCcw size={12} aria-hidden="true" /> : <History size={12} aria-hidden="true" />)} {p.title}
-                      </strong>
+                      </strong>{' '}
                       <small>
                         {time(p.starts_at)}–
                         {time(p.ends_at)}
                       </small>
+                      {action && <span className="visually-hidden">{t(action.kind, { channel: channel.name })}</span>}
                     </>
                   );
                   return action ? (
@@ -87,7 +90,6 @@ export function GuideGrid({ channels, programs, onSelect, onCatchup, hours = 6, 
                       className={className}
                       style={style}
                       title={p.description ?? p.title}
-                      aria-label={t(action.kind, { title: p.title, channel: channel.name, time: time(p.starts_at) })}
                       onClick={() => onCatchup({ ref: channel.ref, title: p.title, subtitle: channel.name, window: action.window })}
                     >
                       {body}
