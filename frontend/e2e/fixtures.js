@@ -29,7 +29,11 @@ export const test = base.extend({
   /** Opt-out for tests that throw on purpose (they assert on `pageErrors`). */
   allowPageErrors: [false, { option: true }],
   pageErrors: async ({}, use) => use([]), // eslint-disable-line no-empty-pattern -- Playwright's fixture signature
-  page: async ({ page, allowCspViolations, cspViolations: violations, allowPageErrors, pageErrors: errors }, use) => {
+  page: async ({ page, allowCspViolations, cspViolations: violations, allowPageErrors, pageErrors: errors }, use, testInfo) => {
+    // One address per test, like separate visitors: the API's per-address limits (refresh, telemetry,
+    // sign-in) then apply to this test alone instead of the whole suite (tools/e2e_server.py trusts
+    // one proxy hop). Browser traffic only: setup calls and metric reads stay 127.0.0.1.
+    await page.context().setExtraHTTPHeaders({ 'X-Forwarded-For': visitorAddress(testInfo.testId) });
     // Reported straight to the test process, so nothing is lost when the page navigates.
     await page.exposeFunction('__e2eCspViolation', (text) => violations.push(text));
     await page.addInitScript(() => {
@@ -54,6 +58,13 @@ export const test = base.extend({
 });
 
 export { expect };
+
+/** A stable private address per test id (10.x.y.z): retries of a test are the same visitor. */
+export function visitorAddress(testId) {
+  let hash = 0;
+  for (const char of testId) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return `10.${(hash >>> 16) & 255}.${(hash >>> 8) & 255}.${(hash & 255) || 1}`;
+}
 
 /** Signs in through the real form; lands past the profile picker. */
 export async function signIn(page, { username = ADMIN.username, password = ADMIN.password } = {}) {

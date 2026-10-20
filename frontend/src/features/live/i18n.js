@@ -14,6 +14,8 @@ export const messages = defineMessages('live', {
     now: '{time} {now}',
     guide: 'Yayın akışı',
     watch: '{name} izle',
+    startOver: ', baştan başlat ({channel})',
+    catchup: ', tekrar izle ({channel})',
   },
   en: {
     nav: { live: 'Live TV' },
@@ -28,6 +30,8 @@ export const messages = defineMessages('live', {
     now: '{time} {now}',
     guide: 'Programme guide',
     watch: 'Watch {name}',
+    startOver: ', start over ({channel})',
+    catchup: ', watch again ({channel})',
   },
 });
 

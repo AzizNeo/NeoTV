@@ -89,6 +89,8 @@ class PlaybackGate:
 
     def authorize(self, ctx: PlaybackContext) -> ContentDescriptor:
         descriptor = self.describe(ctx.content)
+        if ctx.window is not None and not getattr(self.provider(ctx.content.namespace), "supports_window", False):
+            raise PlaybackDeniedError(Deny("CATCHUP_NOT_AVAILABLE", "This content has no catch-up"), "window")
         for policy in self._policies:
             deny = policy.evaluate(ctx, descriptor)
             if deny is not None:

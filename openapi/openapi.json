@@ -8230,6 +8230,35 @@
                         "is_active": {
                           "title": "Is Active",
                           "type": "boolean"
+                        },
+                        "archive_days": {
+                          "description": "Catch-up archive in days; 0 = not recorded (ADR-0012)",
+                          "title": "Archive Days",
+                          "type": "integer"
+                        },
+                        "archive_confirmed_by": {
+                          "anyOf": [
+                            {
+                              "type": "integer"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Administrator who switched the archive on",
+                          "title": "Archive Confirmed By"
+                        },
+                        "archive_confirmed_at": {
+                          "anyOf": [
+                            {
+                              "format": "date-time",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Archive Confirmed At"
                         }
                       },
                       "required": [
@@ -8247,7 +8276,10 @@
                         "rating",
                         "sort_order",
                         "is_live",
-                        "is_active"
+                        "is_active",
+                        "archive_days",
+                        "archive_confirmed_by",
+                        "archive_confirmed_at"
                       ],
                       "title": "LiveChannelAdminOut",
                       "type": "object"
@@ -8479,6 +8511,264 @@
             "bearer": []
           }
         ]
+      }
+    },
+    "/api/v1/live/admin/channels/{channel_id}/archive": {
+      "put": {
+        "operationId": "live_admin_set_archive",
+        "summary": "Switch a channel's catch-up archive on or off (external sources need the rights confirmation)",
+        "tags": [
+          "live"
+        ],
+        "parameters": [
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "properties": {
+                        "id": {
+                          "title": "Id",
+                          "type": "integer"
+                        },
+                        "ref": {
+                          "title": "Ref",
+                          "type": "string"
+                        },
+                        "name": {
+                          "title": "Name",
+                          "type": "string"
+                        },
+                        "description": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Description"
+                        },
+                        "logo": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Logo"
+                        },
+                        "source_type": {
+                          "enum": [
+                            "external",
+                            "ingest"
+                          ],
+                          "title": "Source Type",
+                          "type": "string"
+                        },
+                        "upstream_url": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Upstream Url"
+                        },
+                        "delivery": {
+                          "enum": [
+                            "proxy",
+                            "direct"
+                          ],
+                          "title": "Delivery",
+                          "type": "string"
+                        },
+                        "playback_id": {
+                          "title": "Playback Id",
+                          "type": "string"
+                        },
+                        "ingest_key_last4": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Ingest Key Last4"
+                        },
+                        "epg_channel_id": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Epg Channel Id"
+                        },
+                        "rating": {
+                          "enum": [
+                            "general",
+                            "teen",
+                            "adult",
+                            "unrated"
+                          ],
+                          "title": "Rating",
+                          "type": "string"
+                        },
+                        "sort_order": {
+                          "title": "Sort Order",
+                          "type": "integer"
+                        },
+                        "is_live": {
+                          "title": "Is Live",
+                          "type": "boolean"
+                        },
+                        "is_active": {
+                          "title": "Is Active",
+                          "type": "boolean"
+                        },
+                        "archive_days": {
+                          "description": "Catch-up archive in days; 0 = not recorded (ADR-0012)",
+                          "title": "Archive Days",
+                          "type": "integer"
+                        },
+                        "archive_confirmed_by": {
+                          "anyOf": [
+                            {
+                              "type": "integer"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Administrator who switched the archive on",
+                          "title": "Archive Confirmed By"
+                        },
+                        "archive_confirmed_at": {
+                          "anyOf": [
+                            {
+                              "format": "date-time",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Archive Confirmed At"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "ref",
+                        "name",
+                        "description",
+                        "logo",
+                        "source_type",
+                        "upstream_url",
+                        "delivery",
+                        "playback_id",
+                        "ingest_key_last4",
+                        "epg_channel_id",
+                        "rating",
+                        "sort_order",
+                        "is_live",
+                        "is_active",
+                        "archive_days",
+                        "archive_confirmed_by",
+                        "archive_confirmed_at"
+                      ],
+                      "title": "LiveChannelAdminOut",
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-permission": "live:write",
+        "x-error-codes": [
+          "LIVE_CHANNEL_NOT_FOUND",
+          "ARCHIVE_INVALID",
+          "ARCHIVE_RIGHTS_REQUIRED"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "days": {
+                    "description": "0 switches the archive off",
+                    "minimum": 0,
+                    "title": "Days",
+                    "type": "integer"
+                  },
+                  "rights_confirmed": {
+                    "default": false,
+                    "description": "External sources only: the operator holds the rights to record this stream",
+                    "title": "Rights Confirmed",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "days"
+                ],
+                "title": "ArchiveRequest",
+                "type": "object"
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/live/admin/channels/{channel_id}/rotate-key": {
@@ -8798,6 +9088,77 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/live/archive/{channel_id}/{window}/{filename}": {
+      "get": {
+        "operationId": "live_archive_asset",
+        "summary": "Catch-up archive window: playlist and segments (grant-protected, ADR-0012)",
+        "tags": [
+          "live"
+        ],
+        "parameters": [
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "window",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {},
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "public"
       }
     },
     "/api/v1/live/channels": {
@@ -9592,7 +9953,11 @@
           "STREAM_LIMIT_EXCEEDED",
           "CONTENT_NOT_FOUND",
           "CONTENT_NOT_ALLOWED_FOR_KIDS",
-          "PLAYBACK_DENIED"
+          "PLAYBACK_DENIED",
+          "CATCHUP_NOT_AVAILABLE",
+          "CATCHUP_NOT_IN_PLAN",
+          "CATCHUP_TOO_OLD",
+          "CATCHUP_NOT_STARTED"
         ],
         "security": [
           {
@@ -9612,6 +9977,18 @@
                     "pattern": "^[a-z][a-z0-9_]{1,31}:\\d+$",
                     "title": "Content Ref",
                     "type": "string"
+                  },
+                  "window": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/WindowIn"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "description": "Catch-up / start over: a stretch of a live channel's archive (ADR-0012)"
                   }
                 },
                 "required": [
@@ -13151,6 +13528,139 @@
         "x-auth": "public"
       }
     },
+    "/api/v1/xtream/streaming/timeshift.php": {
+      "get": {
+        "operationId": "xtream_player_timeshift_php",
+        "summary": "Xtream Codes catch-up, query form (?username&password&stream&start&duration)",
+        "tags": [
+          "xtream"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {},
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "public"
+      }
+    },
+    "/api/v1/xtream/timeshift/{username}/{password}/{duration}/{start}/{filename}": {
+      "get": {
+        "operationId": "xtream_player_timeshift",
+        "summary": "Xtream Codes catch-up URL: /timeshift/<user>/<pass>/<minutes>/<YYYY-MM-DD:HH-MM>/<id>.m3u8 (UTC)",
+        "tags": [
+          "xtream"
+        ],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "password",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "duration",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "start",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {},
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "public"
+      }
+    },
     "/api/v1/xtream/xmltv.php": {
       "get": {
         "operationId": "xtream_player_xmltv",
@@ -14035,6 +14545,11 @@
           "ads": {
             "title": "Ads",
             "type": "boolean"
+          },
+          "catchup_days": {
+            "description": "Days of archived live TV the plan can watch (0 = none)",
+            "title": "Catchup Days",
+            "type": "integer"
           }
         },
         "required": [
@@ -14042,7 +14557,8 @@
           "max_profiles",
           "max_resolution",
           "offline_downloads",
-          "ads"
+          "ads",
+          "catchup_days"
         ],
         "title": "EntitlementsOut",
         "type": "object"
@@ -14973,6 +15489,35 @@
           "is_active": {
             "title": "Is Active",
             "type": "boolean"
+          },
+          "archive_days": {
+            "description": "Catch-up archive in days; 0 = not recorded (ADR-0012)",
+            "title": "Archive Days",
+            "type": "integer"
+          },
+          "archive_confirmed_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Administrator who switched the archive on",
+            "title": "Archive Confirmed By"
+          },
+          "archive_confirmed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archive Confirmed At"
           }
         },
         "required": [
@@ -14990,7 +15535,10 @@
           "rating",
           "sort_order",
           "is_live",
-          "is_active"
+          "is_active",
+          "archive_days",
+          "archive_confirmed_by",
+          "archive_confirmed_at"
         ],
         "title": "LiveChannelAdminOut",
         "type": "object"
@@ -15064,6 +15612,11 @@
                 "type": "null"
               }
             ]
+          },
+          "catchup_days": {
+            "description": "Days this channel can be watched back (0 = none); the plan may allow less",
+            "title": "Catchup Days",
+            "type": "integer"
           }
         },
         "required": [
@@ -15075,7 +15628,8 @@
           "is_live",
           "rating",
           "now",
-          "next"
+          "next",
+          "catchup_days"
         ],
         "title": "LiveChannelOut",
         "type": "object"
@@ -16722,6 +17276,27 @@
           "outcome"
         ],
         "title": "WebhookOut",
+        "type": "object"
+      },
+      "WindowIn": {
+        "additionalProperties": false,
+        "properties": {
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          },
+          "end": {
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "WindowIn",
         "type": "object"
       }
     },

@@ -11,7 +11,7 @@ from __future__ import annotations
 import base64
 import re
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import urlsplit
 from xml.etree import ElementTree
@@ -130,6 +130,7 @@ def live_stream(
     epg_channel_id: str | None,
     added_at: datetime,
     adult: bool,
+    archive_days: int = 0,
 ) -> dict[str, Any]:
     return {
         "num": num,
@@ -143,9 +144,9 @@ def live_stream(
         "category_id": str(category_id),
         "category_ids": [category_id],
         "custom_sid": "",
-        "tv_archive": 0,
+        "tv_archive": 1 if archive_days > 0 else 0,  # catch-up (ADR-0012): what this account may watch back
         "direct_source": "",  # never the origin: apps must come through NeoTV's signed proxy
-        "tv_archive_duration": 0,
+        "tv_archive_duration": archive_days,
     }
 
 
@@ -335,6 +336,7 @@ def epg_listing(
     starts_at: datetime,
     ends_at: datetime,
     now: datetime | None = None,
+    archived_since: datetime | None = None,
 ) -> dict[str, Any]:
     """One guide entry. Title and description are Base64 in this protocol — apps decode them."""
     item: dict[str, Any] = {
@@ -352,7 +354,8 @@ def epg_listing(
     }
     if now is not None:  # get_simple_data_table also says what is on air
         item["now_playing"] = 1 if starts_at <= now < ends_at else 0
-        item["has_archive"] = 0
+        # Playable from the archive: started, and not older than this account's catch-up window.
+        item["has_archive"] = 1 if archived_since is not None and archived_since <= starts_at <= now else 0
     return item
 
 
@@ -419,6 +422,7 @@ class PlaylistEntry:
     group: str
     logo: str | None
     epg_id: str | None = None
+    catchup_days: int = 0
 
 
 def _attr(value: str) -> str:
@@ -437,6 +441,27 @@ def m3u(entries: list[PlaylistEntry], *, server_url: str, username: str, passwor
         attrs = [f'tvg-id="{_attr(e.epg_id or "")}"', f'tvg-name="{_attr(e.name)}"']
         attrs.append(f'tvg-logo="{_attr(e.logo or "")}"')
         attrs.append(f'group-title="{_attr(e.group)}"')
+        if e.catchup_days > 0:  # the "xc" catch-up scheme: the app builds /timeshift/… URLs itself
+            attrs += ['catchup="xc"', f'catchup-days="{e.catchup_days}"']
         lines.append(f"#EXTINF:-1 {' '.join(attrs)},{_attr(e.name)}")
         lines.append(stream_url(server_url, e.section, username, password, e.ref))
     return "\n".join(lines) + "\n"
+
+
+# ── catch-up (timeshift) ────────────────────────────────────────────────────
+
+#: Xtream writes a timeshift start as YYYY-MM-DD:HH-MM, in the server's time zone (UTC, see server_info).
+_TIMESHIFT_START = re.compile(r"^(\d{4})-(\d{2})-(\d{2}):(\d{2})-(\d{2})$")
+
+
+def timeshift_window(start: str, duration_min: str) -> tuple[datetime, datetime] | None:
+    """``2026-10-20:18-00`` + ``45`` → the window, or ``None`` for anything malformed."""
+    match = _TIMESHIFT_START.match(start)
+    if not match or not duration_min.isdigit() or not 0 < int(duration_min) <= 360:
+        return None
+    try:
+        year, month, day, hour, minute = (int(part) for part in match.groups())
+        begin = datetime(year, month, day, hour, minute, tzinfo=UTC)
+    except ValueError:
+        return None
+    return begin, begin + timedelta(minutes=int(duration_min))

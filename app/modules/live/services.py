@@ -17,6 +17,7 @@ from app.kernel.security.egress import EgressGateway
 from app.kernel.time import Clock
 from app.kernel.uow import UnitOfWorkFactory
 from app.modules.live.api import NAMESPACE, LiveListing, LiveStats
+from app.modules.live.archive import ArchiveStorage
 from app.modules.live.models import LiveChannel, LiveProgram
 from app.shared_kernel.events import ContentRemoved
 from app.shared_kernel.ratings import KIDS_ALLOWED
@@ -38,6 +39,14 @@ class InvalidIngestKeyError(LiveError):
 
 class LiveSourceConfigError(LiveError):
     pass
+
+
+class ArchiveConfigError(LiveError):
+    pass
+
+
+class ArchiveRightsRequiredError(LiveError):
+    """Recording an external stream needs the administrator's confirmation of the rights (ADR-0012)."""
 
 
 class EpgImportError(LiveError):
@@ -65,6 +74,7 @@ class LiveChannelDTO:
     rating: str
     now: ProgramDTO | None
     next: ProgramDTO | None
+    catchup_days: int = 0  # the channel's archive (ADR-0012); the viewer's plan may allow less
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,6 +94,9 @@ class LiveChannelAdminDTO:
     sort_order: int
     is_live: bool
     is_active: bool
+    archive_days: int = 0
+    archive_confirmed_by: int | None = None
+    archive_confirmed_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,6 +116,12 @@ def _program(p: LiveProgram) -> ProgramDTO:
     )
 
 
+def _archive_off(channel: LiveChannel) -> None:
+    channel.archive_days = 0
+    channel.archive_confirmed_by = None
+    channel.archive_confirmed_at = None
+
+
 def _admin(c: LiveChannel) -> LiveChannelAdminDTO:
     return LiveChannelAdminDTO(
         id=c.id,
@@ -120,6 +139,9 @@ def _admin(c: LiveChannel) -> LiveChannelAdminDTO:
         sort_order=c.sort_order,
         is_live=bool(c.is_live),
         is_active=bool(c.is_active),
+        archive_days=c.archive_days or 0,
+        archive_confirmed_by=c.archive_confirmed_by,
+        archive_confirmed_at=c.archive_confirmed_at,
     )
 
 
@@ -163,6 +185,7 @@ class LiveChannelService:
                     rating=c.rating,
                     now=schedule.get(c.id, (None, None))[0],
                     next=schedule.get(c.id, (None, None))[1],
+                    catchup_days=c.archive_days or 0,
                 )
                 for c in channels
             ]
@@ -182,9 +205,18 @@ class LiveChannelService:
                     rating=c.rating,
                     epg_channel_id=c.epg_channel_id,
                     added_at=c.created_at,
+                    catchup_days=c.archive_days or 0,
                 )
                 for c in rows.scalars()
             ]
+
+    def archive_days(self, channel_id: int) -> int:
+        """The channel's catch-up window in days (0 = not archived, or not an active channel)."""
+        with self._uow() as uow:
+            days = uow.session.execute(
+                select(LiveChannel.archive_days).where(LiveChannel.id == channel_id, LiveChannel.is_active.is_(True))
+            ).scalar_one_or_none()
+            return int(days or 0)
 
     def get_active(self, channel_id: int) -> LiveChannel | None:
         with self._uow() as uow:
@@ -291,11 +323,35 @@ class LiveChannelService:
             channel = uow.session.get(LiveChannel, channel_id)
             if channel is None:
                 raise LiveChannelNotFoundError("Live channel not found")
+            previous_source = channel.upstream_url
             for field, value in changes.items():
                 if field in allowed and value is not None:
                     setattr(channel, field, value)
             if channel.source_type == "external" and not channel.upstream_url:
                 raise LiveSourceConfigError("external channels need an upstream URL")
+            if channel.source_type == "external" and channel.upstream_url != previous_source:
+                # The right to record was confirmed for the old stream, not for this one (ADR-0012).
+                _archive_off(channel)
+            return _admin(channel)
+
+    def set_archive(
+        self, channel_id: int, *, days: int, rights_confirmed: bool, actor_id: int, max_days: int
+    ) -> LiveChannelAdminDTO:
+        """Switch a channel's catch-up archive on (``days`` > 0) or off (0)."""
+        if not 0 <= days <= max_days:
+            raise ArchiveConfigError(f"archive days must be between 0 and {max_days}")
+        with self._uow() as uow:
+            channel = uow.session.get(LiveChannel, channel_id)
+            if channel is None:
+                raise LiveChannelNotFoundError("Live channel not found")
+            if days == 0:
+                _archive_off(channel)
+                return _admin(channel)
+            if channel.source_type == "external" and not rights_confirmed:
+                raise ArchiveRightsRequiredError("confirm that the operator may record this external stream")
+            channel.archive_days = days
+            channel.archive_confirmed_by = actor_id
+            channel.archive_confirmed_at = self._clock.now()
             return _admin(channel)
 
     def rotate_ingest_key(self, channel_id: int) -> IssuedIngestKey:
@@ -460,3 +516,80 @@ def _xmltv_time(value: str) -> datetime:
         stamp, offset = value.split(" ", 1)
         return datetime.strptime(f"{stamp} {offset}", "%Y%m%d%H%M%S %z")
     return datetime.strptime(value[:14], "%Y%m%d%H%M%S").replace(tzinfo=UTC)
+
+
+@dataclass(frozen=True, slots=True)
+class ArchivedChannel:
+    id: int
+    days: int
+    since: datetime | None  # when the archive was switched on
+
+
+@dataclass(frozen=True, slots=True)
+class RecordingSource:
+    url: str
+    external: bool  # an operator-entered URL on the internet: checked by the egress policy
+
+
+class ArchiveService:
+    """Which channels are archived, and the retention that keeps each to its window (ADR-0012)."""
+
+    def __init__(self, uow: UnitOfWorkFactory, storage: ArchiveStorage, clock: Clock, *, rtmp_base: str = "") -> None:
+        self._uow = uow
+        self._storage = storage
+        self._clock = clock
+        self._rtmp_base = rtmp_base.rstrip("/")
+
+    def recording_sources(self) -> dict[int, RecordingSource]:
+        """What the recorder should record right now: archived channels whose source is up.
+
+        External: the upstream URL (the recorder checks it with the egress policy first). Ingest:
+        the internal RTMP stream, only while the encoder is connected (``is_live``) — otherwise
+        there is nothing to pull and the archive simply has a gap.
+        """
+        with self._uow() as uow:
+            rows = uow.session.execute(
+                select(LiveChannel).where(LiveChannel.archive_days > 0, LiveChannel.is_active.is_(True))
+            ).scalars()
+            sources: dict[int, RecordingSource] = {}
+            for channel in rows:
+                if channel.source_type == "external" and channel.upstream_url:
+                    sources[channel.id] = RecordingSource(channel.upstream_url, external=True)
+                elif channel.source_type == "ingest" and channel.is_live and self._rtmp_base:
+                    sources[channel.id] = RecordingSource(f"{self._rtmp_base}/{channel.playback_id}", external=False)
+            return sources
+
+    def archived(self) -> list[ArchivedChannel]:
+        with self._uow() as uow:
+            rows = uow.session.execute(
+                select(LiveChannel.id, LiveChannel.archive_days, LiveChannel.archive_confirmed_at).where(
+                    LiveChannel.archive_days > 0, LiveChannel.is_active.is_(True)
+                )
+            )
+            return [ArchivedChannel(id=i, days=d, since=s) for i, d, s in rows]
+
+    def enforce_retention(self) -> dict[str, int]:
+        """Deletes what is older than each channel's window, and everything of a channel no longer
+        archived (switched off, deactivated or removed). Never runs in the playback path."""
+        now = self._clock.now()
+        windows = {c.id: c.days for c in self.archived()}
+        removed = trimmed = dropped = 0
+        for channel_id in self._storage.channels():
+            days = windows.get(channel_id)
+            if days is None:
+                removed += self._storage.delete_channel(channel_id)
+                dropped += 1
+            else:
+                count = self._storage.delete_before(channel_id, now - timedelta(days=days))
+                removed += count
+                trimmed += 1 if count else 0
+        return {"segments_removed": removed, "channels_trimmed": trimmed, "channels_dropped": dropped}
+
+    def lag_seconds(self) -> dict[int, float]:
+        """Per archived channel: seconds since its newest segment began (since switch-on if none)."""
+        now = self._clock.now()
+        out: dict[int, float] = {}
+        for channel in self.archived():
+            newest = self._storage.newest(channel.id) or channel.since or now
+            out[channel.id] = max(0.0, (now - newest).total_seconds())
+        return out

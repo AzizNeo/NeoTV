@@ -52,6 +52,20 @@ class Metrics:
             registry=self.registry,
             multiprocess_mode="livemostrecent",
         )
+        # Catch-up archive (ADR-0012), read from the archive volume at scrape time.
+        self.archive_disk_used = Gauge(
+            "neotv_archive_disk_used_ratio",
+            "Share of the archive volume in use (recording stops at ARCHIVE_STOP_RATIO)",
+            registry=self.registry,
+            multiprocess_mode="livemostrecent",
+        )
+        self.archive_lag = Gauge(
+            "neotv_archive_lag_seconds",
+            "Seconds since an archived channel's newest recorded segment began",
+            ["channel"],
+            registry=self.registry,
+            multiprocess_mode="livemostrecent",
+        )
         self.dead_letters = Gauge(
             "neotv_outbox_dead_letters",
             "Unresolved dead letters",

@@ -28,3 +28,13 @@
 .actionsStart a { display: inline-flex; gap: 0.25rem; align-items: center; }
 .searchRow { display: grid; grid-template-columns: 9rem minmax(0, 1fr) 7rem auto; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
 @media (max-width: 640px) { .searchRow { grid-template-columns: 1fr 1fr; } .searchRow > input[type='search'] { grid-column: 1 / -1; grid-row: 1; } }
+.check {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  line-height: 1.4;
+}
+.check input {
+  margin-top: 0.2rem;
+  flex: none;
+}

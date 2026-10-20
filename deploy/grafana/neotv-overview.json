@@ -770,13 +770,110 @@
     },
     {
       "type": "row",
-      "title": "Platform",
+      "title": "Catch-up archive",
       "collapsed": false,
       "panels": [],
       "id": 18,
       "gridPos": {
         "x": 0,
         "y": 64,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Archive volume in use",
+      "description": "Recording stops at 90 % and resumes below 85 %; the alert fires at 80 %",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(neotv_archive_disk_used_ratio)",
+          "legendFormat": "used",
+          "refId": "A"
+        }
+      ],
+      "id": 19,
+      "gridPos": {
+        "x": 0,
+        "y": 65,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Time since the newest recorded segment, by channel",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (channel) (neotv_archive_lag_seconds)",
+          "legendFormat": "{{channel}}",
+          "refId": "A"
+        }
+      ],
+      "id": 20,
+      "gridPos": {
+        "x": 12,
+        "y": 65,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "row",
+      "title": "Platform",
+      "collapsed": false,
+      "panels": [],
+      "id": 21,
+      "gridPos": {
+        "x": 0,
+        "y": 73,
         "w": 24,
         "h": 1
       }
@@ -815,10 +912,10 @@
           "refId": "A"
         }
       ],
-      "id": 19,
+      "id": 22,
       "gridPos": {
         "x": 0,
-        "y": 65,
+        "y": 74,
         "w": 12,
         "h": 8
       }
@@ -857,10 +954,10 @@
           "refId": "A"
         }
       ],
-      "id": 20,
+      "id": 23,
       "gridPos": {
         "x": 12,
-        "y": 65,
+        "y": 74,
         "w": 12,
         "h": 8
       }
@@ -899,10 +996,10 @@
           "refId": "A"
         }
       ],
-      "id": 21,
+      "id": 24,
       "gridPos": {
         "x": 0,
-        "y": 73,
+        "y": 82,
         "w": 12,
         "h": 8
       }
@@ -912,10 +1009,10 @@
       "title": "Browsers",
       "collapsed": false,
       "panels": [],
-      "id": 22,
+      "id": 25,
       "gridPos": {
         "x": 0,
-        "y": 81,
+        "y": 90,
         "w": 24,
         "h": 1
       }
@@ -981,10 +1078,10 @@
           "refId": "D"
         }
       ],
-      "id": 23,
+      "id": 26,
       "gridPos": {
         "x": 0,
-        "y": 82,
+        "y": 91,
         "w": 12,
         "h": 8
       }
@@ -1023,10 +1120,10 @@
           "refId": "A"
         }
       ],
-      "id": 24,
+      "id": 27,
       "gridPos": {
         "x": 12,
-        "y": 82,
+        "y": 91,
         "w": 12,
         "h": 8
       }
@@ -1065,10 +1162,10 @@
           "refId": "A"
         }
       ],
-      "id": 25,
+      "id": 28,
       "gridPos": {
         "x": 0,
-        "y": 90,
+        "y": 99,
         "w": 12,
         "h": 8
       }
@@ -1107,10 +1204,10 @@
           "refId": "A"
         }
       ],
-      "id": 26,
+      "id": 29,
       "gridPos": {
         "x": 12,
-        "y": 90,
+        "y": 99,
         "w": 12,
         "h": 8
       }

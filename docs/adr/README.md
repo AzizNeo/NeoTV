@@ -17,3 +17,4 @@ One file per decision, numbered in the order they were written. A superseded rec
 | [0009](0009-load-testing.md) | Load testing: real client pacing, SLO thresholds, limits left on | Accepted |
 | [0010](0010-from-audit-to-rewrite.md) | From an audit to a rewrite: what was found, and where each finding is handled | Accepted |
 | [0011](0011-xtream-compatible-player-api.md) | Xtream-compatible player API: app credentials bound to a profile, the platform's rules unchanged | Accepted |
+| [0012](0012-catch-up-tv.md) | Catch-up TV: recording is opt-in per channel, the plan sets the window, storage behind a port | Accepted |

@@ -23,7 +23,7 @@ from app.kernel.http.endpoint import endpoint
 from app.kernel.observability.metrics import Metrics
 from app.kernel.resilience.rate_limit import Rate, client_ip
 from app.kernel.time import Clock
-from app.modules.playback.api import PlaybackRefusedError, SessionOpener
+from app.modules.playback.api import PlaybackRefusedError, PlaybackWindow, SessionOpener
 from app.modules.xtream import protocol
 from app.modules.xtream.catalog import XtreamCatalog
 from app.modules.xtream.domain import XtreamPrincipal
@@ -215,6 +215,40 @@ def stream(section: str, username: str, password: str, filename: str) -> Respons
     its previous stream, as one device does in the web player. ``section`` is the app's grouping
     only — what may be played is decided by playback, not by the path.
     """
+    return _stream(username, password, filename)
+
+
+@blueprint.get("/timeshift/<string:username>/<string:password>/<string:duration>/<string:start>/<string:filename>")
+@endpoint(
+    auth="public",
+    summary="Xtream Codes catch-up URL: /timeshift/<user>/<pass>/<minutes>/<YYYY-MM-DD:HH-MM>/<id>.m3u8 (UTC)",
+    tags=_TAGS,
+    rate=_STREAM_RATE,
+)
+def timeshift(username: str, password: str, duration: str, start: str, filename: str) -> Response:
+    """Catch-up (ADR-0012): the same session and redirect as a live stream, for a window of its
+    archive. Whether the window may be played is the playback gate's catch-up policy."""
+    return _stream(username, password, filename, window=(start, duration))
+
+
+@blueprint.get("/streaming/timeshift.php")
+@endpoint(
+    auth="public",
+    summary="Xtream Codes catch-up, query form (?username&password&stream&start&duration)",
+    tags=_TAGS,
+    rate=_STREAM_RATE,
+)
+def timeshift_php() -> Response:
+    values = request.values
+    return _stream(
+        values.get("username", ""),
+        values.get("password", ""),
+        f"{values.get('stream', '')}.{protocol.OUTPUT_FORMATS[0]}",
+        window=(values.get("start", ""), values.get("duration", "")),
+    )
+
+
+def _stream(username: str, password: str, filename: str, *, window: tuple[str, str] | None = None) -> Response:
     try:
         who = _authenticate(username, password)
     except _Blocked:
@@ -227,6 +261,12 @@ def stream(section: str, username: str, password: str, filename: str) -> Respons
     ref = protocol.content_ref(stem)
     if ref is None:
         return _plain(404, "CONTENT_NOT_FOUND")
+    archive: PlaybackWindow | None = None
+    if window is not None:
+        parsed = protocol.timeshift_window(*window)
+        if parsed is None:
+            return _plain(400, "INVALID_TIMESHIFT")
+        archive = PlaybackWindow(*parsed)
     try:
         opened = _opener().open(
             user_id=who.user_id,
@@ -237,6 +277,7 @@ def stream(section: str, username: str, password: str, filename: str) -> Respons
             ip=client_ip(),
             user_agent=request.headers.get("User-Agent", "Xtream app"),
             keepalive="media",
+            window=archive,
         )
     except PlaybackRefusedError as refused:
         return _plain(_REFUSAL_STATUS.get(refused.code, 403), refused.code)

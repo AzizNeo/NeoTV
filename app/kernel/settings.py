@@ -46,6 +46,11 @@ def _split_csv(value: Any) -> Any:
     return value
 
 
+def _default_archive_root() -> Path:
+    # A real disk (a volume in containers): archives outlive restarts, unlike live HLS in tmpfs.
+    return PROJECT_ROOT / "var" / "archive"
+
+
 def _default_hls_root() -> Path:
     # tmpfs keeps live HLS segments off disk; the directory is created 0700 by the transcoder.
     if sys.platform.startswith("linux") and Path("/dev/shm").is_dir():  # noqa: S108
@@ -101,6 +106,12 @@ class Settings(BaseSettings):
     hls_serve_via_nginx: bool = False
     transcode_encoders: CsvList = ["h264_nvenc", "h264_qsv", "h264_videotoolbox", "libx264"]
     transcode_idle_grace_s: int = Field(default=60, ge=10)
+    # Catch-up TV (ADR-0012): the longest archive a channel may keep.
+    archive_max_days: int = Field(default=7, ge=1, le=30)
+    archive_root: Path = Field(default_factory=_default_archive_root)
+    #: Disk use at which no recording runs, and below which recording resumes (hysteresis).
+    archive_stop_ratio: float = Field(default=0.90, gt=0, le=1)
+    archive_resume_ratio: float = Field(default=0.85, gt=0, le=1)
     ingest_callback_allowed_ips: CsvList = ["127.0.0.1", "::1"]
     rtmp_internal_base: str = "rtmp://127.0.0.1:1935/live"
     epg_xmltv_url: str | None = None

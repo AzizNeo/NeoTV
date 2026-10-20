@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 import secrets
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -35,6 +36,11 @@ def environment() -> dict[str, str]:
             "CELERY_RESULT_BACKEND": "cache+memory://",
             "CELERY_ALWAYS_EAGER": "true",
             "MAIL_DIR": str(STATE / "mail"),
+            "ARCHIVE_ROOT": str(STATE / "archive"),
+            # Each browser test is its own visitor (frontend/e2e/fixtures.js sends X-Forwarded-For):
+            # per-address limits apply per test, as they would to separate households — not to the
+            # whole suite as one address. Direct calls (metrics, setup) stay 127.0.0.1.
+            "TRUSTED_PROXY_COUNT": "1",
             "LOG_LEVEL": "WARNING",
             # The browser reaches the API through `vite preview` (same origin), as behind nginx.
             "ALLOWED_ORIGINS": "http://127.0.0.1:4173,http://localhost:4173",
@@ -59,6 +65,8 @@ def main() -> int:
     step("flask", "--app", "app.wsgi", "db", "upgrade")
     step("flask", "--app", "app.wsgi", "identity", "create-admin", "--username", USERNAME)
     step("tools.seed_demo")
+    shutil.rmtree(STATE / "archive", ignore_errors=True)
+    step("tools.seed_archive", "--channel", "Akamai Live", "--days", "3", "--minutes", "180")
     print("e2e backend ready on http://127.0.0.1:5000", flush=True)
     os.chdir(ROOT)
     os.execve(sys.executable, [sys.executable, "run.py"], env)  # noqa: S606 - fixed command

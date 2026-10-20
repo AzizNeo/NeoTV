@@ -29,5 +29,6 @@ export function perks(e, t) {
     t(e.ads ? 'perks.ads' : 'perks.noAds'),
     e.offline_downloads && t('perks.downloads'),
     e.max_profiles > 1 && t('perks.profiles', { count: e.max_profiles }),
+    e.catchup_days > 0 && t('perks.catchup', { count: e.catchup_days }),
   ].filter(Boolean);
 }

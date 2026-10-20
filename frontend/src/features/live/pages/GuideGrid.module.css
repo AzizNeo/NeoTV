@@ -89,3 +89,26 @@
 .airing small {
   color: var(--color-text-secondary);
 }
+
+.past {
+  background: var(--surface-2);
+}
+.past strong,
+.past small {
+  color: var(--text-2);
+}
+button.program {
+  border: 1px solid transparent;
+  text-align: left;
+  font: inherit;
+  color: var(--text-1);
+  cursor: pointer;
+}
+.playable:hover,
+.playable:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+.playable strong svg {
+  vertical-align: -1px;
+}

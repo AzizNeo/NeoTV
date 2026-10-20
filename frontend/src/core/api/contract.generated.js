@@ -809,10 +809,30 @@ export const OPERATIONS = Object.freeze({
     "idempotent": false,
     "errors": []
   },
+  "live_admin_set_archive": {
+    "method": "PUT",
+    "path": "/api/v1/live/admin/channels/{channel_id}/archive",
+    "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": [
+      "LIVE_CHANNEL_NOT_FOUND",
+      "ARCHIVE_INVALID",
+      "ARCHIVE_RIGHTS_REQUIRED"
+    ]
+  },
   "live_admin_update": {
     "method": "PATCH",
     "path": "/api/v1/live/admin/channels/{channel_id}",
     "auth": "user",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
+  },
+  "live_archive_asset": {
+    "method": "GET",
+    "path": "/api/v1/live/archive/{channel_id}/{window}/{filename}",
+    "auth": "public",
     "profile": false,
     "idempotent": false,
     "errors": []
@@ -885,7 +905,11 @@ export const OPERATIONS = Object.freeze({
       "STREAM_LIMIT_EXCEEDED",
       "CONTENT_NOT_FOUND",
       "CONTENT_NOT_ALLOWED_FOR_KIDS",
-      "PLAYBACK_DENIED"
+      "PLAYBACK_DENIED",
+      "CATCHUP_NOT_AVAILABLE",
+      "CATCHUP_NOT_IN_PLAN",
+      "CATCHUP_TOO_OLD",
+      "CATCHUP_NOT_STARTED"
     ]
   },
   "playback_proxy": {
@@ -1227,6 +1251,22 @@ export const OPERATIONS = Object.freeze({
   "xtream_player_stream": {
     "method": "GET",
     "path": "/api/v1/xtream/{section}/{username}/{password}/{filename}",
+    "auth": "public",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
+  },
+  "xtream_player_timeshift": {
+    "method": "GET",
+    "path": "/api/v1/xtream/timeshift/{username}/{password}/{duration}/{start}/{filename}",
+    "auth": "public",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
+  },
+  "xtream_player_timeshift_php": {
+    "method": "GET",
+    "path": "/api/v1/xtream/streaming/timeshift.php",
     "auth": "public",
     "profile": false,
     "idempotent": false,

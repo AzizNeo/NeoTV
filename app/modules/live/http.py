@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import ipaddress
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 from flask import Blueprint, Response, make_response, redirect, request, send_from_directory
@@ -20,8 +20,9 @@ from app.kernel.security.auth import current_user
 from app.kernel.settings import Settings
 from app.kernel.task_tracking import TaskTracker
 from app.kernel.time import utcnow
+from app.modules.live.archive import SEGMENT_KEY, SEGMENT_SECONDS, ArchiveStorage, parse_start, render_playlist
 from app.modules.live.orchestrator import TranscodeOrchestrator
-from app.modules.live.provider import hls_dir
+from app.modules.live.provider import archive_dir, hls_dir
 from app.modules.live.services import EpgService, LiveChannelService
 from app.modules.live.tasks import stream_dir
 from app.modules.live.transcoding import master_playlist
@@ -56,6 +57,7 @@ class LiveChannelOut(BaseModel):
     rating: RatingLiteral
     now: ProgramOut | None
     next: ProgramOut | None
+    catchup_days: int = Field(description="Days this channel can be watched back (0 = none); the plan may allow less")
 
 
 class GuideQuery(BaseModel):
@@ -87,6 +89,17 @@ class LiveChannelAdminOut(BaseModel):
     sort_order: int
     is_live: bool
     is_active: bool
+    archive_days: int = Field(description="Catch-up archive in days; 0 = not recorded (ADR-0012)")
+    archive_confirmed_by: int | None = Field(description="Administrator who switched the archive on")
+    archive_confirmed_at: datetime | None
+
+
+class ArchiveRequest(_Strict):
+    days: int = Field(ge=0, description="0 switches the archive off")
+    rights_confirmed: bool = Field(
+        default=False,
+        description="External sources only: the operator holds the rights to record this stream",
+    )
 
 
 class CreateLiveChannelRequest(_Strict):
@@ -193,6 +206,41 @@ def hls_asset(playback_id: str, filename: str) -> Response:
     return response
 
 
+@blueprint.get("/archive/<int:channel_id>/<window>/<path:filename>")
+@endpoint(
+    auth="public",
+    summary="Catch-up archive window: playlist and segments (grant-protected, ADR-0012)",
+    rate=Rate("live.archive", rps=40, burst=120, per="ip"),
+)
+def archive_asset(channel_id: int, window: str, filename: str) -> Response:
+    start_s, dash, end_s = window.partition("-")
+    if not (dash and start_s.isdigit() and end_s.isdigit() and len(start_s) <= 11 and len(end_s) <= 11):
+        raise ApiError("NOT_FOUND", 404)
+    start, end = int(start_s), int(end_s)
+    is_playlist = filename == "index.m3u8"
+    grant = resolve(GrantVerifier).verify(request.args, require_live_session=is_playlist)
+    if grant.target != archive_dir(channel_id, start, end):
+        raise ApiError("GRANT_INVALID", 403, "Grant does not cover this window")
+    storage = resolve(ArchiveStorage)
+    begin, finish = datetime.fromtimestamp(start, UTC), datetime.fromtimestamp(end, UTC)
+    if is_playlist:
+        now = utcnow()
+        segments = storage.segments(channel_id, begin, finish, now=now)
+        playlist = render_playlist(segments, complete=finish <= now, query=request.query_string.decode())
+        return _playlist_response(playlist)
+    match = SEGMENT_KEY.match(filename)
+    stamp = parse_start(match[3] + ".ts") if match else None
+    # Only segments of this window (the one that covers its start began a little earlier).
+    if stamp is None or not (begin - timedelta(seconds=2 * SEGMENT_SECONDS) <= stamp < finish):
+        raise ApiError("NOT_FOUND", 404)
+    if resolve(Settings).hls_serve_via_nginx:
+        response = make_response("", 200)
+        response.headers["X-Accel-Redirect"] = f"/_protected_archive/{channel_id}/{filename}"
+        response.headers["Content-Type"] = "video/mp2t"
+        return response
+    return send_from_directory(storage.channel_dir(channel_id), filename, mimetype="video/mp2t", max_age=3600)
+
+
 def _is_variant(name: str) -> bool:
     return name.startswith("stream_") and name.endswith(".m3u8") and name[7:-5].isdigit()
 
@@ -292,6 +340,24 @@ def admin_update(channel_id: int, body: UpdateLiveChannelRequest) -> object:
         epg_channel_id=body.epg_channel_id,
         sort_order=body.sort_order,
         is_active=body.is_active,
+    )
+
+
+@blueprint.put("/admin/channels/<int:channel_id>/archive")
+@endpoint(
+    summary="Switch a channel's catch-up archive on or off (external sources need the rights confirmation)",
+    permission="live:write",
+    body=ArchiveRequest,
+    response=LiveChannelAdminOut,
+    errors=("LIVE_CHANNEL_NOT_FOUND", "ARCHIVE_INVALID", "ARCHIVE_RIGHTS_REQUIRED"),
+)
+def admin_set_archive(channel_id: int, body: ArchiveRequest) -> object:
+    return resolve(LiveChannelService).set_archive(
+        channel_id,
+        days=body.days,
+        rights_confirmed=body.rights_confirmed,
+        actor_id=current_user.id,
+        max_days=resolve(Settings).archive_max_days,
     )
 
 

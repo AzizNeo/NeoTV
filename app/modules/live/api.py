@@ -27,6 +27,7 @@ class LiveListing:
     rating: str
     epg_channel_id: str | None
     added_at: datetime
+    catchup_days: int = 0  # the channel's archive (ADR-0012); a viewer's plan may allow less
 
 
 @dataclass(frozen=True, slots=True)

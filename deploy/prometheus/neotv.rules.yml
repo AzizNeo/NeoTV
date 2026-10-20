@@ -145,3 +145,17 @@ groups:
         annotations:
           summary: "TV app sign-ins refused for guessing: {{ $value | humanize }} per minute"
           runbook_url: docs/runbooks.md#xtream-guessing
+      - alert: NeoTVArchiveDiskFilling
+        expr: max(neotv_archive_disk_used_ratio) > 0.8
+        for: 10m
+        labels: {severity: ticket}
+        annotations:
+          summary: "The catch-up archive volume is {{ $value | humanizePercentage }} full (recording stops at 90%)"
+          runbook_url: docs/runbooks.md#archive-disk
+      - alert: NeoTVArchiveNotRecording
+        expr: max by (channel) (neotv_archive_lag_seconds) > 120
+        for: 10m
+        labels: {severity: ticket}
+        annotations:
+          summary: "Archived channel {{ $labels.channel }} has recorded nothing for {{ $value | humanizeDuration }}"
+          runbook_url: docs/runbooks.md#archive-not-recording

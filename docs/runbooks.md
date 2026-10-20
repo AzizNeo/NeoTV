@@ -4,7 +4,8 @@ What to do when an alert from `deploy/prometheus/neotv.rules.yml` fires. Each al
 (`runbook_url`); a test keeps every alert and every section in step.
 
 Conventions: commands assume the production stack (`docker-compose.yml`: services `api`,
-`worker-default`, `worker-playlist`, `worker-transcode`, `beat`, `web`, `postgres`, `redis`).
+`worker-default`, `worker-playlist`, `worker-transcode`, `recorder`, `beat`, `web`, `postgres`,
+`redis`).
 Logs are JSON — filter by `logger`, `request_id` or `trace_id` (a log line's `trace_id` opens the
 request's trace in the tracing backend when `OTEL_ENDPOINT` is set). **Severity:** `page` = act
 now; `ticket` = act within working hours.
@@ -189,3 +190,30 @@ spread: the per-address guard keeps each to ~30 tries per 10 minutes; raise noth
 `denied` rate. If an owner reports their TV stopped after a password change, that is expected —
 a new account password revokes every app credential; they create a new one under Account →
 TV apps.
+
+<a id="archive-disk"></a>
+## NeoTVArchiveDiskFilling — the catch-up archive volume is over 80 % full (ticket)
+
+**Means:** recordings (ADR-0012) are filling `ARCHIVE_ROOT`. At 90 % (`ARCHIVE_STOP_RATIO`) the
+recorder stops writing — existing archives stay and keep playing — and resumes below 85 %.
+
+**Check:** `max(neotv_archive_disk_used_ratio)`; what takes the space —
+`docker compose exec api du -sh /var/lib/neotv/archive/*` (one directory per channel id). The
+retention task (`live.archive_retention`, every 10 minutes) must be running: `docker compose
+logs --since 1h beat worker-default | grep archive_retention`.
+
+**Fix:** grow the volume, or shorten windows (Admin → Live → channel → archive days), or switch
+the archive off for channels nobody catches up on; the next retention run frees the space. Never
+delete files by hand while the recorder runs.
+
+<a id="archive-not-recording"></a>
+## NeoTVArchiveNotRecording — an archived channel has recorded nothing for 2 minutes (ticket)
+
+**Means:** a channel with an archive has no new segment: its catch-up will have a gap.
+
+**Check:** is the source live (an ingest channel's encoder connected, an external URL
+answering)? Is the disk guard holding recording (`neotv_archive_disk_used_ratio` ≥ 0.9)? Is the
+recorder running (`docker compose ps recorder`, `docker compose logs --since 30m recorder`)?
+
+**Fix:** restore the source or free disk space; the recorder retries by itself. A source that is
+gone for good: switch the channel's archive off so it stops alerting.

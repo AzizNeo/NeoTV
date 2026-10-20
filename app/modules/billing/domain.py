@@ -22,6 +22,7 @@ class Entitlements:
     max_resolution: str
     offline_downloads: bool
     ads: bool
+    catchup_days: int = 0  # how far back archived live channels can be watched (ADR-0012)
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,7 +85,7 @@ DEFAULT_CATALOG = PlanCatalog(
             "TRY",
             "monthly",
             ("2 ekran", "Full HD", "Reklamsız"),
-            Entitlements(2, 2, "1080p", False, False),
+            Entitlements(2, 2, "1080p", False, False, catchup_days=3),
         ),
         Plan(
             PlanId.DUO,
@@ -93,7 +94,7 @@ DEFAULT_CATALOG = PlanCatalog(
             "TRY",
             "monthly",
             ("3 ekran", "Full HD", "Reklamsız", "İndirme"),
-            Entitlements(3, 3, "1080p", True, False),
+            Entitlements(3, 3, "1080p", True, False, catchup_days=3),
         ),
         Plan(
             PlanId.FAMILY,
@@ -102,7 +103,7 @@ DEFAULT_CATALOG = PlanCatalog(
             "TRY",
             "monthly",
             ("5 ekran", "4K", "Reklamsız", "İndirme", "Aile profilleri"),
-            Entitlements(5, 5, "2160p", True, False),
+            Entitlements(5, 5, "2160p", True, False, catchup_days=7),
         ),
     ]
 )
