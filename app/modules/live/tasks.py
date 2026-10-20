@@ -82,3 +82,14 @@ def import_epg() -> dict[str, int] | None:
 def import_epg_from(self: Any, url: str) -> dict[str, int]:
     self.update_state(state="PROGRESS", meta={"progress": 10, "message": "downloading XMLTV"})
     return resolve(EpgService).import_xmltv(resolve(EgressGateway), url)
+
+
+@shared_task(name="live.archive_retention")
+def archive_retention() -> dict[str, int]:
+    """Keeps every archived channel to its window and drops what is no longer archived (ADR-0012)."""
+    from app.modules.live.services import ArchiveService
+
+    result = resolve(ArchiveService).enforce_retention()
+    if result["segments_removed"]:
+        _log.info("archive retention", extra=result)
+    return result

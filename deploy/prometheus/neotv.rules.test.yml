@@ -138,6 +138,12 @@ tests:
         values: '0+3x30'
       - series: 'neotv_xtream_auth_total{result="denied"}'
         values: '0+50x30'
+      - series: 'neotv_archive_disk_used_ratio'
+        values: '0.5 0.85x20'
+      - series: 'neotv_archive_lag_seconds{channel="3"}'
+        values: '5 300x20'
+      - series: 'neotv_archive_lag_seconds{channel="4"}'
+        values: '5x20'
     alert_rule_test:
       - eval_time: 6m
         alertname: NeoTVApiDown
@@ -187,3 +193,17 @@ tests:
             exp_annotations:
               runbook_url: 'docs/runbooks.md#xtream-guessing'
               summary: 'TV app sign-ins refused for guessing: 3 per minute'
+      - eval_time: 15m
+        alertname: NeoTVArchiveDiskFilling
+        exp_alerts:
+          - exp_labels: {severity: ticket}
+            exp_annotations:
+              runbook_url: 'docs/runbooks.md#archive-disk'
+              summary: 'The catch-up archive volume is 85% full (recording stops at 90%)'
+      - eval_time: 15m
+        alertname: NeoTVArchiveNotRecording
+        exp_alerts:             # channel 3 stopped; channel 4 records on
+          - exp_labels: {severity: ticket, channel: "3"}
+            exp_annotations:
+              runbook_url: 'docs/runbooks.md#archive-not-recording'
+              summary: 'Archived channel 3 has recorded nothing for 5m 0s'

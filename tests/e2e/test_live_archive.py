@@ -70,3 +70,44 @@ def test_only_administrators_and_known_channels(api: Api, admin: str, viewer: st
 def test_plans_carry_their_catch_up_window(api: Api) -> None:
     plans = {p["id"]: p["entitlements"]["catchup_days"] for p in api.get("/api/v1/billing/plans").data}
     assert plans == {"free": 0, "personal": 3, "duo": 3, "family": 7}
+
+
+# ── retention and metrics (the recorder's output, faked as files) ──────────
+
+
+def test_retention_keeps_each_window_and_drops_what_is_no_longer_archived(tmp_path: Any) -> None:
+    from datetime import timedelta
+
+    from app.kernel.container import resolve
+    from app.kernel.observability.metrics import Metrics
+    from app.kernel.time import utcnow
+    from app.modules.live.archive import ArchiveStorage
+    from app.modules.live.tasks import archive_retention
+    from tests.support.factory import make_app
+
+    app = make_app(archive_root=tmp_path)
+    api = Api(app)
+    admin = api.user("boss", role="admin")
+    kept = _channel(api, admin, source_type="ingest")
+    off = _channel(api, admin, source_type="ingest")
+    _archive(api, admin, kept["id"], days=1)
+    now = utcnow().replace(microsecond=0)
+    with app.app_context():
+        storage = resolve(ArchiveStorage)
+        for channel_id, ages in ((kept["id"], (60, 3600, 2 * 86400)), (off["id"], (60,)), (999, (60,))):
+            for age in ages:
+                path = storage.channel_dir(channel_id) / storage.segment_name(now - timedelta(seconds=age))
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"ts")
+        result = archive_retention.apply().get()
+        assert result == {"segments_removed": 3, "channels_trimmed": 1, "channels_dropped": 2}
+        assert storage.channels() == [kept["id"]]  # switched off / removed: all gone
+        assert storage.newest(kept["id"]) == now - timedelta(seconds=60)  # within the day: kept
+
+        text = resolve(Metrics).render().decode()
+    assert "neotv_archive_disk_used_ratio" in text
+    lag = next(
+        line for line in text.splitlines() if line.startswith(f'neotv_archive_lag_seconds{{channel="{kept["id"]}"}}')
+    )
+    assert 55 <= float(lag.split()[-1]) <= 120
+    assert f'channel="{off["id"]}"' not in text  # only archived channels report

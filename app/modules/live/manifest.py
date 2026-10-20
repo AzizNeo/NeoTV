@@ -69,6 +69,22 @@ def _services(c: Any) -> None:
         lambda c: TranscodeOrchestrator(c.resolve("kernel.redis"), idle_grace_s=settings.transcode_idle_grace_s),
     )
     c.register(LiveReader, lambda c: _LiveReader(c))
+    from app.modules.live.archive import ArchiveDiskGuard, ArchiveStorage, LocalArchiveStorage
+    from app.modules.live.services import ArchiveService
+
+    c.register(ArchiveStorage, lambda _c: LocalArchiveStorage(settings.archive_root))
+    c.register(
+        ArchiveDiskGuard,
+        lambda c: ArchiveDiskGuard(
+            c.resolve(ArchiveStorage),
+            stop_ratio=settings.archive_stop_ratio,
+            resume_ratio=settings.archive_resume_ratio,
+        ),
+    )
+    c.register(
+        ArchiveService,
+        lambda c: ArchiveService(c.resolve(UnitOfWorkFactory), c.resolve(ArchiveStorage), c.resolve(Clock)),
+    )
 
 
 manifest = ModuleManifest(
@@ -82,7 +98,11 @@ manifest = ModuleManifest(
     routes=(RouteSpec("app.modules.live.http:blueprint", "/api/v1/live"),),
     task_modules=("app.modules.live.tasks",),
     task_routes={"live.run_transcoder": {"queue": "transcode"}, "live.import_epg*": {"queue": "epg"}},
-    beat_schedule={"live.import-epg": {"task": "live.import_epg", "schedule": 6 * 3600.0}},
+    beat_schedule={
+        "live.import-epg": {"task": "live.import_epg", "schedule": 6 * 3600.0},
+        "live.archive-retention": {"task": "live.archive_retention", "schedule": 600.0},
+    },
+    post_boot="app.modules.live.post_boot:install_metrics",
     permissions=("live:write",),
     extensions=(ExtensionSpec("playback.content_providers", "app.modules.live.provider:build_provider"),),
     error_map={

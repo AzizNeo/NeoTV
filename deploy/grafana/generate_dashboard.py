@@ -166,6 +166,18 @@ def panels() -> list[dict]:
             "ok; denied (wrong or revoked credential, suspended account); blocked (an address that "
             "failed too often, refused without checking). A rise in denied+blocked is guessing.",
         ),
+        _row("Catch-up archive"),
+        _ts(
+            "Archive volume in use",
+            [("max(neotv_archive_disk_used_ratio)", "used")],
+            "percentunit",
+            "Recording stops at 90 % and resumes below 85 %; the alert fires at 80 %",
+        ),
+        _ts(
+            "Time since the newest recorded segment, by channel",
+            [("max by (channel) (neotv_archive_lag_seconds)", "{{channel}}")],
+            "s",
+        ),
         _row("Platform"),
         _ts("Outbox lag", [("max(neotv_outbox_lag_seconds)", "oldest undelivered event")], "s"),
         _ts("Dead letters waiting for a human", [("max(neotv_outbox_dead_letters)", "dead letters")]),

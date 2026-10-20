@@ -17,6 +17,7 @@ from app.kernel.security.egress import EgressGateway
 from app.kernel.time import Clock
 from app.kernel.uow import UnitOfWorkFactory
 from app.modules.live.api import NAMESPACE, LiveListing, LiveStats
+from app.modules.live.archive import ArchiveStorage
 from app.modules.live.models import LiveChannel, LiveProgram
 from app.shared_kernel.events import ContentRemoved
 from app.shared_kernel.ratings import KIDS_ALLOWED
@@ -504,3 +505,54 @@ def _xmltv_time(value: str) -> datetime:
         stamp, offset = value.split(" ", 1)
         return datetime.strptime(f"{stamp} {offset}", "%Y%m%d%H%M%S %z")
     return datetime.strptime(value[:14], "%Y%m%d%H%M%S").replace(tzinfo=UTC)
+
+
+@dataclass(frozen=True, slots=True)
+class ArchivedChannel:
+    id: int
+    days: int
+    since: datetime | None  # when the archive was switched on
+
+
+class ArchiveService:
+    """Which channels are archived, and the retention that keeps each to its window (ADR-0012)."""
+
+    def __init__(self, uow: UnitOfWorkFactory, storage: ArchiveStorage, clock: Clock) -> None:
+        self._uow = uow
+        self._storage = storage
+        self._clock = clock
+
+    def archived(self) -> list[ArchivedChannel]:
+        with self._uow() as uow:
+            rows = uow.session.execute(
+                select(LiveChannel.id, LiveChannel.archive_days, LiveChannel.archive_confirmed_at).where(
+                    LiveChannel.archive_days > 0, LiveChannel.is_active.is_(True)
+                )
+            )
+            return [ArchivedChannel(id=i, days=d, since=s) for i, d, s in rows]
+
+    def enforce_retention(self) -> dict[str, int]:
+        """Deletes what is older than each channel's window, and everything of a channel no longer
+        archived (switched off, deactivated or removed). Never runs in the playback path."""
+        now = self._clock.now()
+        windows = {c.id: c.days for c in self.archived()}
+        removed = trimmed = dropped = 0
+        for channel_id in self._storage.channels():
+            days = windows.get(channel_id)
+            if days is None:
+                removed += self._storage.delete_channel(channel_id)
+                dropped += 1
+            else:
+                count = self._storage.delete_before(channel_id, now - timedelta(days=days))
+                removed += count
+                trimmed += 1 if count else 0
+        return {"segments_removed": removed, "channels_trimmed": trimmed, "channels_dropped": dropped}
+
+    def lag_seconds(self) -> dict[int, float]:
+        """Per archived channel: seconds since its newest segment began (since switch-on if none)."""
+        now = self._clock.now()
+        out: dict[int, float] = {}
+        for channel in self.archived():
+            newest = self._storage.newest(channel.id) or channel.since or now
+            out[channel.id] = max(0.0, (now - newest).total_seconds())
+        return out
