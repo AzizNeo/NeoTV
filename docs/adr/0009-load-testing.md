@@ -177,3 +177,9 @@ Reading it:
   Read together: API and Celery side compete for the same two cores. Beat's 57 % is unexpected for
   a scheduler and is noted for profiling, not explained.
 
+**Correction (2026-10).** Viewers were mapped to accounts by `exec.vu.idInTest` modulo the account
+count, but k6 numbers VUs across *all* scenarios: when the sign-in scenario took a low id, two
+viewers could share an account and the second one's stream was refused (`403`, the plan's
+single stream) — a failure of the test, not of the system, seen as an intermittent smoke failure.
+Every VU id now has its own account (`ACCOUNTS ≥ viewers + sign-in VUs`, checked in setup; the
+sign-in scenario's `maxVUs` is pinned), and CI seeds accordingly.
