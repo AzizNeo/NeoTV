@@ -95,7 +95,8 @@ def test_records_every_archived_channel_once_across_replicas(tmp_path: Path, red
     assert sorted(first.running) == [3, 4] and second.running == {}  # the lease decides
     argv = first.running[3].process.argv  # type: ignore[attr-defined]
     assert argv[argv.index("-i") + 1] == EXTERNAL.url and argv[argv.index("-c") + 1] == "copy"
-    assert argv[-1].endswith("3/recorder.m3u8") and "%Y%m%dT%H%M%SZ.ts" in argv[argv.index("-hls_segment_filename") + 1]
+    assert Path(argv[-1]).parts[-2:] == ("3", "recorder.m3u8")  # Path, not "/": the test runs on Windows too
+    assert Path(argv[argv.index("-hls_segment_filename") + 1]).name == "%Y%m%dT%H%M%SZ.ts"
 
     first.stop_all()  # replica a goes away: its leases are released, b takes over
     second.tick()

@@ -37,6 +37,10 @@ def environment() -> dict[str, str]:
             "CELERY_ALWAYS_EAGER": "true",
             "MAIL_DIR": str(STATE / "mail"),
             "ARCHIVE_ROOT": str(STATE / "archive"),
+            # Each browser test is its own visitor (frontend/e2e/fixtures.js sends X-Forwarded-For):
+            # per-address limits apply per test, as they would to separate households — not to the
+            # whole suite as one address. Direct calls (metrics, setup) stay 127.0.0.1.
+            "TRUSTED_PROXY_COUNT": "1",
             "LOG_LEVEL": "WARNING",
             # The browser reaches the API through `vite preview` (same origin), as behind nginx.
             "ALLOWED_ORIGINS": "http://127.0.0.1:4173,http://localhost:4173",
