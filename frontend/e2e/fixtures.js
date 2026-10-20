@@ -38,6 +38,15 @@ export const test = base.extend({
       });
     });
     page.on('pageerror', (error) => errors.push(`uncaught: ${error.message}`));
+    // Failed API calls, for showReady()'s report (path only: query strings can hold grants).
+    const failures = [];
+    page.on('response', (response) => {
+      const url = new URL(response.url());
+      if (url.pathname.startsWith('/api/') && response.status() >= 400) {
+        failures.push(`${response.request().method()} ${url.pathname} → ${response.status()}`);
+      }
+    });
+    page.apiFailures = failures;
     await use(page);
     if (!allowCspViolations) expect(violations, 'CSP violations').toEqual([]);
     if (!allowPageErrors) expect(errors, 'uncaught page errors').toEqual([]);
@@ -57,6 +66,22 @@ export async function signIn(page, { username = ADMIN.username, password = ADMIN
     await page.locator('main button').first().click();
     await page.waitForURL((url) => !url.pathname.startsWith('/profiles'));
   }
+}
+
+/**
+ * Waits for `locator` to be visible; if it never is, fails with what the page shows instead —
+ * its URL, the start of its visible text and the API calls that failed — so an intermittent
+ * failure in CI explains itself without the trace.
+ */
+export async function showReady(page, locator, what, timeout = 20_000) {
+  try {
+    await locator.waitFor({ state: 'visible', timeout });
+  } catch (error) {
+    const text = (await page.locator('body').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300);
+    const failed = (page.apiFailures ?? []).slice(-8).join('; ') || 'none';
+    throw new Error(`${what} never appeared.\n  URL: ${page.url()}\n  Page shows: ${text}\n  Failed API calls: ${failed}`, { cause: error });
+  }
+  return locator;
 }
 
 /** The player's error card (instead of a video): its message, or null while there is none. */

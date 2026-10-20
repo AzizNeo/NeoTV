@@ -55,17 +55,50 @@ async function unwrap(response) {
   return body && typeof body === 'object' && 'success' in body ? body.data : body;
 }
 
+// Restoring a session must not turn a passing problem into a sign-out: a rate limit, an outage or a
+// dropped connection says nothing about the refresh cookie. Those are retried (the server's
+// Retry-After first, else back-off); only an answer about the session itself (401/400) is final.
+const REFRESH_ATTEMPTS = 3;
+const REFRESH_MAX_WAIT_MS = 10_000;
+const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
+
+/** Exported for tests: is this refresh failure about the moment rather than about the session? */
+export function isTransient(error) {
+  return error.status === 0 || error.status === 429 || error.status >= 500;
+}
+
+export function retryDelayMs(error, attempt) {
+  const seconds = Number(error.details?.retry_after_seconds);
+  const ms = Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 500 * 2 ** attempt;
+  return Math.min(ms, REFRESH_MAX_WAIT_MS);
+}
+
+async function refreshOnce() {
+  let response;
+  try {
+    response = await fetch(buildUrl('identity_refresh'), { method: 'POST', credentials: 'include', headers: CSRF });
+  } catch (cause) {
+    throw ApiError.network(cause);
+  }
+  if (!response.ok) throw await ApiError.fromResponse(response);
+  const data = await unwrap(response);
+  tokenStore.setAccess(data.access_token);
+  return data;
+}
+
 async function refreshAccess() {
-  refreshing ??= fetch(buildUrl('identity_refresh'), { method: 'POST', credentials: 'include', headers: CSRF })
-    .then(async (response) => {
-      if (!response.ok) throw await ApiError.fromResponse(response);
-      const data = await unwrap(response);
-      tokenStore.setAccess(data.access_token);
-      return data;
-    })
-    .finally(() => {
-      refreshing = null;
-    });
+  refreshing ??= (async () => {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await refreshOnce();
+      } catch (error) {
+        if (!isTransient(error) || attempt + 1 >= REFRESH_ATTEMPTS) throw error;
+        await sleep(retryDelayMs(error, attempt));
+      }
+    }
+  })().finally(() => {
+    refreshing = null;
+  });
   return refreshing;
 }
 
