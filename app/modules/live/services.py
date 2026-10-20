@@ -74,6 +74,7 @@ class LiveChannelDTO:
     rating: str
     now: ProgramDTO | None
     next: ProgramDTO | None
+    catchup_days: int = 0  # the channel's archive (ADR-0012); the viewer's plan may allow less
 
 
 @dataclass(frozen=True, slots=True)
@@ -184,6 +185,7 @@ class LiveChannelService:
                     rating=c.rating,
                     now=schedule.get(c.id, (None, None))[0],
                     next=schedule.get(c.id, (None, None))[1],
+                    catchup_days=c.archive_days or 0,
                 )
                 for c in channels
             ]

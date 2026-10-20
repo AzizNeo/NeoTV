@@ -21,6 +21,7 @@ export const messages = defineMessages('billing', {
       ads: 'Reklamlı',
       noAds: 'Reklamsız',
       downloads: 'İndirme',
+      catchup: { other: '{count} gün geriye dönük izleme' },
     },
     plans: {
       title: 'Planınızı seçin',
@@ -86,6 +87,7 @@ export const messages = defineMessages('billing', {
       ads: 'With ads',
       noAds: 'No ads',
       downloads: 'Downloads',
+      catchup: { one: '{count} day of catch-up TV', other: '{count} days of catch-up TV' },
     },
     plans: {
       title: 'Choose your plan',

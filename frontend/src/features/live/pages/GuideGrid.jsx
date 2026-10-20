@@ -1,11 +1,12 @@
 import PropTypes from 'prop-types';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { History, RotateCcw } from 'lucide-react';
 import styles from './GuideGrid.module.css';
 import { useFormat } from '@/core/i18n';
 import { useT } from '../i18n';
+import { catchupAction } from '../catchup';
 
 const HOUR_PX = 240;
-
 /** Horizontal programme guide: one lane per channel, blocks positioned by time. */
 /** Wall clock as state (render stays pure); ticks once a minute so the now-line moves. */
 function useNow(intervalMs = 60_000) {
@@ -17,14 +18,20 @@ function useNow(intervalMs = 60_000) {
   return now;
 }
 
-export function GuideGrid({ channels, programs, onSelect, hours = 6 }) {
+export function GuideGrid({ channels, programs, onSelect, onCatchup, hours = 6, back = 0 }) {
   const t = useT();
   const { time } = useFormat();
   const now = useNow();
-  const start = new Date(now);
+  const scroller = useRef(null);
+  const start = new Date(now - back * 3_600_000);
   start.setMinutes(start.getMinutes() < 30 ? 0 : 30, 0, 0);
   const startMs = start.getTime();
-  const endMs = startMs + hours * 3_600_000;
+  const span = hours + back;
+  const endMs = startMs + span * 3_600_000;
+  // With past hours shown, open at "now" (the past is a scroll to the left away).
+  useEffect(() => {
+    if (back > 0 && scroller.current) scroller.current.scrollLeft = Math.max(0, ((Date.now() - startMs) / 3_600_000) * HOUR_PX - HOUR_PX / 2);
+  }, [back, startMs]);
   const byChannel = new Map();
   for (const p of programs) {
     const list = byChannel.get(p.channel_id) ?? [];
@@ -32,13 +39,13 @@ export function GuideGrid({ channels, programs, onSelect, hours = 6 }) {
     byChannel.set(p.channel_id, list);
   }
   const offset = (ms) => ((ms - startMs) / 3_600_000) * HOUR_PX;
-  const slots = Array.from({ length: hours * 2 }, (_, i) => new Date(startMs + i * 1_800_000));
+  const slots = Array.from({ length: span * 2 }, (_, i) => new Date(startMs + i * 1_800_000));
 
   return (
     <section className={styles.guide} aria-label={t('guide')}>
       <h2>{t('guide')}</h2>
-      <div className={styles.scroller}>
-        <div className={styles.timeline} style={{ width: hours * HOUR_PX }}>
+      <div className={styles.scroller} ref={scroller}>
+        <div className={styles.timeline} style={{ width: span * HOUR_PX }}>
           {slots.map((slot) => (
             <span key={slot.getTime()} style={{ left: offset(slot.getTime()) }}>
               {time(slot)}
@@ -51,20 +58,43 @@ export function GuideGrid({ channels, programs, onSelect, hours = 6 }) {
             <button className={styles.channel} onClick={() => onSelect({ ref: channel.ref, title: channel.name })} title={t('watch', { name: channel.name })}>
               {channel.name}
             </button>
-            <div className={styles.track} style={{ width: hours * HOUR_PX }}>
+            <div className={styles.track} style={{ width: span * HOUR_PX }}>
               {(byChannel.get(channel.id) ?? [])
                 .filter((p) => new Date(p.ends_at).getTime() > startMs && new Date(p.starts_at).getTime() < endMs)
                 .map((p) => {
                   const s = Math.max(startMs, new Date(p.starts_at).getTime());
                   const e = Math.min(endMs, new Date(p.ends_at).getTime());
                   const airing = now >= new Date(p.starts_at).getTime() && now < new Date(p.ends_at).getTime();
-                  return (
-                    <div key={p.id} className={`${styles.program} ${airing ? styles.airing : ''}`} style={{ left: offset(s), width: Math.max(2, offset(e) - offset(s) - 2) }} title={p.description ?? p.title}>
-                      <strong>{p.title}</strong>
+                  const past = new Date(p.ends_at).getTime() <= now;
+                  const action = onCatchup ? catchupAction(channel, p, now) : null;
+                  const className = `${styles.program} ${airing ? styles.airing : ''} ${past ? styles.past : ''} ${action ? styles.playable : ''}`;
+                  const style = { left: offset(s), width: Math.max(2, offset(e) - offset(s) - 2) };
+                  const body = (
+                    <>
+                      <strong>
+                        {action && (action.kind === 'startOver' ? <RotateCcw size={12} aria-hidden="true" /> : <History size={12} aria-hidden="true" />)} {p.title}
+                      </strong>
                       <small>
                         {time(p.starts_at)}–
                         {time(p.ends_at)}
                       </small>
+                    </>
+                  );
+                  return action ? (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className={className}
+                      style={style}
+                      title={p.description ?? p.title}
+                      aria-label={t(action.kind, { title: p.title, channel: channel.name, time: time(p.starts_at) })}
+                      onClick={() => onCatchup({ ref: channel.ref, title: p.title, subtitle: channel.name, window: action.window })}
+                    >
+                      {body}
+                    </button>
+                  ) : (
+                    <div key={p.id} className={className} style={style} title={p.description ?? p.title}>
+                      {body}
                     </div>
                   );
                 })}
@@ -80,5 +110,7 @@ GuideGrid.propTypes = {
   channels: PropTypes.arrayOf(PropTypes.object).isRequired,
   programs: PropTypes.arrayOf(PropTypes.object).isRequired,
   onSelect: PropTypes.func.isRequired,
+  onCatchup: PropTypes.func,
   hours: PropTypes.number,
+  back: PropTypes.number,
 };

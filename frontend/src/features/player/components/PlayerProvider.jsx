@@ -1,5 +1,6 @@
 /**
  * App-wide player: any feature calls `usePlayer().play({ ref, title })`, optionally with a queue —
+ * and with `window: { start, end }` to play a live channel's archive (catch-up, start over) —
  * `play(item, { queue: [...] })` — for "next episode" and channel zapping (see ../queue.js).
  * The overlay owns the playback session; other features observe playback via
  * the `player.observers` slot (e.g. library saves resume positions) without
@@ -61,7 +62,7 @@ export function usePlayer() {
 
 function PlayerOverlay({ item, queue, onJump, onClose }) {
   const t = useT();
-  const { status, session, error } = usePlaybackSession(item.ref);
+  const { status, session, error } = usePlaybackSession(item.ref, item.window ?? null);
   const [fatal, setFatal] = useState(null);
   const [video, setVideo] = useState(null);
   const videoRef = useRef(null);

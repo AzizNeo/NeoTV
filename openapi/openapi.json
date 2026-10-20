@@ -15479,6 +15479,11 @@
                 "type": "null"
               }
             ]
+          },
+          "catchup_days": {
+            "description": "Days this channel can be watched back (0 = none); the plan may allow less",
+            "title": "Catchup Days",
+            "type": "integer"
           }
         },
         "required": [
@@ -15490,7 +15495,8 @@
           "is_live",
           "rating",
           "now",
-          "next"
+          "next",
+          "catchup_days"
         ],
         "title": "LiveChannelOut",
         "type": "object"

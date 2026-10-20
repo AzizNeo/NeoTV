@@ -57,6 +57,7 @@ class LiveChannelOut(BaseModel):
     rating: RatingLiteral
     now: ProgramOut | None
     next: ProgramOut | None
+    catchup_days: int = Field(description="Days this channel can be watched back (0 = none); the plan may allow less")
 
 
 class GuideQuery(BaseModel):
