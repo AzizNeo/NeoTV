@@ -57,6 +57,18 @@ class ContentDescriptor:
 
 
 @dataclass(frozen=True, slots=True)
+class PlaybackWindow:
+    """A stretch of a live channel's past (catch-up) or of a programme still on air (start over).
+
+    Providers that can play one declare ``supports_window = True``; the gate refuses a window for
+    any other content (ADR-0012).
+    """
+
+    start: datetime
+    end: datetime
+
+
+@dataclass(frozen=True, slots=True)
 class PlaybackContext:
     user_id: int
     profile_id: int
@@ -67,6 +79,7 @@ class PlaybackContext:
     content: ContentRef
     session_token: str = ""
     grant_expires_at: int = 0
+    window: PlaybackWindow | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -215,6 +228,7 @@ class SessionOpener(Protocol):
         ip: str,
         user_agent: str,
         keepalive: KeepAlive = "heartbeat",
+        window: PlaybackWindow | None = None,
     ) -> OpenedStream: ...
 
     def release(self, session_token: str) -> bool: ...
@@ -237,6 +251,7 @@ __all__ = [
     "PlaybackContext",
     "PlaybackPolicy",
     "PlaybackRefusedError",
+    "PlaybackWindow",
     "Rating",
     "ResolvedSource",
     "SessionDirectory",

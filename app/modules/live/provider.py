@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from app.kernel.capabilities import CapabilityIndex
@@ -21,6 +22,13 @@ from app.modules.playback.api import (
 from app.shared_kernel.content import ContentRef
 
 HLS_PREFIX = "/api/v1/live/hls/"
+ARCHIVE_PREFIX = "/api/v1/live/archive/"
+
+
+def archive_dir(channel_id: int, start: int, end: int) -> str:
+    """The signed directory of one catch-up window: the grant names the window, so a viewer can
+    neither widen it nor move it past what the catch-up policy allowed (ADR-0012)."""
+    return f"{ARCHIVE_PREFIX}{channel_id}/{start}-{end}/"
 
 
 class LiveOfflineError(Exception):
@@ -37,6 +45,7 @@ def hls_dir(playback_id: str) -> str:
 
 class LiveContentProvider:
     namespace = NAMESPACE
+    supports_window = True  # catch-up and start over from the archive (ADR-0012)
 
     def __init__(
         self,
@@ -82,6 +91,12 @@ class LiveContentProvider:
         channel = self._channels.get_active(descriptor.ref.id)
         if channel is None:
             raise LookupError(str(descriptor.ref))
+        if ctx.window is not None:  # the catch-up policy has already allowed this window
+            start, end = int(ctx.window.start.timestamp()), int(ctx.window.end.timestamp())
+            return ResolvedSource(
+                manifest_url=self._urls.signed_entry(archive_dir(channel.id, start, end), "index.m3u8", ctx),
+                is_live=ctx.window.end.timestamp() > time.time(),  # start over: the playlist still grows
+            )
         if channel.source_type == "external":
             assert channel.upstream_url is not None
             url = (

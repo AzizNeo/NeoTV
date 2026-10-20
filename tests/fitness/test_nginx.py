@@ -50,3 +50,9 @@ def test_the_access_log_masks_credential_segments_and_drops_queries() -> None:
     replacement = nginx_regex[2].replace("$head", r"\g<head>").replace("$tail", r"\g<tail>")
     assert regex.sub(replacement, "/api/v1/xtream/live/user1/pass1/121.m3u8") == "/api/v1/xtream/live/***/***/121.m3u8"
     assert regex.sub(replacement, "/live") == "/live"
+
+
+def test_archive_files_are_only_served_after_the_api_checked_the_grant() -> None:
+    start = CONF.index("location /_protected_archive/ {")
+    body = CONF[start : CONF.index("\n    }", start)]  # has a nested types {} block
+    assert "internal;" in body and "alias /var/lib/neotv/archive/;" in body

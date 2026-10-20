@@ -102,3 +102,29 @@ def test_the_disk_guard_stops_at_90_and_resumes_below_85() -> None:
     with pytest.raises(ValueError, match="RESUME"):
         ArchiveDiskGuard(disk, stop_ratio=0.8, resume_ratio=0.85)  # type: ignore[arg-type]
     assert DiskUsage(used=1, total=0).ratio == 1.0  # an unreadable volume counts as full
+
+
+def test_the_playlist_marks_holes_and_ends_only_when_the_window_has() -> None:
+    from app.modules.live.archive import Segment, render_playlist
+
+    segments = [
+        Segment(T0, 6.0, "3/20261020/11/20261020T115948Z.ts"),
+        Segment(T0 + timedelta(seconds=6), 6.4, "3/20261020/11/20261020T115954Z.ts"),
+        Segment(T0 + timedelta(minutes=5), 6.0, "3/20261020/12/20261020T120448Z.ts", discontinuity=True),
+    ]
+    vod = render_playlist(segments, complete=True, query="sig=x").splitlines()
+    assert vod[:6] == [
+        "#EXTM3U",
+        "#EXT-X-VERSION:3",
+        "#EXT-X-TARGETDURATION:7",  # rounded up from 6.4
+        "#EXT-X-MEDIA-SEQUENCE:0",
+        "#EXT-X-PLAYLIST-TYPE:VOD",
+        "#EXT-X-INDEPENDENT-SEGMENTS",
+    ]
+    assert vod[6] == "#EXT-X-PROGRAM-DATE-TIME:2026-10-20T11:59:48.000Z"
+    assert "20261020/11/20261020T115948Z.ts?sig=x" in vod  # relative to the window, channel id dropped
+    hole = vod.index("#EXT-X-DISCONTINUITY")
+    assert vod[hole + 1] == "#EXT-X-PROGRAM-DATE-TIME:2026-10-20T12:04:48.000Z" and vod[-1] == "#EXT-X-ENDLIST"
+    live = render_playlist(segments, complete=False, query="").splitlines()
+    assert "#EXT-X-PLAYLIST-TYPE:EVENT" in live and "#EXT-X-ENDLIST" not in live
+    assert render_playlist([], complete=False, query="").count("#EXTINF") == 0

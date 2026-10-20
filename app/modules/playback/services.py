@@ -25,6 +25,7 @@ from app.modules.playback.api import (
     OpenedStream,
     PlaybackContext,
     PlaybackRefusedError,
+    PlaybackWindow,
     ResolvedSource,
 )
 from app.modules.playback.concurrency import StreamConcurrencyGuard
@@ -101,6 +102,7 @@ class PlaybackSessionService:
         ip: str,
         user_agent: str,
         keepalive: KeepAlive = "heartbeat",
+        window: PlaybackWindow | None = None,
     ) -> OpenedSession:
         ref = ContentRef.parse(content_ref)
         device_key = self._device_keys.key(user_id, client_device_id, user_agent)
@@ -116,6 +118,7 @@ class PlaybackSessionService:
             content=ref,
             session_token=token,
             grant_expires_at=expires_at,
+            window=window,
         )
         gate = self._gate()
         try:
@@ -343,6 +346,7 @@ class SessionOpenerService:
         ip: str,
         user_agent: str,
         keepalive: KeepAlive = "heartbeat",
+        window: PlaybackWindow | None = None,
     ) -> OpenedStream:
         try:
             opened = self._sessions.open(
@@ -353,6 +357,7 @@ class SessionOpenerService:
                 ip=ip,
                 user_agent=user_agent,
                 keepalive=keepalive,
+                window=window,
             )
         except StreamLimitExceededError as exc:
             raise PlaybackRefusedError("STREAM_LIMIT_EXCEEDED", str(exc)) from exc

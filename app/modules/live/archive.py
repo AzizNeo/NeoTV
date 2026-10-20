@@ -160,6 +160,36 @@ class LocalArchiveStorage:
             hour += timedelta(hours=1)
 
 
+#: A recorded segment's key inside one channel: YYYYMMDD/HH/YYYYMMDDTHHMMSSZ.ts
+SEGMENT_KEY = re.compile(r"^(\d{8})/(\d{2})/(\d{8}T\d{6}Z)\.ts$")
+
+
+def render_playlist(segments: list[Segment], *, complete: bool, query: str) -> str:
+    """An HLS media playlist for a window. ``complete``: the window has ended (VOD, ENDLIST);
+    otherwise it is still on air (EVENT, no ENDLIST — players poll it, start over works).
+    Segment URIs are relative to the window's directory and carry the window's grant."""
+    target = max([SEGMENT_SECONDS, *(int(-(-s.duration_s // 1)) for s in segments)])
+    lines = [
+        "#EXTM3U",
+        "#EXT-X-VERSION:3",
+        f"#EXT-X-TARGETDURATION:{target}",
+        "#EXT-X-MEDIA-SEQUENCE:0",
+        f"#EXT-X-PLAYLIST-TYPE:{'VOD' if complete else 'EVENT'}",
+        "#EXT-X-INDEPENDENT-SEGMENTS",
+    ]
+    for index, segment in enumerate(segments):
+        if segment.discontinuity:
+            lines.append("#EXT-X-DISCONTINUITY")
+        if index == 0 or segment.discontinuity:  # wall-clock anchors: the guide and the player agree
+            lines.append(f"#EXT-X-PROGRAM-DATE-TIME:{segment.start.strftime('%Y-%m-%dT%H:%M:%S.000Z')}")
+        lines.append(f"#EXTINF:{segment.duration_s:.3f},")
+        key = segment.key.split("/", 1)[1]  # drop the channel id: URIs are relative to the window
+        lines.append(f"{key}?{query}" if query else key)
+    if complete:
+        lines.append("#EXT-X-ENDLIST")
+    return "\n".join(lines) + "\n"
+
+
 class ArchiveDiskGuard:
     """Whether recording may run, with hysteresis so it does not flap around one threshold.
 

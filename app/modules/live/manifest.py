@@ -98,6 +98,7 @@ manifest = ModuleManifest(
     description="Live channels (external HLS or RTMP ingest + ABR transcoding) and the programme guide.",
     provides={"live.read": LiveReader},
     requires=frozenset({"identity.authentication", "profile.context", "playback.urls", "playback.grants"}),
+    optional_requires=frozenset({"billing.entitlements"}),  # the plan's catch-up window
     models=("app.modules.live.models",),
     services=_services,
     routes=(RouteSpec("app.modules.live.http:blueprint", "/api/v1/live"),),
@@ -110,7 +111,10 @@ manifest = ModuleManifest(
     post_boot="app.modules.live.post_boot:install_metrics",
     cli=("app.modules.live.cli:live_cli",),
     permissions=("live:write",),
-    extensions=(ExtensionSpec("playback.content_providers", "app.modules.live.provider:build_provider"),),
+    extensions=(
+        ExtensionSpec("playback.content_providers", "app.modules.live.provider:build_provider"),
+        ExtensionSpec("playback.policies", "app.modules.live.catchup:build_catchup_policy"),
+    ),
     error_map={
         LiveChannelNotFoundError: (404, "LIVE_CHANNEL_NOT_FOUND"),
         InvalidIngestKeyError: (403, "INVALID_INGEST_KEY"),

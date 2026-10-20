@@ -62,6 +62,19 @@ ffmpeg sees them; an ingest channel is recorded only while its encoder is connec
 back off per channel (5 s doubling to 5 min, reset after a minute of healthy recording); the disk
 guard stops every recording at 90 % and resumes below 85 %.
 
+## Playback (C3)
+
+`POST /api/v1/playback/sessions` takes an optional `window {start, end}` (at most 6 hours). The
+gate refuses a window for content whose provider cannot play one; the live module contributes
+the `catchup_window` policy (`CATCHUP_NOT_AVAILABLE`, `CATCHUP_NOT_IN_PLAN`, `CATCHUP_TOO_OLD`,
+`CATCHUP_NOT_STARTED`), so plan, kids rating and the stream limit apply as for live. The grant is
+signed for the window's own directory, `/api/v1/live/archive/<channel>/<start>-<end>/`, so a
+viewer can neither widen nor move it; the playlist (`index.m3u8`) is built from the segment
+names — VOD with `ENDLIST` once the window has ended, EVENT while it is still on air (start
+over) — with `PROGRAM-DATE-TIME` anchors and a `DISCONTINUITY` at every hole. Segments outside
+the window are refused; nginx serves the files (`/_protected_archive/`, internal) after the API
+has checked the grant.
+
 ## Consequences
 
 - Recording costs disk continuously for every archived channel (roughly bitrate × window); the

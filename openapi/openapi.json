@@ -9090,6 +9090,77 @@
         }
       }
     },
+    "/api/v1/live/archive/{channel_id}/{window}/{filename}": {
+      "get": {
+        "operationId": "live_archive_asset",
+        "summary": "Catch-up archive window: playlist and segments (grant-protected, ADR-0012)",
+        "tags": [
+          "live"
+        ],
+        "parameters": [
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "window",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {},
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "public"
+      }
+    },
     "/api/v1/live/channels": {
       "get": {
         "operationId": "live_list_channels",
@@ -9882,7 +9953,11 @@
           "STREAM_LIMIT_EXCEEDED",
           "CONTENT_NOT_FOUND",
           "CONTENT_NOT_ALLOWED_FOR_KIDS",
-          "PLAYBACK_DENIED"
+          "PLAYBACK_DENIED",
+          "CATCHUP_NOT_AVAILABLE",
+          "CATCHUP_NOT_IN_PLAN",
+          "CATCHUP_TOO_OLD",
+          "CATCHUP_NOT_STARTED"
         ],
         "security": [
           {
@@ -9902,6 +9977,18 @@
                     "pattern": "^[a-z][a-z0-9_]{1,31}:\\d+$",
                     "title": "Content Ref",
                     "type": "string"
+                  },
+                  "window": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/WindowIn"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "description": "Catch-up / start over: a stretch of a live channel's archive (ADR-0012)"
                   }
                 },
                 "required": [
@@ -17050,6 +17137,27 @@
           "outcome"
         ],
         "title": "WebhookOut",
+        "type": "object"
+      },
+      "WindowIn": {
+        "additionalProperties": false,
+        "properties": {
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          },
+          "end": {
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "WindowIn",
         "type": "object"
       }
     },

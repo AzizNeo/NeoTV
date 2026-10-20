@@ -207,6 +207,14 @@ class LiveChannelService:
                 for c in rows.scalars()
             ]
 
+    def archive_days(self, channel_id: int) -> int:
+        """The channel's catch-up window in days (0 = not archived, or not an active channel)."""
+        with self._uow() as uow:
+            days = uow.session.execute(
+                select(LiveChannel.archive_days).where(LiveChannel.id == channel_id, LiveChannel.is_active.is_(True))
+            ).scalar_one_or_none()
+            return int(days or 0)
+
     def get_active(self, channel_id: int) -> LiveChannel | None:
         with self._uow() as uow:
             channel = uow.session.get(LiveChannel, channel_id)

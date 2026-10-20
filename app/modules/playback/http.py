@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Literal
 
 from flask import Blueprint, Response, request, stream_with_context
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 from app.kernel.container import resolve
 from app.kernel.http.endpoint import endpoint
@@ -13,7 +14,7 @@ from app.kernel.http.profile_context import current_profile
 from app.kernel.resilience.rate_limit import Rate, client_ip
 from app.kernel.security.auth import current_user
 from app.kernel.security.device_keys import HEADER as DEVICE_HEADER
-from app.modules.playback.api import GrantVerifier
+from app.modules.playback.api import GrantVerifier, PlaybackWindow
 from app.modules.playback.hls_proxy import HlsProxyService
 from app.modules.playback.services import EVENT_TYPES, PlaybackSessionService
 
@@ -27,8 +28,28 @@ class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
 
+#: The longest stretch one catch-up session plays (a long film or match, with margins).
+MAX_WINDOW = timedelta(hours=6)
+
+
+class WindowIn(_Strict):
+    start: AwareDatetime
+    end: AwareDatetime
+
+    @model_validator(mode="after")
+    def _sane(self) -> WindowIn:
+        if self.end <= self.start:
+            raise ValueError("end must be after start")
+        if self.end - self.start > MAX_WINDOW:
+            raise ValueError("a window is at most 6 hours")
+        return self
+
+
 class OpenSessionRequest(_Strict):
     content_ref: str = Field(min_length=3, max_length=64, pattern=r"^[a-z][a-z0-9_]{1,31}:\d+$")
+    window: WindowIn | None = Field(
+        default=None, description="Catch-up / start over: a stretch of a live channel's archive (ADR-0012)"
+    )
 
 
 class ContentInfo(BaseModel):
@@ -97,7 +118,16 @@ def _service() -> PlaybackSessionService:
     body=OpenSessionRequest,
     response=OpenSessionResponse,
     status=201,
-    errors=("STREAM_LIMIT_EXCEEDED", "CONTENT_NOT_FOUND", "CONTENT_NOT_ALLOWED_FOR_KIDS", "PLAYBACK_DENIED"),
+    errors=(
+        "STREAM_LIMIT_EXCEEDED",
+        "CONTENT_NOT_FOUND",
+        "CONTENT_NOT_ALLOWED_FOR_KIDS",
+        "PLAYBACK_DENIED",
+        "CATCHUP_NOT_AVAILABLE",
+        "CATCHUP_NOT_IN_PLAN",
+        "CATCHUP_TOO_OLD",
+        "CATCHUP_NOT_STARTED",
+    ),
 )
 def open_session(body: OpenSessionRequest) -> OpenSessionResponse:
     opened = _service().open(
@@ -107,6 +137,7 @@ def open_session(body: OpenSessionRequest) -> OpenSessionResponse:
         client_device_id=request.headers.get(DEVICE_HEADER),
         ip=client_ip(),
         user_agent=request.headers.get("User-Agent", ""),
+        window=PlaybackWindow(body.window.start, body.window.end) if body.window else None,
     )
     return OpenSessionResponse(
         session_token=opened.token,

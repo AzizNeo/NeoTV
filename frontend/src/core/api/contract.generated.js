@@ -829,6 +829,14 @@ export const OPERATIONS = Object.freeze({
     "idempotent": false,
     "errors": []
   },
+  "live_archive_asset": {
+    "method": "GET",
+    "path": "/api/v1/live/archive/{channel_id}/{window}/{filename}",
+    "auth": "public",
+    "profile": false,
+    "idempotent": false,
+    "errors": []
+  },
   "live_guide": {
     "method": "GET",
     "path": "/api/v1/live/guide",
@@ -897,7 +905,11 @@ export const OPERATIONS = Object.freeze({
       "STREAM_LIMIT_EXCEEDED",
       "CONTENT_NOT_FOUND",
       "CONTENT_NOT_ALLOWED_FOR_KIDS",
-      "PLAYBACK_DENIED"
+      "PLAYBACK_DENIED",
+      "CATCHUP_NOT_AVAILABLE",
+      "CATCHUP_NOT_IN_PLAN",
+      "CATCHUP_TOO_OLD",
+      "CATCHUP_NOT_STARTED"
     ]
   },
   "playback_proxy": {
